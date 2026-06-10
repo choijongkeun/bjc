@@ -11,6 +11,26 @@ import { actorMiddleware } from "./http/actorMiddleware.js";
 import { unauthorized, validationError } from "./domain/errors.js";
 
 const app = express();
+const allowedOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+app.use((req, res, next) => {
+  const origin = req.header("origin");
+
+  if (origin && allowedOriginPattern.test(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Headers", "Content-Type, x-actor-account-id");
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  }
+
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+
+  next();
+});
+
 app.use(express.json({ limit: "2mb" }));
 app.use(actorMiddleware);
 
