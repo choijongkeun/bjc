@@ -385,14 +385,17 @@ async function main() {
   }
 
   try {
-    const auditLogs = await engine.listAuditLogs({ actor_account_id: ids.reader, page: 1, limit: 5 });
-    results.push({
-      name: "READER list audit_logs",
-      ok: auditLogs.total >= 1,
-      message: `total=${auditLogs.total}`
-    });
+    await engine.listAuditLogs({ actor_account_id: ids.reader, page: 1, limit: 5 });
+    results.push({ name: "READER list audit_logs denied", ok: false, message: "unexpected success" });
   } catch (e: any) {
-    results.push({ name: "READER list audit_logs", ok: false, message: e?.message });
+    results.push({ name: "READER list audit_logs denied", ok: true, message: e?.message });
+  }
+
+  try {
+    await engine.listAuditLogs({ actor_account_id: ids.user, page: 1, limit: 5 });
+    results.push({ name: "USER list audit_logs denied", ok: false, message: "unexpected success" });
+  } catch (e: any) {
+    results.push({ name: "USER list audit_logs denied", ok: true, message: e?.message });
   }
 
   process.stdout.write("\nRESULTS\n");
