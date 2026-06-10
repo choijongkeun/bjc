@@ -272,18 +272,75 @@
 
 ---
 
-## 9. 실제 DB 적용 전 확인할 점
+## 9. binary source of truth 정책
 
+명시적 정책:
+
+- `binary_nodes`를 바이너리 구조의 source of truth로 본다.
+- `accounts.binary_parent_account_id` / `accounts.binary_position`은 조회 최적화 및 목록 표시용 denormalized 필드다.
+- 회원가입 또는 바이너리 재배치 시 `binary_nodes`와 `accounts`의 binary 관련 필드는 반드시 같은 트랜잭션에서 함께 갱신해야 한다.
+- 둘이 불일치할 경우 `binary_nodes`를 우선 기준으로 보고, `accounts`는 복구 대상 필드로 본다.
+
+실무 의미:
+
+- 트리 탐색
+- slot 점유 판단
+- closure 재구성
+- cycle 방지
+
+는 `binary_nodes` / `binary_edges` 기준으로 수행한다.
+
+`accounts`는 아래 용도에 집중한다.
+
+- 회원 목록 화면
+- 간단한 상세 조회
+- 검색/필터 최적화
+
+---
+
+## 10. root node 정책
+
+명시적 정책:
+
+- MySQL의 `unique(parent_account_id, position)`는 `NULL` 조합을 여러 개 허용할 수 있다.
+- 따라서 DB unique만으로 root node 개수 제한을 완전히 보장하지는 못한다.
+
+1차 정책:
+
+- 플랫폼 최상단 root 계정은 운영 설정 또는 초기 seed로 1개만 둔다.
+- app layer에서 root 생성/변경을 `ADMIN` 전용으로 제한한다.
+- 일반 회원가입은 반드시 sponsor/root 하위에 배치되며 root node로 직접 생성되지 않는다.
+
+향후 확장:
+
+- 필요 시 `system_settings` 또는 `platform_roots` 테이블로 root 정책을 분리할 수 있다.
+
+현재 초안 해석:
+
+- `binary_nodes.parent_account_id is null` + `position is null` 조합은 DB만으로 다중 허용될 수 있다.
+- 따라서 root 유일성은 운영 정책 + service validation으로 막아야 한다.
+
+---
+
+## 11. 실제 DB 적용 전 체크리스트
+
+- 0001이 적용되어 있는지 확인
+- `accounts.id` 타입이 실제로 `char(36)`인지 재확인
+- `accounts`에 같은 이름의 컬럼이 이미 없는지 확인
+- 신규 constraint 이름 충돌 여부 확인
+- 신규 index / unique 이름 충돌 여부 확인
 - MySQL 8.0에서 `CHECK`가 실제 enforce 되는지 환경 확인
 - 운영 DB에 기존 `accounts` row가 얼마나 있는지 확인
 - `login_id`, `referral_code` backfill 전략 수립
 - `joined_at`, `updated_at` backfill 필요 여부 확인
 - `binary_nodes`, `binary_edges` 초기 데이터 생성 전략 필요
 - `auth_sessions` retention / cleanup 정책 필요
+- 실제 적용 전 DB 백업
+- smoke SQL은 실패 기대 구문에서 중단될 수 있으므로 수동 로그 방식 또는 분할 실행 계획 필요
 
 ---
 
-## 10. trigger / stored routine 미사용 사유
+## 12. trigger / stored routine 미사용 사유
 
 현재 프로젝트 제약:
 
@@ -301,7 +358,7 @@
 
 ---
 
-## 11. app layer에서 반드시 막아야 할 것
+## 13. app layer에서 반드시 막아야 할 것
 
 - 추천인 순환
 - 바이너리 순환
@@ -320,7 +377,27 @@
 
 ---
 
-## 12. smoke SQL 요약
+## 14. cleanup / rollback 방향
+
+현재는 draft migration이므로 실제 rollback SQL 파일은 아직 만들지 않았다.
+
+되돌릴 경우 방향:
+
+- `binary_edges`
+- `binary_nodes`
+- `auth_sessions`
+- `accounts`의 FK / unique / index / check / columns
+
+즉, FK 의존 순서상 위에서 아래 방향으로 제거해야 한다.
+
+권장:
+
+- 실제 운영 DB 적용 전 `0002_rollback` 별도 파일을 준비한다.
+- 운영 반영 전에는 forward SQL과 rollback SQL을 함께 검토한다.
+
+---
+
+## 15. smoke SQL 요약
 
 [bjc_member_referral_binary_smoketest.sql](file:///Users/faster/Projects/bjc/mysql/smoke/bjc_member_referral_binary_smoketest.sql)에는 아래 항목을 넣었다.
 
@@ -345,7 +422,7 @@
 
 ---
 
-## 13. 이번 초안의 보류 항목
+## 16. 이번 초안의 보류 항목
 
 이번 0002에서는 만들지 않았다.
 
@@ -359,7 +436,7 @@
 
 ---
 
-## 14. 다음 구현 단계
+## 17. 다음 구현 단계
 
 1. `accountsRepo` 확장
 2. `auth repo/service`
@@ -371,7 +448,7 @@
 
 ---
 
-## 15. 결론
+## 18. 결론
 
 이번 0002 초안은 아래를 달성한다.
 

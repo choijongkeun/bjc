@@ -4,6 +4,9 @@ set sql_safe_updates = 0;
 -- Assumes 0001_bjc_offchain_core_mysql.sql has already been applied once.
 -- Do not run on production yet. This is a review-stage SQL draft only.
 
+-- ---------------------------------------------------------------------------
+-- accounts: column expansion
+-- ---------------------------------------------------------------------------
 alter table accounts
   add column login_id varchar(64) null after id,
   add column password_hash varchar(255) null after login_id,
@@ -16,6 +19,13 @@ alter table accounts
   add column last_login_at datetime(6) null after joined_at,
   add column updated_at datetime(6) null after last_login_at;
 
+-- ---------------------------------------------------------------------------
+-- accounts: indexes, foreign keys, checks
+-- Notes:
+-- - login_id / password_hash / referral_code remain nullable for backfill safety
+-- - binary_parent_account_id + binary_position is added as a denormalized
+--   protection layer in addition to binary_nodes
+-- ---------------------------------------------------------------------------
 alter table accounts
   add unique key uniq_accounts_login_id (login_id),
   add unique key uniq_accounts_referral_code (referral_code),
@@ -35,6 +45,11 @@ alter table accounts
   add constraint chk_accounts_binary_parent_not_self
     check (binary_parent_account_id is null or binary_parent_account_id <> id);
 
+-- ---------------------------------------------------------------------------
+-- auth_sessions
+-- - session-first auth storage
+-- - stores hash only, never raw session token
+-- ---------------------------------------------------------------------------
 create table if not exists auth_sessions (
   id bigint not null auto_increment,
   account_id char(36) not null,
@@ -54,6 +69,12 @@ create table if not exists auth_sessions (
     foreign key (account_id) references accounts(id)
 ) engine=InnoDB default charset=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- binary_nodes
+-- - source of truth for direct binary parent / child placement
+-- - root members may have parent_account_id = null and position = null
+-- - one direct LEFT and one direct RIGHT child per parent
+-- ---------------------------------------------------------------------------
 create table if not exists binary_nodes (
   account_id char(36) not null,
   parent_account_id char(36) null,
@@ -77,6 +98,13 @@ create table if not exists binary_nodes (
     check (parent_account_id is null or parent_account_id <> account_id)
 ) engine=InnoDB default charset=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- binary_edges
+-- - closure table for binary traversal and leg aggregations
+-- - self row policy:
+--   * self row allowed with depth = 0 and root_leg = null
+--   * non-self rows require depth > 0 and root_leg in ('LEFT', 'RIGHT')
+-- ---------------------------------------------------------------------------
 create table if not exists binary_edges (
   id bigint not null auto_increment,
   ancestor_account_id char(36) not null,
@@ -107,6 +135,9 @@ create table if not exists binary_edges (
     )
 ) engine=InnoDB default charset=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- referral_edges reuse policy
+-- ---------------------------------------------------------------------------
 -- referral_edges is intentionally reused as the sponsor closure table.
 -- 0002 does not drop, recreate, or rename referral_edges.
 -- If future API naming differs from the existing schema, map it in the service layer.

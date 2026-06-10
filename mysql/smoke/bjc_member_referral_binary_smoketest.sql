@@ -1,6 +1,10 @@
 -- BJC member / referral / binary / auth smoke test for 0002 draft
 -- This script is intended for manual execution and log review.
 -- Statements marked "should fail" are PASS when MySQL returns the expected error.
+-- Expected error codes:
+-- - duplicate key: ERROR 1062
+-- - foreign key:   ERROR 1452
+-- - CHECK:         ERROR 3819
 
 set sql_safe_updates = 0;
 
@@ -10,9 +14,20 @@ set @sponsor_id := uuid();
 set @user_id := uuid();
 set @ghost_id := uuid();
 
+-- ---------------------------------------------------------------------------
+-- T1 root/admin account insert
+-- ---------------------------------------------------------------------------
 select concat('T1 root/admin account insert (suffix=', @suffix, ')') as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  joined_at,
+  updated_at
 ) values (
   @root_admin_id,
   concat('admin_', @suffix),
@@ -25,10 +40,23 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T2 sponsor account insert
+-- ---------------------------------------------------------------------------
 select 'T2 sponsor account insert' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, sponsor_account_id,
-  binary_parent_account_id, binary_position, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  sponsor_account_id,
+  binary_parent_account_id,
+  binary_position,
+  joined_at,
+  updated_at
 ) values (
   @sponsor_id,
   concat('sponsor_', @suffix),
@@ -44,10 +72,23 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T3 new USER account insert with referral_code
+-- ---------------------------------------------------------------------------
 select 'T3 new USER account insert with referral_code and sponsor/binary parent' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, sponsor_account_id,
-  binary_parent_account_id, binary_position, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  sponsor_account_id,
+  binary_parent_account_id,
+  binary_position,
+  joined_at,
+  updated_at
 ) values (
   @user_id,
   concat('user_', @suffix),
@@ -63,9 +104,21 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T4 duplicate login_id should fail
+-- PASS if MySQL returns ERROR 1062
+-- ---------------------------------------------------------------------------
 select 'T4 duplicate login_id should fail with duplicate key (PASS if ERROR 1062)' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  joined_at,
+  updated_at
 ) values (
   uuid(),
   concat('user_', @suffix),
@@ -78,9 +131,21 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T5 duplicate referral_code should fail
+-- PASS if MySQL returns ERROR 1062
+-- ---------------------------------------------------------------------------
 select 'T5 duplicate referral_code should fail with duplicate key (PASS if ERROR 1062)' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  joined_at,
+  updated_at
 ) values (
   uuid(),
   concat('user_dup_ref_', @suffix),
@@ -93,10 +158,22 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T6 missing sponsor_account_id should fail
+-- PASS if MySQL returns ERROR 1452
+-- ---------------------------------------------------------------------------
 select 'T6 missing sponsor_account_id should fail with FK error (PASS if ERROR 1452)' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, sponsor_account_id,
-  joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  sponsor_account_id,
+  joined_at,
+  updated_at
 ) values (
   uuid(),
   concat('user_bad_sponsor_', @suffix),
@@ -110,9 +187,16 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T7 binary_nodes root insert
+-- ---------------------------------------------------------------------------
 select 'T7 binary_nodes root insert' as test;
 insert into binary_nodes (
-  account_id, parent_account_id, position, root_account_id, updated_at
+  account_id,
+  parent_account_id,
+  position,
+  root_account_id,
+  updated_at
 ) values (
   @root_admin_id,
   null,
@@ -121,9 +205,16 @@ insert into binary_nodes (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T8 binary_nodes LEFT insert success
+-- ---------------------------------------------------------------------------
 select 'T8 binary_nodes LEFT insert success' as test;
 insert into binary_nodes (
-  account_id, parent_account_id, position, root_account_id, updated_at
+  account_id,
+  parent_account_id,
+  position,
+  root_account_id,
+  updated_at
 ) values (
   @sponsor_id,
   @root_admin_id,
@@ -132,9 +223,17 @@ insert into binary_nodes (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T9 duplicate LEFT under same parent should fail
+-- PASS if MySQL returns ERROR 1062
+-- ---------------------------------------------------------------------------
 select 'T9 duplicate LEFT under same parent should fail (PASS if ERROR 1062)' as test;
 insert into binary_nodes (
-  account_id, parent_account_id, position, root_account_id, updated_at
+  account_id,
+  parent_account_id,
+  position,
+  root_account_id,
+  updated_at
 ) values (
   uuid(),
   @root_admin_id,
@@ -143,11 +242,24 @@ insert into binary_nodes (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T10 binary_nodes RIGHT insert success
+-- ---------------------------------------------------------------------------
 select 'T10 binary_nodes RIGHT insert success' as test;
 set @right_id := uuid();
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, sponsor_account_id,
-  binary_parent_account_id, binary_position, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  sponsor_account_id,
+  binary_parent_account_id,
+  binary_position,
+  joined_at,
+  updated_at
 ) values (
   @right_id,
   concat('right_', @suffix),
@@ -163,7 +275,11 @@ insert into accounts (
   now(6)
 );
 insert into binary_nodes (
-  account_id, parent_account_id, position, root_account_id, updated_at
+  account_id,
+  parent_account_id,
+  position,
+  root_account_id,
+  updated_at
 ) values (
   @right_id,
   @root_admin_id,
@@ -172,9 +288,16 @@ insert into binary_nodes (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T11 binary_edges closure insert
+-- ---------------------------------------------------------------------------
 select 'T11 binary_edges closure insert' as test;
 insert into binary_edges (
-  ancestor_account_id, descendant_account_id, depth, root_leg, path
+  ancestor_account_id,
+  descendant_account_id,
+  depth,
+  root_leg,
+  path
 ) values
   (@root_admin_id, @root_admin_id, 0, null, concat('/', @root_admin_id, '/')),
   (@root_admin_id, @sponsor_id, 1, 'LEFT', concat('/', @root_admin_id, '/', @sponsor_id, '/')),
@@ -182,9 +305,17 @@ insert into binary_edges (
   (@root_admin_id, @right_id, 1, 'RIGHT', concat('/', @root_admin_id, '/', @right_id, '/')),
   (@right_id, @right_id, 0, null, concat('/', @right_id, '/'));
 
+-- ---------------------------------------------------------------------------
+-- T12 duplicate ancestor/descendant should fail
+-- PASS if MySQL returns ERROR 1062
+-- ---------------------------------------------------------------------------
 select 'T12 duplicate ancestor/descendant should fail (PASS if ERROR 1062)' as test;
 insert into binary_edges (
-  ancestor_account_id, descendant_account_id, depth, root_leg, path
+  ancestor_account_id,
+  descendant_account_id,
+  depth,
+  root_leg,
+  path
 ) values (
   @root_admin_id,
   @sponsor_id,
@@ -193,10 +324,19 @@ insert into binary_edges (
   concat('/dup/', @root_admin_id, '/', @sponsor_id, '/')
 );
 
+-- ---------------------------------------------------------------------------
+-- T13 auth_sessions insert success
+-- ---------------------------------------------------------------------------
 select 'T13 auth_sessions insert success' as test;
 set @session_hash := concat('sess_', @suffix);
 insert into auth_sessions (
-  account_id, session_token_hash, expires_at, revoked_at, last_seen_at, user_agent, ip_address
+  account_id,
+  session_token_hash,
+  expires_at,
+  revoked_at,
+  last_seen_at,
+  user_agent,
+  ip_address
 ) values (
   @user_id,
   @session_hash,
@@ -207,9 +347,19 @@ insert into auth_sessions (
   '127.0.0.1'
 );
 
+-- ---------------------------------------------------------------------------
+-- T14 duplicate session_token_hash should fail
+-- PASS if MySQL returns ERROR 1062
+-- ---------------------------------------------------------------------------
 select 'T14 duplicate session_token_hash should fail (PASS if ERROR 1062)' as test;
 insert into auth_sessions (
-  account_id, session_token_hash, expires_at, revoked_at, last_seen_at, user_agent, ip_address
+  account_id,
+  session_token_hash,
+  expires_at,
+  revoked_at,
+  last_seen_at,
+  user_agent,
+  ip_address
 ) values (
   @sponsor_id,
   @session_hash,
@@ -220,9 +370,21 @@ insert into auth_sessions (
   '127.0.0.1'
 );
 
+-- ---------------------------------------------------------------------------
+-- T15 invalid status should fail due to CHECK
+-- PASS if MySQL returns ERROR 3819
+-- ---------------------------------------------------------------------------
 select 'T15 invalid status should fail due to CHECK (PASS if ERROR 3819)' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  joined_at,
+  updated_at
 ) values (
   uuid(),
   concat('bad_status_', @suffix),
@@ -235,10 +397,24 @@ insert into accounts (
   now(6)
 );
 
+-- ---------------------------------------------------------------------------
+-- T16 invalid binary_position should fail due to CHECK
+-- PASS if MySQL returns ERROR 3819
+-- ---------------------------------------------------------------------------
 select 'T16 invalid binary_position should fail due to CHECK (PASS if ERROR 3819)' as test;
 insert into accounts (
-  id, login_id, password_hash, display_name, role, status, referral_code, sponsor_account_id,
-  binary_parent_account_id, binary_position, joined_at, updated_at
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  sponsor_account_id,
+  binary_parent_account_id,
+  binary_position,
+  joined_at,
+  updated_at
 ) values (
   uuid(),
   concat('bad_pos_', @suffix),
