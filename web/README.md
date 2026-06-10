@@ -1,57 +1,122 @@
-# React + TypeScript + Vite
+# BJC Admin Console
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 18 + TypeScript + Vite + TailwindCSS 3 기반의 BJC 관리자 콘솔입니다.
 
-Currently, two official plugins are available:
+## Environment
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+`src/lib/api.ts`는 `VITE_API_BASE_URL`을 우선 사용하고, 값이 없으면 상대 경로(`/api`)로 요청합니다.
 
-## Expanding the ESLint configuration
+- dev 편의 기능: `vite.config.ts`의 `server.proxy`가 `http://localhost:3000`으로 `/api`, `/health`를 프록시합니다.
+- preview / production-like: Vite dev proxy가 없으므로 `VITE_API_BASE_URL`을 반드시 설정해야 합니다.
+- 로컬 preview smoke를 위해 백엔드는 `localhost` / `127.0.0.1` 출처의 CORS preflight를 허용합니다.
+- 운영 배포에서는 관리자 콘솔 도메인을 백엔드 CORS allowlist에 명시적으로 등록해야 합니다.
+- 운영에서는 `Access-Control-Allow-Origin: *` 와일드카드 사용을 지양합니다.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+기본 예시는 `web/.env.example`, `web/.env.local.example`에 있습니다.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```env
+VITE_API_BASE_URL=http://localhost:3000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+로컬에서 고정해서 쓰려면 `web/.env.local`을 생성하세요. `.env.local`은 저장소에 커밋하지 않습니다.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```env
+VITE_API_BASE_URL=http://localhost:3000
 ```
+
+## Backend Run
+
+백엔드는 저장소 루트에서 실행합니다.
+
+- 루트에서 `npm install`
+- 루트에서 `.env` 준비
+- 루트에서 `npm run dev`
+- 기본 포트는 `:3000`
+- `.env`는 저장소에 포함하지 않습니다.
+
+```bash
+npm install
+npm run dev
+```
+
+## Frontend Dev Run
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+- 기본 포트는 `:5173`
+- dev에서는 `vite.config.ts`의 `server.proxy`로 `/api`, `/health`를 `http://localhost:3000`에 연결할 수 있습니다.
+
+## Frontend Preview Run
+
+preview / production-like 환경에서는 dev proxy가 적용되지 않으므로 빌드 시점에 `VITE_API_BASE_URL`을 주입해야 합니다.
+
+```bash
+cd web
+npm install
+VITE_API_BASE_URL=http://localhost:3000 npm run build
+npm run preview -- --host 0.0.0.0 --port 4175
+```
+
+- preview 기본 검증 포트 예시는 `:4175`
+- preview에서는 `server.proxy`가 아니라 `VITE_API_BASE_URL` 기준으로 API를 호출합니다.
+
+## Actor Id Guide
+
+실제 UUID는 문서에 고정하지 않고 아래 기준으로 사용합니다.
+
+- `ADMIN actor id`: `accounts.role = 'ADMIN'` 인 계정 UUID
+- `READER actor id`: `accounts.role = 'READER'` 인 계정 UUID
+- `USER actor id`: `accounts.role = 'USER'` 인 계정 UUID
+
+## Verify
+
+프론트 테스트:
+
+```bash
+cd web
+npm test
+```
+
+프론트 production-like 빌드:
+
+```bash
+cd web
+VITE_API_BASE_URL=http://localhost:3000 npm run build
+```
+
+백엔드 빌드:
+
+```bash
+npm run build
+```
+
+## Smoke Checklist
+
+상세 체크리스트는 [.trae/documents/BJC_Admin_Console_Smoke_Checklist.md](file:///Users/faster/Projects/bjc/.trae/documents/BJC_Admin_Console_Smoke_Checklist.md)에 정리되어 있습니다.
+
+핵심 확인 항목:
+
+- `/login` 렌더링
+- `ADMIN` 로그인 성공
+- `ADMIN /admin?tab=policies` 조회
+- `ADMIN /admin?tab=audit` 접근
+- `READER` 로그인 성공
+- `READER` write 버튼 비노출
+- `READER` audit 직접 접근 시 safe 우회
+- `USER` 로그인 차단
+- `/admin/ledger/:accountId` 상세 렌더링
+- `npm test` 통과
+- 프론트 `npm run build` 통과
+- 루트 백엔드 `npm run build` 통과
+
+## Pre-Deploy Checks
+
+- `VITE_API_BASE_URL`을 운영 API 주소로 설정
+- 백엔드 CORS allowlist에 운영 관리자 도메인 등록
+- `.env`, `web/.env.local` 미커밋 확인
+- MySQL 접속정보 미노출 확인
+- 프론트 `dist` 산출물 생성 확인
