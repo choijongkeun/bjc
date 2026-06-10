@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Network | BJC DeFi Institutional</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        .circuit-line {
+            background: #334155;
+            position: absolute;
+            z-index: 0;
+        }
+        .node-active-glow {
+            box-shadow: 0 0 15px rgba(78, 222, 163, 0.15);
+        }
+        /* Custom scrollbar for data-heavy views */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b1326;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #424754;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#92002a",
+                    "on-primary-fixed": "#001a42",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#005236",
+                    "primary-container": "#4d8eff",
+                    "surface-container-highest": "#2d3449",
+                    "on-tertiary-fixed": "#40000d",
+                    "on-tertiary": "#67001b",
+                    "inverse-surface": "#dae2fd",
+                    "on-secondary-container": "#00311f",
+                    "on-primary-container": "#00285d",
+                    "on-secondary": "#003824",
+                    "primary-fixed": "#d8e2ff",
+                    "on-error": "#690005",
+                    "tertiary-container": "#ff516a",
+                    "surface-container-lowest": "#060e20",
+                    "surface-container-high": "#222a3d",
+                    "outline": "#8c909f",
+                    "on-primary-fixed-variant": "#004395",
+                    "background": "#0b1326",
+                    "on-surface": "#dae2fd",
+                    "surface-bright": "#31394d",
+                    "outline-variant": "#424754",
+                    "secondary": "#4edea3",
+                    "surface-dim": "#0b1326",
+                    "primary-fixed-dim": "#adc6ff",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "secondary-container": "#00a572",
+                    "error": "#ffb4ab",
+                    "secondary-fixed": "#6ffbbe",
+                    "secondary-fixed-dim": "#4edea3",
+                    "inverse-primary": "#005ac2",
+                    "surface-container": "#171f33",
+                    "tertiary": "#ffb2b7",
+                    "tertiary-fixed": "#ffdadb",
+                    "surface-tint": "#adc6ff",
+                    "surface": "#0b1326",
+                    "error-container": "#93000a",
+                    "inverse-on-surface": "#283044",
+                    "on-surface-variant": "#c2c6d6",
+                    "on-tertiary-container": "#5b0017",
+                    "primary": "#adc6ff",
+                    "on-secondary-fixed": "#002113",
+                    "on-primary": "#002e6a",
+                    "surface-variant": "#2d3449",
+                    "surface-container-low": "#131b2e",
+                    "on-background": "#dae2fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "40px",
+                    "base": "4px",
+                    "sm": "12px",
+                    "xs": "8px",
+                    "lg": "24px",
+                    "container-max": "1440px",
+                    "gutter": "20px",
+                    "md": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "data-lg": ["JetBrains Mono"],
+                    "data-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen">
+<!-- Sidebar Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-surface-container-low border-r border-outline-variant flex flex-col p-md">
+<div class="mb-xl px-xs">
+<h1 class="font-headline-md text-headline-md font-extrabold text-on-surface">BJC Institutional</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70">Tier 1 Vault</p>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-sm text-label-sm">Staking</span>
+</a>
+<!-- Active State: Network -->
+<a class="bg-secondary-container text-on-secondary-container rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-label-sm text-label-sm">Network</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Transactions</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-sm text-label-sm">Governance</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">shield_person</span>
+<span class="font-label-sm text-label-sm">Admin</span>
+</a>
+</nav>
+<div class="mt-auto space-y-base border-t border-outline-variant pt-md">
+<button class="w-full bg-primary text-on-primary font-bold py-sm px-md rounded-xl mb-md transition-all active:scale-95">
+                Stake Assets
+            </button>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-sm text-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex flex-col min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant flex justify-between items-center px-lg py-sm">
+<div class="flex items-center gap-md">
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-xl pr-md py-xs text-body-md focus:ring-2 focus:ring-primary" placeholder="Search Node ID, User or Rank..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<nav class="hidden md:flex items-center gap-lg mr-lg">
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="#">Overview</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">Network Tree</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="#">Analytics</a>
+</nav>
+<div class="flex items-center gap-md">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="bg-primary-container text-on-primary-container px-md py-xs rounded-full font-label-sm text-label-sm transition-opacity active:opacity-80">
+                        Connect Wallet
+                    </button>
+<img alt="User Avatar" class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRqqoUwU4Av58sXWO9hpwoeUc8WEGgMDq1fwrSK1KQAPAmFdia0vE6mOBcCDL1Ev86SjXcMlyIYzxYmBCRdJArleMRWR_l3hG5UjJgtaD2ro2r6F51oDaVn8RZatl_mtwNYYip6-JgfEIJWaS-nGX89X4uwlZ7jKoSR2j9u_uFFJ5WhOJ5-mSgPx4KrnWYUXIhkQ_m9xUsFnj97OdUTddJiwQJLMJKZTKHRTsVx1VSDgZDjBjTjRJrHD4cioHPLYqA4ZaavXalCQ"/>
+</div>
+</div>
+</header>
+<!-- Dynamic Content Header -->
+<section class="p-lg">
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Network Genealogy</h2>
+<p class="text-on-surface-variant font-body-md">Visualizing institutional hierarchy and staking attribution levels.</p>
+</div>
+<div class="flex gap-sm">
+<div class="flex items-center gap-xs px-md py-sm glass-panel rounded-xl">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-label-sm">Active Nodes: 1,248</span>
+</div>
+<div class="flex items-center gap-xs px-md py-sm glass-panel rounded-xl">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span class="font-label-sm text-label-sm">Inactive: 152</span>
+</div>
+</div>
+</div>
+<!-- Dashboard Interaction Bar -->
+<div class="flex flex-wrap gap-md mb-xl">
+<div class="glass-panel p-xs rounded-xl flex items-center gap-xs">
+<button class="px-md py-xs bg-secondary text-on-secondary rounded-lg font-label-sm text-label-sm">Depth: 3</button>
+<button class="px-md py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm transition-colors">Depth: 5</button>
+<button class="px-md py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm transition-colors">Max</button>
+</div>
+<div class="glass-panel p-xs rounded-xl flex items-center gap-xs">
+<button class="px-md py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Filter by Rank
+                    </button>
+</div>
+<div class="ml-auto glass-panel p-xs rounded-xl flex items-center gap-xs">
+<button class="px-md py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">zoom_in</span>
+                        Zoom
+                    </button>
+<button class="px-md py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">center_focus_strong</span>
+                        Recenter
+                    </button>
+</div>
+</div>
+<!-- Network Canvas Area -->
+<div class="relative w-full h-[700px] glass-panel rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing">
+<!-- Background Shader / Atmospheric Effect -->
+
+<div class="absolute inset-0 p-xl flex flex-col items-center" id="tree-container">
+<!-- Root Node -->
+<div class="relative z-10 flex flex-col items-center mb-xl">
+<div class="w-72 glass-panel p-md rounded-2xl border-primary/40 node-active-glow relative">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-sm py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Master Node</div>
+<div class="flex items-start justify-between mb-sm">
+<div>
+<p class="font-data-md text-data-md text-primary mb-1">ID: BJC-0001</p>
+<h4 class="font-headline-md text-headline-md leading-tight text-on-surface">Alex Thompson</h4>
+</div>
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional studio portrait of a high-net-worth individual for a premium DeFi dashboard. The person has a confident and welcoming expression, appearing as a leader in a corporate modern setting. The lighting is soft and cinematic with a cool blue and slate color palette. The background is a clean, out-of-focus modern office environment with subtle glass elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx95XosOwnFvKY2HZADJYZXDDJjVTxosu3Ihb3pH-UisbEKxwR7QFc9AaVunrp-7JpnSWOS4tFB_ve_JTcBTMGHoBgIMR6PXqRaWoHY7nk-izoAfGENoL3yZd4U77xv5230gCPOxOmjNWc5vfHg3QiuEVpdN7GIDp1156Uu2_JimwqeURQMtinW59CUkmxUv-Z6fSXDrkrVIdgUArrj7lPBABhExfIZKPLIAPxTQSjmyOidfpNz1gldNqTuV4o4w_gq6LnfN8_dg"/>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-md border-t border-outline-variant/30 pt-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">RANK</p>
+<p class="font-data-lg text-data-lg text-secondary">Diamond</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">STAKING</p>
+<p class="font-data-lg text-data-lg text-on-surface">$2.4M</p>
+</div>
+</div>
+</div>
+<!-- Connectors (Downwards) -->
+<div class="circuit-line w-[1px] h-20 top-full"></div>
+<div class="circuit-line w-[600px] h-[1px] top-[calc(100%+80px)]"></div>
+</div>
+<!-- Level 1 Nodes -->
+<div class="flex gap-xl relative z-10 mt-xl">
+<!-- Left Branch -->
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10"></div>
+<div class="w-64 glass-panel p-md rounded-2xl border-outline-variant hover:border-primary/50 transition-colors group cursor-pointer">
+<div class="flex items-center gap-md mb-sm">
+<img alt="User" class="w-10 h-10 rounded-full bg-surface-variant" data-alt="A sharp, professional headshot of a female tech executive, styled for a luxury financial application. She is wearing a modern tailored blazer in charcoal gray. The lighting is bright but high-contrast, emphasizing a high-end corporate aesthetic. The overall mood is focused, sophisticated, and authoritative, matching a dark-mode slate UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCV9pZbHR0XE4FMY_v1L80qg2LAAP8eyLSNdkvbYAsSr-8V-Be9Y9a82XgEre5oJtYiewePEag_L3iTuEbrigjpEqmuWGqzWpazhzPY3FnlXYOrDdvclWpfybicrjx56GYXmXgvH6KusuZpmkPZW4i7cZEawv58PDkpeWx7aO6HOyRHqmjVfNGIFfMe-FVq8tdpIby9M-NH_fwZ-NBZbPPT6fZ3i_eDIb__3_-SnYOi2qKRpTIGeWj8IJlNrezt3wg-VVSmOU_jpA"/>
+<div>
+<h5 class="font-label-sm text-label-sm text-on-surface">Sarah Jenkins</h5>
+<p class="font-data-md text-[10px] text-primary">ID: BJC-0422</p>
+</div>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Staked</p>
+<p class="font-data-md text-data-md text-on-surface">$842k</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-[10px] px-sm py-1 rounded-full font-bold">Gold</span>
+</div>
+</div>
+<!-- Sub-connectors -->
+<div class="circuit-line w-[1px] h-10 top-full opacity-40"></div>
+<div class="circuit-line w-[280px] h-[1px] top-[calc(100%+40px)] opacity-40"></div>
+</div>
+<!-- Right Branch -->
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10"></div>
+<div class="w-64 glass-panel p-md rounded-2xl border-outline-variant hover:border-primary/50 transition-colors group cursor-pointer">
+<div class="flex items-center gap-md mb-sm">
+<img alt="User" class="w-10 h-10 rounded-full bg-surface-variant" data-alt="A modern portrait of a successful digital entrepreneur with a relaxed but professional demeanor. He has a minimalist style with a dark turtleneck. The lighting is soft-key with deep shadows, emphasizing the obsidian glass aesthetic of the surrounding UI. The background is a clean, dark gradients suggesting a high-end workspace." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWI8EaBZarcI1P3wC-CwVtkL-7RSG_SCgdenu1vs6DYzeSCRB4sBkZLraupbR4cygikcgkKxBZf0iLHHAGNQ_0V7Ys-mra1GV237912X1OCvdvSLg-jpmFTugatfePC40fiynvLamAX5lu4DF7oEi6MHiVgzMQ7mMofzv8SLXpUE68eAKznDaenckp24zMPMkRwF7-946XOAElZ8DFno-AL8bJCrYBwOFfpq6jTIb15DmLcOqWYp1NoxbcsDkNpAY6AgAw69tv3g"/>
+<div>
+<h5 class="font-label-sm text-label-sm text-on-surface">Marcus Reed</h5>
+<p class="font-data-md text-[10px] text-primary">ID: BJC-1108</p>
+</div>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Staked</p>
+<p class="font-data-md text-data-md text-on-surface">$1.2M</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-[10px] px-sm py-1 rounded-full font-bold">Platinum</span>
+</div>
+</div>
+<!-- Sub-connectors -->
+<div class="circuit-line w-[1px] h-10 top-full opacity-40"></div>
+<div class="circuit-line w-[280px] h-[1px] top-[calc(100%+40px)] opacity-40"></div>
+</div>
+</div>
+<!-- Level 2 Nodes (Simplified Grid for space) -->
+<div class="flex gap-lg mt-xl relative z-10 pt-md">
+<!-- Bottom Row Children -->
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10 opacity-40"></div>
+<div class="w-48 glass-panel p-sm rounded-xl border-outline-variant/30 flex flex-col gap-xs opacity-80 hover:opacity-100 transition-opacity">
+<p class="text-[10px] text-primary font-bold">BJC-2291</p>
+<p class="font-label-sm text-label-sm">Emma Vance</p>
+<div class="flex justify-between items-center mt-xs">
+<p class="font-data-md text-[12px]">$120k</p>
+<span class="text-[9px] px-xs bg-outline/20 text-on-surface-variant rounded">Silver</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10 opacity-40"></div>
+<div class="w-48 glass-panel p-sm rounded-xl border-outline-variant/30 flex flex-col gap-xs opacity-80 hover:opacity-100 transition-opacity">
+<p class="text-[10px] text-primary font-bold">BJC-3011</p>
+<p class="font-label-sm text-label-sm">David Chen</p>
+<div class="flex justify-between items-center mt-xs">
+<p class="font-data-md text-[12px]">$45k</p>
+<span class="text-[9px] px-xs bg-outline/20 text-on-surface-variant rounded">Bronze</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10 opacity-40"></div>
+<div class="w-48 glass-panel p-sm rounded-xl border-outline-variant/30 flex flex-col gap-xs opacity-80 hover:opacity-100 transition-opacity">
+<p class="text-[10px] text-primary font-bold">BJC-0922</p>
+<p class="font-label-sm text-label-sm">S. Rodriguez</p>
+<div class="flex justify-between items-center mt-xs">
+<p class="font-data-md text-[12px]">$310k</p>
+<span class="text-[9px] px-xs bg-secondary/20 text-secondary rounded">Gold</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<div class="circuit-line w-[1px] h-10 -top-10 opacity-40"></div>
+<div class="w-48 glass-panel p-sm rounded-xl border-outline-variant/30 flex flex-col gap-xs opacity-80 hover:opacity-100 transition-opacity">
+<p class="text-[10px] text-primary font-bold">BJC-4421</p>
+<p class="font-label-sm text-label-sm">Julian Keys</p>
+<div class="flex justify-between items-center mt-xs">
+<p class="font-data-md text-[12px]">$18k</p>
+<span class="text-[9px] px-xs bg-error/20 text-error rounded opacity-60">Inactive</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Navigation Controls Overlay -->
+<div class="absolute bottom-lg right-lg flex flex-col gap-xs">
+<button class="w-10 h-10 glass-panel flex items-center justify-center rounded-xl hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 glass-panel flex items-center justify-center rounded-xl hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<div class="h-px bg-outline-variant my-xs"></div>
+<button class="w-10 h-10 glass-panel flex items-center justify-center rounded-xl hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+<!-- Legend Overlay -->
+<div class="absolute bottom-lg left-lg glass-panel p-md rounded-2xl flex items-center gap-lg">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="font-label-sm text-label-sm text-on-surface">Active</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-error opacity-60"></div>
+<span class="font-label-sm text-label-sm text-on-surface">Inactive / Grace</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full border border-primary"></div>
+<span class="font-label-sm text-label-sm text-on-surface">Next Milestone</span>
+</div>
+</div>
+</div>
+<!-- Stats Footer Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg mt-xl">
+<div class="glass-panel p-lg rounded-2xl">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-xs">Direct Referrals</p>
+<div class="flex items-end justify-between">
+<h3 class="font-display-lg text-[32px] font-bold text-on-surface">42</h3>
+<span class="text-secondary font-data-md flex items-center gap-1 text-sm pb-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> +3
+                        </span>
+</div>
+<div class="mt-md h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[70%]"></div>
+</div>
+</div>
+<div class="glass-panel p-lg rounded-2xl">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-xs">Group Staking Vol.</p>
+<div class="flex items-end justify-between">
+<h3 class="font-display-lg text-[32px] font-bold text-on-surface">$14.8M</h3>
+<span class="text-secondary font-data-md flex items-center gap-1 text-sm pb-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                        </span>
+</div>
+<div class="mt-md h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[85%]"></div>
+</div>
+</div>
+<div class="glass-panel p-lg rounded-2xl">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-xs">Active Tree Depth</p>
+<div class="flex items-end justify-between">
+<h3 class="font-display-lg text-[32px] font-bold text-on-surface">12 Levels</h3>
+<span class="text-on-surface-variant font-data-md flex items-center gap-1 text-sm pb-1">
+<span class="material-symbols-outlined text-sm">horizontal_rule</span> Steady
+                        </span>
+</div>
+<div class="mt-md h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[40%]"></div>
+</div>
+</div>
+<div class="glass-panel p-lg rounded-2xl border-primary/20 bg-primary/5">
+<p class="font-label-sm text-label-sm text-primary mb-xs">Current Commission</p>
+<div class="flex items-end justify-between">
+<h3 class="font-display-lg text-[32px] font-bold text-on-surface">2.4% APY</h3>
+<span class="text-primary font-data-md flex items-center gap-1 text-sm pb-1">
+                            Bonus Active
+                        </span>
+</div>
+<button class="mt-md w-full py-xs border border-primary/30 text-primary font-label-sm text-label-sm rounded-lg hover:bg-primary/10 transition-colors">
+                        View Attribution
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // Micro-interaction for pan/zoom simulation logic
+        const container = document.getElementById('tree-container');
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
+
+        container.parentElement.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.pageX - container.offsetLeft;
+            startY = e.pageY - container.offsetTop;
+            scrollLeft = container.offsetLeft;
+            scrollTop = container.offsetTop;
+        });
+
+        container.parentElement.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        container.parentElement.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        container.parentElement.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const y = e.pageY - container.offsetTop;
+            const walkX = (x - startX) * 0.5;
+            const walkY = (y - startY) * 0.5;
+            // Simulated movement
+            container.style.transform = `translate(${walkX}px, ${walkY}px)`;
+        });
+
+        // Hover effects for node high-lighting
+        document.querySelectorAll('.group').forEach(node => {
+            node.addEventListener('mouseenter', () => {
+                // Potential to highlight connected lines here
+            });
+        });
+    </script>
+</body></html>

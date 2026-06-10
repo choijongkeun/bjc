@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Staking Dashboard | BJC DeFi</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        .circuit-line {
+            position: relative;
+        }
+        .circuit-line::after {
+            content: '';
+            position: absolute;
+            background: #424754;
+            height: 1px;
+            width: 20px;
+            right: -20px;
+            top: 50%;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .active-nav-glow {
+            box-shadow: 0 0 15px rgba(0, 165, 114, 0.2);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "on-primary-fixed": "#001a42",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#005236",
+                      "primary-container": "#4d8eff",
+                      "surface-container-highest": "#2d3449",
+                      "on-tertiary-fixed": "#40000d",
+                      "on-tertiary": "#67001b",
+                      "inverse-surface": "#dae2fd",
+                      "on-secondary-container": "#00311f",
+                      "on-primary-container": "#00285d",
+                      "on-secondary": "#003824",
+                      "primary-fixed": "#d8e2ff",
+                      "on-error": "#690005",
+                      "tertiary-container": "#ff516a",
+                      "surface-container-lowest": "#060e20",
+                      "surface-container-high": "#222a3d",
+                      "outline": "#8c909f",
+                      "on-primary-fixed-variant": "#004395",
+                      "background": "#0b1326",
+                      "on-surface": "#dae2fd",
+                      "surface-bright": "#31394d",
+                      "outline-variant": "#424754",
+                      "secondary": "#4edea3",
+                      "surface-dim": "#0b1326",
+                      "primary-fixed-dim": "#adc6ff",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "secondary-container": "#00a572",
+                      "error": "#ffb4ab",
+                      "secondary-fixed": "#6ffbbe",
+                      "secondary-fixed-dim": "#4edea3",
+                      "inverse-primary": "#005ac2",
+                      "surface-container": "#171f33",
+                      "tertiary": "#ffb2b7",
+                      "tertiary-fixed": "#ffdadb",
+                      "surface-tint": "#adc6ff",
+                      "surface": "#0b1326",
+                      "error-container": "#93000a",
+                      "inverse-on-surface": "#283044",
+                      "on-surface-variant": "#c2c6d6",
+                      "on-tertiary-container": "#5b0017",
+                      "primary": "#adc6ff",
+                      "on-secondary-fixed": "#002113",
+                      "on-primary": "#002e6a",
+                      "surface-variant": "#2d3449",
+                      "surface-container-low": "#131b2e",
+                      "on-background": "#dae2fd"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "40px",
+                      "base": "4px",
+                      "sm": "12px",
+                      "xs": "8px",
+                      "lg": "24px",
+                      "container-max": "1440px",
+                      "gutter": "20px",
+                      "md": "16px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "data-lg": ["JetBrains Mono"],
+                      "data-md": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+                      "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen">
+<!-- TopNavBar -->
+<nav class="w-full sticky top-0 z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-outline-variant flex justify-between items-center px-lg py-sm">
+<div class="flex items-center gap-lg">
+<span class="font-headline-md text-headline-md font-bold text-primary">BJC DeFi</span>
+<div class="hidden md:flex gap-md">
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200" href="#">Dashboard</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">Staking</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200" href="#">Network</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200" href="#">Governance</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex items-center bg-surface-container px-md py-xs rounded-xl border border-outline-variant">
+<span class="material-symbols-outlined text-outline text-[20px] mr-xs">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-label-sm w-48 text-on-surface" placeholder="Search markets..." type="text"/>
+</div>
+<button class="bg-primary-container text-on-primary-container px-lg py-xs rounded-full font-label-sm hover:opacity-80 transition-opacity">Connect Wallet</button>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+</div>
+</nav>
+<!-- SideNavBar (Hidden on Mobile) -->
+<aside class="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 z-40 bg-surface-container dark:bg-surface-container-low border-r border-outline-variant p-md pt-[80px]">
+<div class="flex flex-col gap-xs mb-xl">
+<div class="flex items-center gap-md px-md py-sm">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface font-extrabold">BJC Institutional</p>
+<p class="text-[10px] text-outline uppercase tracking-wider">Tier 1 Vault</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm">Dashboard</span>
+</a>
+<a class="bg-secondary-container text-on-secondary-container rounded-xl flex items-center gap-md px-md py-sm active-nav-glow" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="font-label-sm">Staking</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-label-sm">Network</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm">Transactions</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-sm">Governance</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">shield_person</span>
+<span class="font-label-sm">Admin</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant pt-md space-y-base">
+<button class="w-full bg-secondary text-on-secondary font-bold py-sm rounded-xl mb-md hover:scale-[0.98] transition-transform">
+                Stake Assets
+            </button>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label-sm">Support</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:pl-64 min-h-screen">
+<div class="max-w-container-max mx-auto p-lg">
+<!-- Header Section -->
+<div class="mb-xl flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-xs">Institutional Staking</h1>
+<p class="text-on-surface-variant max-w-2xl">Secure your digital assets in our Tier 1 vaults. High-yield staking products designed for long-term growth and maximum security with daily compounding rewards.</p>
+</div>
+<div class="flex gap-sm">
+<div class="glass-card px-lg py-sm rounded-xl">
+<p class="text-label-sm text-outline uppercase mb-xs">Total Staked</p>
+<p class="font-data-lg text-data-lg text-secondary">$12.48M</p>
+</div>
+<div class="glass-card px-lg py-sm rounded-xl">
+<p class="text-label-sm text-outline uppercase mb-xs">Accrued Rewards</p>
+<p class="font-data-lg text-data-lg text-tertiary">$45,210.12</p>
+</div>
+</div>
+</div>
+<!-- Staking Product List (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg mb-xl">
+<!-- Product 1 -->
+<div class="glass-card rounded-xl p-lg flex flex-col group hover:border-primary/50 transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</div>
+<span class="bg-secondary/10 text-secondary text-[10px] font-bold px-xs py-[2px] rounded border border-secondary/20">HOT</span>
+</div>
+<h3 class="font-headline-md text-on-surface mb-base">Ethereum Liquid</h3>
+<p class="text-label-sm text-outline mb-lg">Institutional Grade PoS</p>
+<div class="space-y-sm mb-xl flex-1">
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Daily ROI</span>
+<span class="font-data-md text-secondary">0.024%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Period</span>
+<span class="font-data-md text-on-surface">30 Days</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Min Stake</span>
+<span class="font-data-md text-on-surface">0.5 ETH</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-sm rounded-xl font-bold hover:opacity-90 transition-opacity active:scale-[0.98]">Stake Now</button>
+</div>
+<!-- Product 2 -->
+<div class="glass-card rounded-xl p-lg flex flex-col group hover:border-primary/50 transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</div>
+</div>
+<h3 class="font-headline-md text-on-surface mb-base">Blue Chip Vault</h3>
+<p class="text-label-sm text-outline mb-lg">Multi-asset Staking</p>
+<div class="space-y-sm mb-xl flex-1">
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Daily ROI</span>
+<span class="font-data-md text-secondary">0.018%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Period</span>
+<span class="font-data-md text-on-surface">90 Days</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Min Stake</span>
+<span class="font-data-md text-on-surface">5,000 USDC</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-sm rounded-xl font-bold hover:opacity-90 transition-opacity active:scale-[0.98]">Stake Now</button>
+</div>
+<!-- Product 3 -->
+<div class="glass-card rounded-xl p-lg flex flex-col group hover:border-primary/50 transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+</div>
+<h3 class="font-headline-md text-on-surface mb-base">Solana Alpha</h3>
+<p class="text-label-sm text-outline mb-lg">High Velocity Staking</p>
+<div class="space-y-sm mb-xl flex-1">
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Daily ROI</span>
+<span class="font-data-md text-secondary">0.038%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Period</span>
+<span class="font-data-md text-on-surface">15 Days</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Min Stake</span>
+<span class="font-data-md text-on-surface">100 SOL</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-sm rounded-xl font-bold hover:opacity-90 transition-opacity active:scale-[0.98]">Stake Now</button>
+</div>
+<!-- Product 4 -->
+<div class="glass-card rounded-xl p-lg flex flex-col group hover:border-primary/50 transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-outline" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+<h3 class="font-headline-md text-on-surface mb-base">Governance Lock</h3>
+<p class="text-label-sm text-outline mb-lg">Long-term BJC Utility</p>
+<div class="space-y-sm mb-xl flex-1">
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Daily ROI</span>
+<span class="font-data-md text-secondary">0.045%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Period</span>
+<span class="font-data-md text-on-surface">365 Days</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-label-sm text-on-surface-variant">Min Stake</span>
+<span class="font-data-md text-on-surface">1,000 BJC</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-sm rounded-xl font-bold hover:opacity-90 transition-opacity active:scale-[0.98]">Stake Now</button>
+</div>
+</div>
+<!-- My Active Staking Section -->
+<div class="glass-card rounded-xl overflow-hidden border border-outline-variant">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h2 class="font-headline-md text-on-surface">My Active Staking</h2>
+<div class="flex gap-sm">
+<button class="text-label-sm text-on-surface-variant hover:text-primary flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">download</span> Export CSV
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface-container-high/90 backdrop-blur-md z-10">
+<tr>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant">Product</th>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant">Amount</th>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant">Period</th>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant">Daily Rate</th>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant">Start / End Date</th>
+<th class="px-lg py-md text-label-sm text-outline uppercase border-b border-outline-variant text-right">Earned Rewards</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[18px]">monetization_on</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface">Ethereum Liquid</p>
+<p class="text-[10px] text-outline">TXID: 8v2...x91</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-md font-data-md text-on-surface">12.50 ETH</td>
+<td class="px-lg py-md">
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden mb-xs">
+<div class="bg-secondary h-full" style="width: 65%;"></div>
+</div>
+<span class="text-[10px] text-outline">Day 20 of 30</span>
+</td>
+<td class="px-lg py-md font-data-md text-secondary">0.024%</td>
+<td class="px-lg py-md font-data-md text-on-surface-variant">
+                                    Oct 12 / Nov 11
+                                </td>
+<td class="px-lg py-md text-right">
+<p class="font-data-md text-secondary">+0.060 ETH</p>
+<p class="text-[10px] text-outline">≈ $152.40 USD</p>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">diamond</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface">Blue Chip Vault</p>
+<p class="text-[10px] text-outline">TXID: 4m1...z33</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-md font-data-md text-on-surface">25,000 USDC</td>
+<td class="px-lg py-md">
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden mb-xs">
+<div class="bg-primary h-full" style="width: 12%;"></div>
+</div>
+<span class="text-[10px] text-outline">Day 11 of 90</span>
+</td>
+<td class="px-lg py-md font-data-md text-secondary">0.018%</td>
+<td class="px-lg py-md font-data-md text-on-surface-variant">
+                                    Oct 21 / Jan 19
+                                </td>
+<td class="px-lg py-md text-right">
+<p class="font-data-md text-secondary">+49.50 USDC</p>
+<p class="text-[10px] text-outline">≈ $49.50 USD</p>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-[18px]">bolt</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface">Solana Alpha</p>
+<p class="text-[10px] text-outline">TXID: 9k2...p20</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-md font-data-md text-on-surface">450 SOL</td>
+<td class="px-lg py-md">
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden mb-xs">
+<div class="bg-tertiary h-full" style="width: 95%;"></div>
+</div>
+<span class="text-[10px] text-outline">Day 14 of 15</span>
+</td>
+<td class="px-lg py-md font-data-md text-secondary">0.038%</td>
+<td class="px-lg py-md font-data-md text-on-surface-variant">
+                                    Oct 18 / Nov 02
+                                </td>
+<td class="px-lg py-md text-right">
+<p class="font-data-md text-secondary">+2.39 SOL</p>
+<p class="text-[10px] text-outline">≈ $406.12 USD</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-lg py-md bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
+<p class="text-label-sm text-outline">Showing 3 active staking contracts</p>
+<div class="flex gap-xs">
+<button class="p-xs hover:bg-surface-variant rounded-lg"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-xs hover:bg-surface-variant rounded-lg"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Visual Decoration / Abstract Data -->
+<div class="mt-xl grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<div class="lg:col-span-2 glass-card rounded-xl p-lg relative overflow-hidden h-[300px]">
+<div class="relative z-10">
+<h3 class="font-headline-md text-on-surface mb-sm">Reward Yield Distribution</h3>
+<p class="text-label-sm text-outline mb-xl">Historical APY performance over the last 12 months for institutional pools.</p>
+<div class="flex items-end gap-md h-32 mb-lg">
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 40%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 60%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 45%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 80%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 70%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 90%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg relative group" style="height: 85%;">
+<div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-40 transition-opacity"></div>
+</div>
+</div>
+<div class="flex justify-between text-[10px] text-outline uppercase tracking-widest">
+<span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span>
+</div>
+</div>
+<!-- Ambient Effect -->
+<div class="absolute -bottom-16 -right-16 w-64 h-64 bg-primary/5 rounded-full blur-[80px]"></div>
+</div>
+<div class="glass-card rounded-xl p-lg flex flex-col justify-center">
+<h3 class="font-headline-md text-on-surface mb-lg">Vault Security</h3>
+<div class="space-y-md">
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-label-sm text-on-surface">Multi-Sig Cold Storage</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-label-sm text-on-surface">Insurance Coverage ($50M)</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-label-sm text-on-surface">Daily Security Audit</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-label-sm text-on-surface">Hardware Isolation</span>
+</div>
+</div>
+<div class="mt-xl p-md bg-surface-container-highest rounded-xl border border-outline-variant flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<p class="text-[11px] text-on-surface-variant">Your assets are protected by enterprise-grade cryptographic MPC technology.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant flex justify-around items-center py-sm px-md">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px]">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="text-[10px]">Staking</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="text-[10px]">Network</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px]">Settings</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for staking buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.classList.add('scale-[0.98]');
+            });
+            button.addEventListener('mouseup', () => {
+                button.classList.remove('scale-[0.98]');
+            });
+            button.addEventListener('mouseleave', () => {
+                button.classList.remove('scale-[0.98]');
+            });
+        });
+
+        // Simple table hover effect enhancement
+        const tableRows = document.querySelectorAll('tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.boxShadow = 'inset 4px 0 0 #4edea3';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.boxShadow = 'none';
+            });
+        });
+    </script>
+</body></html>

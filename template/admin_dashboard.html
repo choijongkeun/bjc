@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BJC DeFi Institutional Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        .circuit-line {
+            background: #424754;
+            position: absolute;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #424754;
+            border-radius: 10px;
+        }
+        .chart-gradient {
+            fill: url(#chartGradient);
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#92002a",
+                    "on-primary-fixed": "#001a42",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#005236",
+                    "primary-container": "#4d8eff",
+                    "surface-container-highest": "#2d3449",
+                    "on-tertiary-fixed": "#40000d",
+                    "on-tertiary": "#67001b",
+                    "inverse-surface": "#dae2fd",
+                    "on-secondary-container": "#00311f",
+                    "on-primary-container": "#00285d",
+                    "on-secondary": "#003824",
+                    "primary-fixed": "#d8e2ff",
+                    "on-error": "#690005",
+                    "tertiary-container": "#ff516a",
+                    "surface-container-lowest": "#060e20",
+                    "surface-container-high": "#222a3d",
+                    "outline": "#8c909f",
+                    "on-primary-fixed-variant": "#004395",
+                    "background": "#0b1326",
+                    "on-surface": "#dae2fd",
+                    "surface-bright": "#31394d",
+                    "outline-variant": "#424754",
+                    "secondary": "#4edea3",
+                    "surface-dim": "#0b1326",
+                    "primary-fixed-dim": "#adc6ff",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "secondary-container": "#00a572",
+                    "error": "#ffb4ab",
+                    "secondary-fixed": "#6ffbbe",
+                    "secondary-fixed-dim": "#4edea3",
+                    "inverse-primary": "#005ac2",
+                    "surface-container": "#171f33",
+                    "tertiary": "#ffb2b7",
+                    "tertiary-fixed": "#ffdadb",
+                    "surface-tint": "#adc6ff",
+                    "surface": "#0b1326",
+                    "error-container": "#93000a",
+                    "inverse-on-surface": "#283044",
+                    "on-surface-variant": "#c2c6d6",
+                    "on-tertiary-container": "#5b0017",
+                    "primary": "#adc6ff",
+                    "on-secondary-fixed": "#002113",
+                    "on-primary": "#002e6a",
+                    "surface-variant": "#2d3449",
+                    "surface-container-low": "#131b2e",
+                    "on-background": "#dae2fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "40px",
+                    "base": "4px",
+                    "sm": "12px",
+                    "xs": "8px",
+                    "lg": "24px",
+                    "container-max": "1440px",
+                    "gutter": "20px",
+                    "md": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "data-lg": ["JetBrains Mono"],
+                    "data-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation -->
+<header class="w-full sticky top-0 z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-outline-variant flex justify-between items-center px-lg py-sm">
+<div class="flex items-center gap-md">
+<span class="font-headline-md text-headline-md font-bold text-primary">BJC DeFi</span>
+<div class="hidden md:flex gap-md ml-xl">
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">Dashboard</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200" href="#">Governance</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200" href="#">Audits</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="bg-primary text-on-primary px-md py-xs rounded-xl font-label-sm hover:opacity-80 transition-opacity">
+                Connect Wallet
+            </button>
+</div>
+</header>
+<div class="flex">
+<!-- Side Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 hidden md:flex flex-col bg-surface-container dark:bg-surface-container-low border-r border-outline-variant p-md pt-[80px]">
+<div class="flex flex-col gap-xs mb-xl">
+<div class="flex items-center gap-md px-md py-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-fixed-dim flex items-center justify-center text-on-primary-fixed">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface">BJC Institutional</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Tier 1 Vault</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="bg-secondary-container text-on-secondary-container rounded-xl flex items-center gap-md px-md py-sm scale-98 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-sm text-label-sm">Staking</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-label-sm text-label-sm">Network</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Transactions</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-sm text-label-sm">Governance</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">shield_person</span>
+<span class="font-label-sm text-label-sm">Admin</span>
+</a>
+</nav>
+<button class="mt-md w-full bg-secondary text-on-secondary py-sm rounded-xl font-label-sm hover:opacity-90 active:scale-95 transition-all">
+                Stake Assets
+            </button>
+<div class="mt-xl pt-md border-t border-outline-variant space-y-base">
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant rounded-xl flex items-center gap-md px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-sm text-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-lg min-h-screen">
+<div class="max-w-[1440px] mx-auto">
+<div class="mb-xl">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-base">Admin Command Center</h1>
+<p class="text-on-surface-variant font-body-md">Global ecosystem health and institutional oversight</p>
+</div>
+<!-- Global Statistics Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
+<!-- Total Users -->
+<div class="glass-card p-lg rounded-xl flex flex-col gap-sm relative overflow-hidden">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Total Users</span>
+<span class="material-symbols-outlined text-primary">groups</span>
+</div>
+<div class="font-data-lg text-display-lg text-on-surface">1.28M</div>
+<div class="flex items-center gap-xs">
+<span class="text-secondary flex items-center font-label-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12.5%
+                            </span>
+<span class="text-on-surface-variant text-[10px]">vs last month</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full h-1 bg-primary/20">
+<div class="h-full bg-primary" style="width: 75%"></div>
+</div>
+</div>
+<!-- New Signups -->
+<div class="glass-card p-lg rounded-xl flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Today's Signups</span>
+<span class="material-symbols-outlined text-secondary">person_add</span>
+</div>
+<div class="font-data-lg text-display-lg text-on-surface">4,812</div>
+<div class="flex items-center gap-xs">
+<span class="text-secondary flex items-center font-label-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span> 8.2%
+                            </span>
+<span class="text-on-surface-variant text-[10px]">since midnight</span>
+</div>
+</div>
+<!-- Total Staked -->
+<div class="glass-card p-lg rounded-xl flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Platform Staked</span>
+<span class="material-symbols-outlined text-tertiary">lock_open</span>
+</div>
+<div class="font-data-lg text-display-lg text-on-surface">$4.2B</div>
+<div class="flex items-center gap-xs">
+<span class="text-secondary flex items-center font-label-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span> 2.1%
+                            </span>
+<span class="text-on-surface-variant text-[10px]">TVL 24h</span>
+</div>
+</div>
+<!-- Today's Staking Volume -->
+<div class="glass-card p-lg rounded-xl flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Daily Volume</span>
+<span class="material-symbols-outlined text-primary-fixed-dim">analytics</span>
+</div>
+<div class="font-data-lg text-display-lg text-on-surface">$89.4M</div>
+<div class="flex items-center gap-xs">
+<span class="text-error flex items-center font-label-sm">
+<span class="material-symbols-outlined text-sm">trending_down</span> 0.4%
+                            </span>
+<span class="text-on-surface-variant text-[10px]">vs yesterday</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg mb-xl">
+<!-- Revenue & Withdrawal Requests -->
+<div class="lg:col-span-8 flex flex-col gap-lg">
+<div class="glass-card p-lg rounded-xl">
+<div class="flex justify-between items-center mb-lg">
+<h3 class="font-headline-md text-headline-md text-on-surface">Revenue &amp; Rewards</h3>
+<div class="flex gap-sm">
+<button class="text-label-sm font-label-sm bg-surface-variant px-md py-base rounded-full">Weekly</button>
+<button class="text-label-sm font-label-sm hover:bg-surface-variant px-md py-base rounded-full transition-colors">Monthly</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<div class="space-y-md">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-on-surface-variant font-label-sm">Generated Rewards</p>
+<p class="font-data-lg text-data-lg text-on-surface">$14.28M</p>
+</div>
+<div class="h-12 w-24">
+<svg class="w-full h-full" viewbox="0 0 100 40">
+<path d="M0 35 Q 25 5, 50 25 T 100 15" fill="none" stroke="#4edea3" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant"></div>
+<div class="flex justify-between items-center">
+<p class="text-on-surface-variant font-label-sm">Yield Efficiency</p>
+<p class="font-data-md text-data-md text-secondary">98.4%</p>
+</div>
+</div>
+<div class="bg-surface-container-highest/40 p-md rounded-xl space-y-md">
+<p class="text-on-surface-variant font-label-sm">Withdrawal Pipeline</p>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-label-sm">
+<span>Completed</span>
+<span class="font-data-md">1,420 ($8.2M)</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-secondary h-full" style="width: 82%"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-label-sm text-tertiary">
+<span>Pending Audit</span>
+<span class="font-data-md">12 ($1.1M)</span>
+</div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-tertiary h-full" style="width: 18%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Aggregate Leg Sales -->
+<div class="glass-card p-lg rounded-xl">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-lg">Network Leg Distribution</h3>
+<div class="flex items-center gap-xl">
+<div class="flex-1 space-y-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-primary uppercase">Left Leg</span>
+<span class="font-data-lg text-data-lg">$2.14B</span>
+</div>
+<div class="relative h-4 bg-surface-container rounded-full overflow-hidden">
+<div class="absolute inset-y-0 left-0 bg-primary-container" style="width: 52%"></div>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-secondary uppercase">Right Leg</span>
+<span class="font-data-lg text-data-lg">$1.98B</span>
+</div>
+<div class="relative h-4 bg-surface-container rounded-full overflow-hidden">
+<div class="absolute inset-y-0 left-0 bg-secondary-container" style="width: 48%"></div>
+</div>
+</div>
+<div class="hidden md:flex flex-col items-center justify-center p-md border border-outline-variant rounded-xl bg-background/40">
+<p class="text-on-surface-variant text-[10px] uppercase mb-base">Imbalance</p>
+<p class="font-data-lg text-tertiary">4.2%</p>
+<p class="text-[10px] text-on-surface-variant">Optimal Range</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Stats & Pie Chart -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<div class="glass-card p-lg rounded-xl h-full flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-lg">Staking by Product</h3>
+<div class="flex-1 flex items-center justify-center relative">
+<!-- Minimal SVG Pie Chart -->
+<svg class="w-48 h-48 -rotate-90">
+<circle cx="96" cy="96" fill="transparent" r="80" stroke="#4d8eff" stroke-dasharray="502" stroke-dashoffset="125" stroke-width="24"></circle>
+<circle cx="96" cy="96" fill="transparent" r="80" stroke="#4edea3" stroke-dasharray="502" stroke-dashoffset="377" stroke-width="24"></circle>
+<circle cx="96" cy="96" fill="transparent" r="80" stroke="#ff516a" stroke-dasharray="502" stroke-dashoffset="470" stroke-width="24"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-on-surface-variant font-label-sm">Total</span>
+<span class="font-data-lg text-on-surface">$4.2B</span>
+</div>
+</div>
+<div class="mt-lg space-y-sm">
+<div class="flex items-center justify-between text-label-sm">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span>BJC Prime Vault</span>
+</div>
+<span class="font-data-md">75%</span>
+</div>
+<div class="flex items-center justify-between text-label-sm">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span>Growth Staking</span>
+</div>
+<span class="font-data-md">18%</span>
+</div>
+<div class="flex items-center justify-between text-label-sm">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span>Liquid Rewards</span>
+</div>
+<span class="font-data-md">7%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Audit Logs & System Alerts -->
+<div class="glass-card rounded-xl overflow-hidden mb-xl">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<div class="flex items-center gap-md">
+<h3 class="font-headline-md text-headline-md text-on-surface">System Health &amp; Audit Logs</h3>
+<span class="bg-secondary/10 text-secondary border border-secondary/20 px-sm py-base rounded-full text-[10px] font-bold uppercase flex items-center gap-base">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full"></span> All Systems Operational
+                            </span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors font-label-sm flex items-center gap-xs">
+                            Export Logs <span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left">
+<thead class="bg-surface-container-high/50 text-on-surface-variant font-label-sm uppercase tracking-wider">
+<tr>
+<th class="px-lg py-md font-label-sm">Event ID</th>
+<th class="px-lg py-md font-label-sm">Timestamp</th>
+<th class="px-lg py-md font-label-sm">Module</th>
+<th class="px-lg py-md font-label-sm">Action</th>
+<th class="px-lg py-md font-label-sm">Status</th>
+<th class="px-lg py-md font-label-sm">Officer</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body-md text-on-surface">
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-lg py-md font-data-md">#AE-9921</td>
+<td class="px-lg py-md text-on-surface-variant">2023-11-24 14:02:11</td>
+<td class="px-lg py-md">Smart Contract V4</td>
+<td class="px-lg py-md">Withdrawal Threshold Update</td>
+<td class="px-lg py-md">
+<span class="bg-secondary/10 text-secondary px-sm py-1 rounded-full text-[10px] font-bold uppercase">Success</span>
+</td>
+<td class="px-lg py-md flex items-center gap-sm">
+<div class="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] text-on-primary-fixed">JD</div>
+<span>Julian D.</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-lg py-md font-data-md">#AE-9920</td>
+<td class="px-lg py-md text-on-surface-variant">2023-11-24 13:45:02</td>
+<td class="px-lg py-md">Admin Portal</td>
+<td class="px-lg py-md">High-Value Tx Flagged</td>
+<td class="px-lg py-md">
+<span class="bg-tertiary/10 text-tertiary px-sm py-1 rounded-full text-[10px] font-bold uppercase">Pending</span>
+</td>
+<td class="px-lg py-md flex items-center gap-sm">
+<div class="w-6 h-6 rounded-full bg-secondary-fixed flex items-center justify-center text-[10px] text-on-secondary-fixed">SA</div>
+<span>Sarah A.</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-lg py-md font-data-md">#AE-9919</td>
+<td class="px-lg py-md text-on-surface-variant">2023-11-24 12:12:44</td>
+<td class="px-lg py-md">Risk Engine</td>
+<td class="px-lg py-md">Anomalous Activity Alert</td>
+<td class="px-lg py-md">
+<span class="bg-error/10 text-error px-sm py-1 rounded-full text-[10px] font-bold uppercase">Alert</span>
+</td>
+<td class="px-lg py-md flex items-center gap-sm">
+<div class="w-6 h-6 rounded-full bg-tertiary-fixed flex items-center justify-center text-[10px] text-on-tertiary-fixed">SYS</div>
+<span>System Auto</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Floating Action Button (Mobile Only context) -->
+<button class="md:hidden fixed bottom-lg right-lg w-14 h-14 bg-secondary text-on-secondary rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<!-- Micro-interaction scripts -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Placeholder for real-time data updates or chart animations
+            console.log('BJC DeFi Admin Dashboard Initialized');
+            
+            // Handle hover state for chart elements
+            const stats = document.querySelectorAll('.glass-card');
+            stats.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.borderColor = '#adc6ff';
+                    card.style.transition = 'border-color 0.3s ease';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.borderColor = '#334155';
+                });
+            });
+        });
+    </script>
+</body></html>

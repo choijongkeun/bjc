@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<title>BJC DeFi - Create Institutional Account</title>
+<style>
+    body {
+      background-color: #0b1326;
+      overflow-x: hidden;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid #334155;
+    }
+    .input-focus-ring:focus {
+      border-color: #adc6ff;
+      box-shadow: 0 0 0 2px rgba(173, 198, 255, 0.2);
+    }
+    .step-line {
+      height: 2px;
+      flex: 1;
+      background: #424754;
+    }
+    .step-line.active {
+      background: #4edea3;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#ff516a",
+            "secondary": "#4edea3",
+            "on-surface-variant": "#c2c6d6",
+            "surface-tint": "#adc6ff",
+            "surface-container-high": "#222a3d",
+            "on-background": "#dae2fd",
+            "surface-variant": "#2d3449",
+            "outline": "#8c909f",
+            "error-container": "#93000a",
+            "surface-bright": "#31394d",
+            "surface-dim": "#0b1326",
+            "outline-variant": "#424754",
+            "on-secondary": "#003824",
+            "on-primary": "#002e6a",
+            "primary-container": "#4d8eff",
+            "on-surface": "#dae2fd",
+            "primary": "#adc6ff",
+            "background": "#0b1326",
+            "surface-container-lowest": "#060e20",
+            "secondary-container": "#00a572",
+            "on-primary-container": "#00285d",
+            "surface-container": "#171f33"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "base": "4px",
+            "lg": "24px",
+            "sm": "12px",
+            "md": "16px",
+            "xl": "40px",
+            "xs": "8px"
+          },
+          "fontFamily": {
+            "display-lg": ["Inter"],
+            "label-sm": ["Inter"],
+            "data-md": ["JetBrains Mono"],
+            "body-md": ["Inter"],
+            "headline-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "data-lg": ["JetBrains Mono"],
+            "body-lg": ["Inter"]
+          },
+          "fontSize": {
+            "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+            "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen flex flex-col font-body-md text-on-surface bg-background">
+<!-- Background Ambient Glow -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-secondary/5 rounded-full blur-[120px]"></div>
+</div>
+<!-- Header Anchor (Identity Only) -->
+<header class="w-full h-20 flex justify-between items-center px-lg z-50 fixed top-0 bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">NexusDeFi</h1>
+</div>
+<div class="hidden md:flex gap-md">
+<a class="text-on-surface-variant font-label-sm uppercase hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="text-on-surface-variant font-label-sm uppercase hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</header>
+<main class="relative z-10 flex-1 flex items-center justify-center py-32 px-md">
+<div class="w-full max-w-xl glass-card rounded-xl p-xl shadow-2xl relative overflow-hidden">
+<!-- Card Decorative Header -->
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary"></div>
+<div class="mb-xl text-center">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Institutional Onboarding</h2>
+<p class="text-on-surface-variant font-body-md">Create your secure gateway to the Nexus Protocol.</p>
+</div>
+<!-- Registration Form -->
+<form class="space-y-lg" id="registrationForm">
+<!-- Step Indicator -->
+<div class="flex items-center gap-sm mb-lg">
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-sm">1</div>
+<div class="step-line active"></div>
+<div class="w-8 h-8 rounded-full border-2 border-outline-variant text-on-surface-variant flex items-center justify-center font-bold text-sm">2</div>
+</div>
+<!-- Personal Info Section -->
+<div class="space-y-md">
+<div>
+<label class="block text-on-surface-variant font-label-sm mb-xs">LOGIN ID</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-sm">alternate_email</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-sm pl-11 pr-md text-on-surface font-body-md input-focus-ring transition-all outline-none" placeholder="e.g. Satoshi_2009" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-on-surface-variant font-label-sm mb-xs">DISPLAY NAME</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-sm">badge</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-sm pl-11 pr-md text-on-surface font-body-md input-focus-ring transition-all outline-none" placeholder="Your trading alias" type="text"/>
+</div>
+</div>
+</div>
+<!-- Security Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div>
+<label class="block text-on-surface-variant font-label-sm mb-xs">PASSWORD</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-sm">lock</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-sm pl-11 pr-md text-on-surface font-body-md input-focus-ring transition-all outline-none" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<div>
+<label class="block text-on-surface-variant font-label-sm mb-xs">CONFIRM PASSWORD</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-sm">verified_user</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-sm pl-11 pr-md text-on-surface font-body-md input-focus-ring transition-all outline-none" placeholder="••••••••" type="password"/>
+</div>
+</div>
+</div>
+<!-- Referral Section -->
+<div class="pt-sm border-t border-outline-variant/30">
+<label class="block text-on-surface-variant font-label-sm mb-xs">REFERRAL CODE (OPTIONAL)</label>
+<div class="flex gap-sm">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-sm">group_add</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-sm pl-11 pr-md text-on-surface font-body-md input-focus-ring transition-all outline-none" id="referralInput" placeholder="NEX-XXXX-XXXX" type="text"/>
+</div>
+<button class="bg-surface-variant text-on-surface font-label-sm px-md rounded-lg hover:bg-outline-variant transition-colors active:scale-95 whitespace-nowrap" onclick="verifyReferral()" type="button">
+              Verify Referral
+            </button>
+</div>
+<!-- Sponsor Info (Hidden initially) -->
+<div class="hidden mt-sm p-sm rounded-lg bg-secondary-container/10 border border-secondary/30 flex items-center gap-md" id="sponsorInfo">
+<div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">verified</span>
+</div>
+<div>
+<p class="text-secondary font-label-sm">SPONSOR VERIFIED</p>
+<p class="text-on-surface font-data-md" id="sponsorDetails">ID: NEX-8821 • Alexander Vanguard</p>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-lg space-y-md">
+<button class="w-full bg-gradient-to-b from-secondary to-secondary-container text-on-secondary-fixed font-bold text-body-lg py-md rounded-lg shadow-lg shadow-secondary/10 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm" type="submit">
+            Register Account
+            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<div class="text-center">
+<p class="text-on-surface-variant font-body-md">
+              Already a verified institution? 
+              <a class="text-primary font-bold hover:underline" href="#">Sign In</a>
+</p>
+</div>
+</div>
+</form>
+<!-- Terms & Security Footnote -->
+<div class="mt-xl flex items-center justify-between opacity-50">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">shield</span>
+<span class="font-label-sm">AES-256 ENCRYPTED</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">gavel</span>
+<span class="font-label-sm">COMPLIANCE READY</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Info -->
+<footer class="w-full py-lg px-xl text-center relative z-10 border-t border-outline-variant/10">
+<div class="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-md opacity-40">
+<p class="font-label-sm">© 2024 NexusDeFi Institutional Protocol. All Rights Reserved.</p>
+<div class="flex gap-lg">
+<a class="font-label-sm hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm hover:text-primary transition-colors" href="#">Risk Disclosure</a>
+</div>
+</div>
+</footer>
+<script>
+    function verifyReferral() {
+      const input = document.getElementById('referralInput');
+      const sponsorInfo = document.getElementById('sponsorInfo');
+      const btn = event.target;
+
+      if (input.value.trim() === "") {
+        input.classList.add('border-error');
+        setTimeout(() => input.classList.remove('border-error'), 1000);
+        return;
+      }
+
+      // Simulate loading state
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span>';
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify Referral';
+        sponsorInfo.classList.remove('hidden');
+        sponsorInfo.classList.add('flex');
+        
+        // Add a subtle entrance animation
+        sponsorInfo.animate([
+          { opacity: 0, transform: 'translateY(-10px)' },
+          { opacity: 1, transform: 'translateY(0)' }
+        ], { duration: 300, easing: 'ease-out' });
+      }, 800);
+    }
+
+    // Micro-interactions for input focus
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('focus', () => {
+        input.parentElement.querySelector('.material-symbols-outlined')?.classList.add('text-primary');
+      });
+      input.addEventListener('blur', () => {
+        input.parentElement.querySelector('.material-symbols-outlined')?.classList.remove('text-primary');
+      });
+    });
+
+    document.getElementById('registrationForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Logic for multi-step could be implemented here
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Processing Registration...';
+      
+      setTimeout(() => {
+        alert('Institutional Registration Initiated. Please check your secure email for verification.');
+        btn.innerHTML = 'Register Account <span class="material-symbols-outlined">arrow_forward</span>';
+      }, 1500);
+    });
+  </script>
+</body></html>

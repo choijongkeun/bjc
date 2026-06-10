@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexusDeFi | Withdrawals</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#ff516a",
+                        "secondary": "#4edea3",
+                        "on-surface-variant": "#c2c6d6",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "surface-tint": "#adc6ff",
+                        "surface-container-high": "#222a3d",
+                        "on-background": "#dae2fd",
+                        "tertiary": "#ffb2b7",
+                        "on-secondary-container": "#00311f",
+                        "surface-variant": "#2d3449",
+                        "inverse-surface": "#dae2fd",
+                        "outline": "#8c909f",
+                        "inverse-primary": "#005ac2",
+                        "error-container": "#93000a",
+                        "surface-bright": "#31394d",
+                        "surface-dim": "#0b1326",
+                        "outline-variant": "#424754",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "on-secondary": "#003824",
+                        "on-primary": "#002e6a",
+                        "on-error": "#690005",
+                        "primary-container": "#4d8eff",
+                        "on-surface": "#dae2fd",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-secondary-fixed-variant": "#005236",
+                        "primary": "#adc6ff",
+                        "tertiary-fixed": "#ffdadb",
+                        "background": "#0b1326",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary": "#67001b",
+                        "on-primary-fixed": "#001a42",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary-fixed-variant": "#004395",
+                        "surface": "#0b1326",
+                        "surface-container-low": "#131b2e",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#d8e2ff",
+                        "error": "#ffb4ab",
+                        "secondary-fixed": "#6ffbbe",
+                        "secondary-container": "#00a572",
+                        "inverse-on-surface": "#283044",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-container": "#00285d",
+                        "on-tertiary-fixed": "#40000d",
+                        "surface-container": "#171f33",
+                        "on-tertiary-container": "#5b0017"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "lg": "24px",
+                        "sm": "12px",
+                        "md": "16px",
+                        "xl": "40px",
+                        "container-max": "1440px",
+                        "xs": "8px",
+                        "gutter": "20px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "data-md": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-lg": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen selection:bg-primary/30">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30 flex justify-between items-center px-lg h-20 w-full">
+<div class="flex items-center gap-md">
+<span class="font-headline-md text-headline-md font-bold text-primary">NexusDeFi</span>
+</div>
+<div class="hidden md:flex flex-1 max-w-md mx-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg pl-xl pr-md py-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Search protocol..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</button>
+<div class="h-8 w-[1px] bg-outline-variant/30 mx-xs"></div>
+<button class="bg-primary-container text-on-primary-container font-bold px-md py-xs rounded-lg active:scale-95 transition-transform">
+                Connect Wallet
+            </button>
+<img alt="User profile avatar" class="w-10 h-10 rounded-full border border-outline-variant/30 bg-surface-container-high" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBghEVQxmUtVMCffrKgcRsKdX0E9eIy4DeUH5iIwMz5QeJmlXcLtHctdBPpqAjRgAdseDknLeSxVvICFMpI4AIdiCK0qUlO0pOyxAJz0i0k0RDMWKV9g-9cymB4kKMOB_Tkw_WgJ1cuEOC0JjSfBEORPLfx8Ejor8m507GebMlo5H77zkzxH6-iba8Ay1wPYLRQHDJLqAK9vvG1TcAlDnDTeiKvpbcWDMko-IXq-B7Mqs77o7mRdN_PalAY3QQ2pgk_STIYyouXSg"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-surface-container-low border-r border-outline-variant/20 flex flex-col py-lg mt-20">
+<div class="px-md mb-xl">
+<div class="flex items-center gap-sm p-sm bg-surface-container-high rounded-xl">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-weight="fill">verified</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Institutional</p>
+<p class="font-body-md text-on-surface font-bold">Verified Account</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-sm text-label-sm">Staking</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-sm text-label-sm">Network</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm">Rewards</span>
+</a>
+<a class="flex items-center gap-sm bg-secondary-container/10 text-secondary border-r-4 border-secondary px-md py-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">outbound</span>
+<span class="font-label-sm text-label-sm">Withdrawals</span>
+</a>
+</nav>
+<div class="px-md mt-auto space-y-base border-t border-outline-variant/10 pt-lg">
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+<div class="mt-md">
+<button class="w-full bg-secondary text-on-secondary font-bold py-sm rounded-lg active:scale-95 transition-transform flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    Stake Assets
+                </button>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 p-lg min-h-screen bg-background">
+<div class="max-w-container-max mx-auto">
+<!-- Breadcrumbs / Page Header -->
+<div class="mb-xl flex justify-between items-end">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Withdrawal Application</h1>
+<p class="text-on-surface-variant mt-xs">Submit a request to move assets to your verified external wallet.</p>
+</div>
+<div class="flex gap-sm">
+<div class="glass-panel px-md py-sm rounded-xl flex items-center gap-sm">
+<div class="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
+<span class="font-data-md text-data-md text-secondary">Network: Polygon Mainnet</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Left Column: Withdrawal Form -->
+<div class="col-span-12 lg:col-span-8 space-y-gutter">
+<div class="glass-panel rounded-xl p-lg overflow-hidden relative">
+<!-- Abstract glow effect -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 blur-[100px] rounded-full"></div>
+<div class="relative z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">account_balance</span>
+                                Withdrawal Form
+                            </h2>
+<form class="space-y-xl">
+<!-- Balance Summary -->
+<div class="grid grid-cols-2 gap-md">
+<div class="bg-surface-container-low p-md rounded-lg border border-outline-variant/20">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-xs uppercase tracking-wider">Daily Rewards Available</p>
+<p class="font-data-lg text-data-lg text-secondary">12,450.00 USDC</p>
+</div>
+<div class="bg-surface-container-low p-md rounded-lg border border-outline-variant/20">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-xs uppercase tracking-wider">Unclaimed Bonus</p>
+<p class="font-data-lg text-data-lg text-primary">3,120.45 USDC</p>
+</div>
+</div>
+<!-- Type Selection -->
+<div class="space-y-sm">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest block">Withdrawal Type</label>
+<div class="grid grid-cols-2 gap-sm">
+<button class="flex items-center justify-between p-md rounded-lg border-2 border-primary bg-primary/5 text-primary transition-all" type="button">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-body-md font-bold">Daily Reward</span>
+</div>
+<span class="material-symbols-outlined">check_circle</span>
+</button>
+<button class="flex items-center justify-between p-md rounded-lg border border-outline-variant/30 text-on-surface-variant hover:border-primary/50 transition-all" type="button">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined">redeem</span>
+<span class="font-body-md">Bonus Pool</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Amount Input -->
+<div class="space-y-sm">
+<div class="flex justify-between items-end">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest block">Amount to Withdraw</label>
+<span class="text-on-surface-variant font-data-md text-data-md">Limit: 50,000 USDC / 24h</span>
+</div>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-xl px-lg py-xl font-data-lg text-data-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-outline/30" placeholder="0.00" type="number"/>
+<div class="absolute right-md top-1/2 -translate-y-1/2 flex items-center gap-md">
+<button class="text-primary font-bold hover:underline transition-all" type="button">MAX</button>
+<div class="flex items-center gap-xs bg-surface-variant px-sm py-xs rounded-lg border border-outline-variant/30">
+<span class="w-6 h-6 rounded-full bg-[#2775ca] flex items-center justify-center text-[12px] font-bold text-white">S</span>
+<span class="font-bold">USDC</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Dynamic Breakdown -->
+<div class="bg-surface-container-high/50 rounded-xl p-md border border-outline-variant/20 space-y-md">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md">Network Fee (0.5%)</span>
+<span class="font-data-md text-data-md">62.25 USDC</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md">Processing Surcharge</span>
+<span class="font-data-md text-data-md">0.00 USDC</span>
+</div>
+<div class="h-[1px] bg-outline-variant/30"></div>
+<div class="flex justify-between items-center">
+<span class="font-body-lg text-body-lg text-on-surface font-bold">Net Receivable</span>
+<span class="font-data-lg text-data-lg text-secondary">12,387.75 USDC</span>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-gradient-to-b from-primary-container to-primary-container/80 text-on-primary-container font-bold py-md rounded-xl text-body-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-sm" type="submit">
+<span class="material-symbols-outlined">send</span>
+                                    Request Withdrawal
+                                </button>
+<p class="text-center text-on-surface-variant text-label-sm flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+                                    Secured by Multi-Sig Verification Protocol
+                                </p>
+</form>
+</div>
+</div>
+</div>
+<!-- Right Column: Policies & History -->
+<div class="col-span-12 lg:col-span-4 space-y-gutter">
+<!-- Withdrawal Policies Card -->
+<div class="glass-panel rounded-xl p-md border-l-4 border-l-primary">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-md">Protocol Policies</h3>
+<ul class="space-y-sm text-on-surface-variant font-body-md">
+<li class="flex gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">info</span>
+<span>Daily limit reset occurs at 00:00 UTC.</span>
+</li>
+<li class="flex gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">info</span>
+<span>Standard processing time: 5-30 minutes.</span>
+</li>
+<li class="flex gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">info</span>
+<span>Large withdrawals (&gt;50k) require secondary MFA approval.</span>
+</li>
+</ul>
+</div>
+<!-- Recent Withdrawals Card -->
+<div class="glass-panel rounded-xl overflow-hidden">
+<div class="p-md border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-low">
+<h3 class="font-body-md font-bold text-on-surface">Recent Withdrawals</h3>
+<button class="text-primary text-label-sm font-bold hover:underline">View All</button>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<!-- Entry 1 -->
+<div class="p-md hover:bg-surface-variant/20 transition-colors">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-data-md text-data-md text-on-surface">2,500.00 USDC</span>
+<span class="px-xs py-[2px] bg-secondary/10 text-secondary text-[10px] font-bold uppercase rounded flex items-center gap-[2px]">
+<span class="w-1 h-1 bg-secondary rounded-full"></span> Completed
+                                    </span>
+</div>
+<div class="flex justify-between items-center text-label-sm text-on-surface-variant">
+<span>2 hours ago</span>
+<span class="flex items-center gap-xs">
+                                        0x71C...4f9
+                                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</span>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="p-md hover:bg-surface-variant/20 transition-colors">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-data-md text-data-md text-on-surface">12,000.00 USDC</span>
+<span class="px-xs py-[2px] bg-secondary/10 text-secondary text-[10px] font-bold uppercase rounded flex items-center gap-[2px]">
+<span class="w-1 h-1 bg-secondary rounded-full"></span> Completed
+                                    </span>
+</div>
+<div class="flex justify-between items-center text-label-sm text-on-surface-variant">
+<span>Yesterday</span>
+<span class="flex items-center gap-xs">
+                                        0x71C...4f9
+                                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</span>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="p-md hover:bg-surface-variant/20 transition-colors">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-data-md text-data-md text-on-surface">450.00 USDC</span>
+<span class="px-xs py-[2px] bg-tertiary-container/10 text-tertiary-container text-[10px] font-bold uppercase rounded flex items-center gap-[2px]">
+<span class="w-1 h-1 bg-tertiary-container rounded-full"></span> Failed
+                                    </span>
+</div>
+<div class="flex justify-between items-center text-label-sm text-on-surface-variant">
+<span>3 days ago</span>
+<span class="text-tertiary-container">Invalid Gas</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Security Banner -->
+<div class="relative h-48 rounded-xl overflow-hidden group">
+<img alt="Security verification background" class="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-60 transition-all duration-700" data-alt="A high-tech digital close-up of a secure server interface with glowing blue lines and hexagonal geometric patterns. The aesthetic is extremely clean and futuristic, representing cyber security and institutional-grade encryption. The lighting is dark with vibrant neon blue highlights that create a sense of deep technical sophistication and trust." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeTE0bibeJkQSHXP4MLc_SiaDv9m4YDoVIeBMlKGyUII0kcFj59dQz4qN-DEf8XVJffZTOZplOMVjpx1Rrnk9hfV1kFtTk-x0w2O-ZF_KdRvKGlku9akBWcJds5iiH2MMFqETLDGdETyQUDeknxT86Yr241x6pR0UpNOmBa9j-xFDaaaBTtzsZCwA0INlLYETWEN_MBq5T0j6RpoJwlnCYj9r6JsB6QfuvNfRXXQhW4dMwm00IedNlK7s6zveDZBHZPO7hb6QSRw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+<div class="absolute bottom-md left-md right-md">
+<p class="font-bold text-on-surface mb-xs">Cold Storage Policy</p>
+<p class="text-label-sm text-on-surface-variant">98% of treasury assets are held in offline vaults for maximum security.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Micro-interaction Script -->
+<script>
+        // Simple tab switching for the withdrawal type
+        const typeButtons = document.querySelectorAll('button[type="button"]');
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Clear all
+                typeButtons.forEach(b => {
+                    b.classList.remove('border-primary', 'bg-primary/5', 'text-primary', 'border-2');
+                    b.classList.add('border-outline-variant/30', 'text-on-surface-variant', 'border');
+                    const icon = b.querySelector('span:last-child');
+                    if (icon && icon.innerText === 'check_circle') icon.style.opacity = '0';
+                });
+                // Set active
+                btn.classList.add('border-primary', 'bg-primary/5', 'text-primary', 'border-2');
+                btn.classList.remove('border-outline-variant/30', 'text-on-surface-variant', 'border');
+                const icon = btn.querySelector('span:last-child');
+                if (icon && icon.innerText === 'check_circle') icon.style.opacity = '1';
+            });
+        });
+
+        // Initialize first button as active visually
+        typeButtons[0].click();
+    </script>
+</body></html>

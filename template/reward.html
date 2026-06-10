@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid #334155;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0b1326;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 10px;
+    }
+    .sticky-header th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(23, 31, 51, 0.95);
+      backdrop-filter: blur(8px);
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#ff516a",
+            "secondary": "#4edea3",
+            "on-surface-variant": "#c2c6d6",
+            "tertiary-fixed-dim": "#ffb2b7",
+            "surface-tint": "#adc6ff",
+            "surface-container-high": "#222a3d",
+            "on-background": "#dae2fd",
+            "tertiary": "#ffb2b7",
+            "on-secondary-container": "#00311f",
+            "surface-variant": "#2d3449",
+            "inverse-surface": "#dae2fd",
+            "outline": "#8c909f",
+            "inverse-primary": "#005ac2",
+            "error-container": "#93000a",
+            "surface-bright": "#31394d",
+            "surface-dim": "#0b1326",
+            "outline-variant": "#424754",
+            "on-tertiary-fixed-variant": "#92002a",
+            "on-secondary": "#003824",
+            "on-primary": "#002e6a",
+            "on-error": "#690005",
+            "primary-container": "#4d8eff",
+            "on-surface": "#dae2fd",
+            "secondary-fixed-dim": "#4edea3",
+            "on-secondary-fixed-variant": "#005236",
+            "primary": "#adc6ff",
+            "tertiary-fixed": "#ffdadb",
+            "background": "#0b1326",
+            "primary-fixed-dim": "#adc6ff",
+            "surface-container-lowest": "#060e20",
+            "on-tertiary": "#67001b",
+            "on-primary-fixed": "#001a42",
+            "surface-container-highest": "#2d3449",
+            "on-primary-fixed-variant": "#004395",
+            "surface": "#0b1326",
+            "surface-container-low": "#131b2e",
+            "on-error-container": "#ffdad6",
+            "primary-fixed": "#d8e2ff",
+            "error": "#ffb4ab",
+            "secondary-fixed": "#6ffbbe",
+            "secondary-container": "#00a572",
+            "inverse-on-surface": "#283044",
+            "on-secondary-fixed": "#002113",
+            "on-primary-container": "#00285d",
+            "on-tertiary-fixed": "#40000d",
+            "surface-container": "#171f33",
+            "on-tertiary-container": "#5b0017"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "base": "4px",
+            "lg": "24px",
+            "sm": "12px",
+            "md": "16px",
+            "xl": "40px",
+            "container-max": "1440px",
+            "xs": "8px",
+            "gutter": "20px"
+          },
+          "fontFamily": {
+            "display-lg": ["Inter"],
+            "label-sm": ["Inter"],
+            "data-md": ["JetBrains Mono"],
+            "body-md": ["Inter"],
+            "headline-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "data-lg": ["JetBrains Mono"],
+            "body-lg": ["Inter"]
+          },
+          "fontSize": {
+            "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "data-lg": ["20px", {"lineHeight": "24px", "fontWeight": "500"}],
+            "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/30">
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-surface-container-low border-r border-outline-variant/20 flex flex-col py-lg hidden md:flex">
+<div class="px-md mb-xl">
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hub</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">Institutional</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant/70 uppercase">Verified Account</p>
+</div>
+</div>
+<button class="w-full py-sm bg-secondary text-on-secondary font-label-sm text-label-sm rounded-lg hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/10">
+        Stake Assets
+      </button>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-sm text-label-sm">Staking</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-sm text-label-sm">Network</span>
+</a>
+<a class="flex items-center gap-sm bg-secondary-container/10 text-secondary border-r-4 border-secondary px-md py-sm transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm">Rewards</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">outbound</span>
+<span class="font-label-sm text-label-sm">Withdrawals</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant/10 pt-md">
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-sm hover:bg-surface-variant/50 hover:text-on-surface transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 md:left-64 right-0 z-50 h-20 bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30 flex justify-between items-center px-lg">
+<div class="flex items-center gap-lg">
+<span class="font-headline-md text-headline-md font-bold text-primary">NexusDeFi</span>
+<div class="hidden lg:flex items-center gap-md">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[20px]">search</span>
+<input class="bg-surface-container-low border border-outline-variant/50 rounded-lg pl-10 pr-4 py-2 text-on-surface font-body-md focus:outline-none focus:border-primary transition-colors w-64" placeholder="Search rewards..." type="text"/>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-sm">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary font-body-md px-md py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all">
+        Connect Wallet
+      </button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/50">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="A professional close-up headshot of a person with a neutral expression, set against a blurred studio background with soft cinematic lighting. The image maintains a high-end corporate aesthetic with clean lines and sophisticated color grading in deep blues and grays, perfectly fitting an institutional DeFi platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkQ-E0TREfUi-IvHjHMqrgTe2SzWqi22Oo8NpqR74H57ijp450t-Xlr4S937dhvyA9YVrlHtmMskHsH8pJxqHsAhXY-69WR8HnWmdWIsNx-HGxRE0SySTXi8x9WSvxh4rcNipolSgZAm2JiqLhzqBhOW8wMUfS5i6AFCWueyTSkFgdoN0L_-KzFmEMqWHYuEYnfFkY-kBwwIaBaS4jYgrthSOWZj2PHYqJ5AyKucm9rEU8_NZmmPmWZwZuH0GSPTo6aiePMUYusw"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-lg md:pl-64 min-h-screen">
+<div class="max-w-[1440px] mx-auto px-lg">
+<!-- Page Header -->
+<div class="mb-lg flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Rewards History</h2>
+<p class="text-on-surface-variant font-body-md">Track and manage your institutional yield distributions.</p>
+</div>
+<div class="flex items-center gap-sm">
+<div class="glass-card flex items-center p-1 rounded-lg">
+<button class="px-md py-2 bg-surface-variant/50 text-on-surface font-label-sm text-label-sm rounded-lg">Last 30 Days</button>
+<button class="px-md py-2 text-on-surface-variant font-label-sm text-label-sm hover:text-on-surface">All Time</button>
+</div>
+<button class="flex items-center gap-xs bg-surface-container-high border border-outline-variant/50 text-on-surface px-md py-2 rounded-lg font-label-sm text-label-sm hover:bg-surface-variant/30 transition-all">
+<span class="material-symbols-outlined text-[18px]">download</span>
+            Export CSV
+          </button>
+</div>
+</div>
+<!-- Bento Grid Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-lg">
+<!-- Total Rewards -->
+<div class="glass-card p-lg rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-base">Total Rewards</p>
+<div class="flex items-baseline gap-xs">
+<span class="font-data-lg text-display-lg text-on-surface tracking-tighter">142.84</span>
+<span class="text-primary font-headline-md">ETH</span>
+</div>
+<div class="mt-md flex items-center gap-xs">
+<span class="flex items-center text-secondary font-data-md">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+              12.4%
+            </span>
+<span class="text-on-surface-variant font-data-md">vs last month</span>
+</div>
+</div>
+<!-- Today's Earnings -->
+<div class="glass-card p-lg rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-base">Today's Earnings</p>
+<div class="flex items-baseline gap-xs">
+<span class="font-data-lg text-display-lg text-on-surface tracking-tighter">0.428</span>
+<span class="text-primary font-headline-md">ETH</span>
+</div>
+<div class="mt-md flex items-center gap-xs">
+<span class="text-on-surface-variant font-data-md">≈ $1,134.20 USD</span>
+</div>
+</div>
+<!-- Active Staked Assets (Placeholder Context) -->
+<div class="glass-card p-lg rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">token</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-base">Staking Yield (APR)</p>
+<div class="flex items-baseline gap-xs">
+<span class="font-data-lg text-display-lg text-secondary tracking-tighter">7.24</span>
+<span class="text-secondary font-headline-md">%</span>
+</div>
+<div class="mt-md flex items-center gap-xs">
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="w-3/4 h-full bg-secondary rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Filters Row -->
+<div class="flex flex-col lg:flex-row items-center justify-between gap-md mb-md p-md glass-card rounded-lg">
+<div class="flex flex-wrap items-center gap-sm w-full lg:w-auto">
+<span class="text-on-surface-variant font-label-sm text-label-sm">Filters:</span>
+<select class="bg-surface-container border border-outline-variant/30 rounded-lg px-md py-2 text-on-surface font-body-md focus:border-primary transition-colors cursor-pointer outline-none">
+<option>All Types</option>
+<option>Daily Staking</option>
+<option>Direct Bonus</option>
+<option>Rank Advancement</option>
+<option>Protocol Contribution</option>
+</select>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">calendar_today</span>
+<input class="bg-surface-container border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2 text-on-surface font-body-md focus:border-primary outline-none w-56" type="text" value="Oct 01 - Oct 31, 2023"/>
+</div>
+</div>
+<div class="flex items-center gap-sm text-on-surface-variant font-label-sm text-label-sm">
+<span>Showing 1-12 of 284 entries</span>
+<div class="flex items-center gap-base">
+<button class="p-1 hover:text-primary active:scale-90"><span class="material-symbols-outlined text-[20px]">chevron_left</span></button>
+<button class="p-1 hover:text-primary active:scale-90"><span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Rewards History Table -->
+<div class="glass-card rounded-xl overflow-hidden border border-outline-variant/30 shadow-2xl">
+<div class="overflow-x-auto custom-scrollbar max-h-[600px]">
+<table class="w-full border-collapse text-left">
+<thead class="sticky-header">
+<tr>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Date & Time</th>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Reward Type</th>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Base Amount</th>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Display (USD)</th>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-md border-b border-outline-variant/50 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">TX Hash</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-on-surface font-body-md">Oct 24, 2023</span>
+<span class="text-on-surface-variant text-[12px] font-data-md">14:22:10 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(173,198,255,0.5)]"></div>
+<span class="text-on-surface font-body-md">Daily Staking</span>
+</div>
+</td>
+<td class="px-lg py-md text-right font-data-md text-secondary text-headline-md tabular-nums">+0.1425 ETH</td>
+<td class="px-lg py-md text-right font-data-md text-on-surface-variant tabular-nums">$378.12</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-full font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Confirmed
+                  </span>
+</td>
+<td class="px-lg py-md">
+<code class="text-primary font-data-md text-[13px] hover:underline cursor-pointer">0x7a2...4f2e</code>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-on-surface font-body-md">Oct 24, 2023</span>
+<span class="text-on-surface-variant text-[12px] font-data-md">08:05:45 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(78,222,163,0.5)]"></div>
+<span class="text-on-surface font-body-md">Direct Bonus</span>
+</div>
+</td>
+<td class="px-lg py-md text-right font-data-md text-secondary text-headline-md tabular-nums">+1.2500 ETH</td>
+<td class="px-lg py-md text-right font-data-md text-on-surface-variant tabular-nums">$3,312.50</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-full font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Confirmed
+                  </span>
+</td>
+<td class="px-lg py-md">
+<code class="text-primary font-data-md text-[13px] hover:underline cursor-pointer">0x3b1...c881</code>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-on-surface font-body-md">Oct 23, 2023</span>
+<span class="text-on-surface-variant text-[12px] font-data-md">23:59:00 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-tertiary-container shadow-[0_0_8px_rgba(255,81,106,0.5)]"></div>
+<span class="text-on-surface font-body-md">Rank Advancement</span>
+</div>
+</td>
+<td class="px-lg py-md text-right font-data-md text-secondary text-headline-md tabular-nums">+5.0000 ETH</td>
+<td class="px-lg py-md text-right font-data-md text-on-surface-variant tabular-nums">$13,250.00</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-full font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Confirmed
+                  </span>
+</td>
+<td class="px-lg py-md">
+<code class="text-primary font-data-md text-[13px] hover:underline cursor-pointer">0x9e4...f1a2</code>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-on-surface font-body-md">Oct 23, 2023</span>
+<span class="text-on-surface-variant text-[12px] font-data-md">12:10:33 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-outline shadow-[0_0_8px_rgba(140,144,159,0.5)]"></div>
+<span class="text-on-surface font-body-md">Contribution</span>
+</div>
+</td>
+<td class="px-lg py-md text-right font-data-md text-secondary text-headline-md tabular-nums">+0.0820 ETH</td>
+<td class="px-lg py-md text-right font-data-md text-on-surface-variant tabular-nums">$217.30</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-primary/10 text-primary border border-primary/20 rounded-full font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    Processing
+                  </span>
+</td>
+<td class="px-lg py-md">
+<code class="text-primary font-data-md text-[13px] hover:underline cursor-pointer">0x1c8...a550</code>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-on-surface font-body-md">Oct 22, 2023</span>
+<span class="text-on-surface-variant text-[12px] font-data-md">14:18:55 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(173,198,255,0.5)]"></div>
+<span class="text-on-surface font-body-md">Daily Staking</span>
+</div>
+</td>
+<td class="px-lg py-md text-right font-data-md text-secondary text-headline-md tabular-nums">+0.1419 ETH</td>
+<td class="px-lg py-md text-right font-data-md text-on-surface-variant tabular-nums">$376.04</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-full font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Confirmed
+                  </span>
+</td>
+<td class="px-lg py-md">
+<code class="text-primary font-data-md text-[13px] hover:underline cursor-pointer">0x4d5...e31b</code>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer Pagination -->
+<div class="px-lg py-md border-t border-outline-variant/30 flex items-center justify-between bg-surface-container-low/50 backdrop-blur-sm">
+<div class="flex items-center gap-md">
+<span class="text-on-surface-variant font-label-sm text-label-sm">Results per page:</span>
+<select class="bg-transparent border-none text-on-surface font-data-md focus:ring-0 cursor-pointer">
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+<div class="flex items-center gap-sm">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors">3</button>
+<span class="text-on-surface-variant">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors">24</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+    // Simple interactive hover effect for the bento grid cards
+    document.querySelectorAll('.glass-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+  </script>
+<style>
+    /* Subtle glow following the mouse on glass cards */
+    .glass-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(400px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(173, 198, 255, 0.05), transparent 40%);
+      pointer-events: none;
+      z-index: 1;
+    }
+  </style>
+</body></html>

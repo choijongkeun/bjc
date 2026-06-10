@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html class="dark" lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>BJC Design Reference Template</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              secondary: "#10B981",
+              tertiary: "#F43F5E",
+              neutral: "#0F172A",
+              surface: "#14213D",
+              surfaceAlt: "#1C2746",
+              borderSoft: "#263455",
+              textPrimary: "#E5ECFF",
+              textSecondary: "#97A4C3",
+              textMuted: "#6E7B98"
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"]
+            },
+            boxShadow: {
+              soft: "0 20px 60px rgba(0, 0, 0, 0.35)"
+            }
+          }
+        }
+      };
+    </script>
+    <style>
+      body {
+        background:
+          radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 30%),
+          radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.1), transparent 26%),
+          #0b1224;
+      }
+
+      .panel {
+        background: rgba(20, 33, 61, 0.84);
+        border: 1px solid rgba(151, 164, 195, 0.12);
+        backdrop-filter: blur(14px);
+      }
+
+      .token-bar {
+        height: 12px;
+        border-radius: 999px;
+      }
+
+      .token-grid {
+        display: grid;
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .token-swatch {
+        height: 24px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen font-sans text-textPrimary">
+    <div class="mx-auto max-w-7xl px-6 py-10 lg:px-10">
+      <header class="mb-8 flex flex-col gap-6 rounded-3xl panel p-6 shadow-soft lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="mb-2 font-mono text-sm text-primary">BJC UI Reference Template</p>
+          <h1 class="text-3xl font-extrabold tracking-tight lg:text-5xl">다크 금융 대시보드 스타일 가이드</h1>
+          <p class="mt-3 max-w-3xl text-sm leading-6 text-textSecondary lg:text-base">
+            블루 중심의 신뢰감, 민트 보조 상태, 핑크 강조/위험 색상을 기반으로 한 운영 콘솔용 UI 템플릿입니다.
+            이후 `signup`, `login`, `dashboard`, `staking` 화면을 만들 때 이 파일을 공통 참고본으로 사용하면 됩니다.
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-sm text-textSecondary">
+          <div class="rounded-2xl bg-white/5 p-4">
+            <p class="font-mono text-xs text-textMuted">Tone</p>
+            <p class="mt-2 font-semibold text-textPrimary">Trust + Precision</p>
+          </div>
+          <div class="rounded-2xl bg-white/5 p-4">
+            <p class="font-mono text-xs text-textMuted">Use Case</p>
+            <p class="mt-2 font-semibold text-textPrimary">Admin / Fintech / Web3</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside class="space-y-6">
+          <section class="rounded-3xl panel p-5">
+            <h2 class="mb-4 text-lg font-bold">1. Color Tokens</h2>
+            <div class="space-y-4">
+              <div class="overflow-hidden rounded-2xl border border-white/10">
+                <div class="bg-primary px-4 py-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-[#F8FBFF]">Primary</span>
+                    <span class="font-mono text-sm text-[#F8FBFF]">#3B82F6</span>
+                  </div>
+                </div>
+                <div class="bg-neutral px-4 py-4">
+                  <div class="token-grid">
+                    <div class="token-swatch bg-[#07122F]"></div>
+                    <div class="token-swatch bg-[#0B1B45]"></div>
+                    <div class="token-swatch bg-[#10295B]"></div>
+                    <div class="token-swatch bg-[#173872]"></div>
+                    <div class="token-swatch bg-[#214A95]"></div>
+                    <div class="token-swatch bg-[#2A61BE]"></div>
+                    <div class="token-swatch bg-[#3B82F6]"></div>
+                    <div class="token-swatch bg-[#72A7FF]"></div>
+                    <div class="token-swatch bg-[#A7C7FF]"></div>
+                    <div class="token-swatch bg-[#D7E7FF]"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="overflow-hidden rounded-2xl border border-white/10">
+                <div class="bg-secondary px-4 py-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-[#041810]">Secondary</span>
+                    <span class="font-mono text-sm text-[#041810]">#10B981</span>
+                  </div>
+                </div>
+                <div class="bg-neutral px-4 py-4">
+                  <div class="token-grid">
+                    <div class="token-swatch bg-[#02140D]"></div>
+                    <div class="token-swatch bg-[#062319]"></div>
+                    <div class="token-swatch bg-[#0A3B29]"></div>
+                    <div class="token-swatch bg-[#0D5A3C]"></div>
+                    <div class="token-swatch bg-[#0E7A54]"></div>
+                    <div class="token-swatch bg-[#10B981]"></div>
+                    <div class="token-swatch bg-[#3DD7A1]"></div>
+                    <div class="token-swatch bg-[#71E4BF]"></div>
+                    <div class="token-swatch bg-[#ABF0DB]"></div>
+                    <div class="token-swatch bg-[#DCF8EF]"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="overflow-hidden rounded-2xl border border-white/10">
+                <div class="bg-tertiary px-4 py-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-[#FFF4F7]">Tertiary</span>
+                    <span class="font-mono text-sm text-[#FFF4F7]">#F43F5E</span>
+                  </div>
+                </div>
+                <div class="bg-neutral px-4 py-4">
+                  <div class="token-grid">
+                    <div class="token-swatch bg-[#25050C]"></div>
+                    <div class="token-swatch bg-[#430A16]"></div>
+                    <div class="token-swatch bg-[#680F22]"></div>
+                    <div class="token-swatch bg-[#951934]"></div>
+                    <div class="token-swatch bg-[#BF2748]"></div>
+                    <div class="token-swatch bg-[#F43F5E]"></div>
+                    <div class="token-swatch bg-[#FF6E86]"></div>
+                    <div class="token-swatch bg-[#FF9FAE]"></div>
+                    <div class="token-swatch bg-[#FFC8CF]"></div>
+                    <div class="token-swatch bg-[#FFE7EB]"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="overflow-hidden rounded-2xl border border-white/10">
+                <div class="bg-neutral px-4 py-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold">Neutral</span>
+                    <span class="font-mono text-sm">#0F172A</span>
+                  </div>
+                </div>
+                <div class="bg-neutral px-4 py-4">
+                  <div class="token-grid">
+                    <div class="token-swatch bg-[#030712]"></div>
+                    <div class="token-swatch bg-[#0B1224]"></div>
+                    <div class="token-swatch bg-[#0F172A]"></div>
+                    <div class="token-swatch bg-[#14213D]"></div>
+                    <div class="token-swatch bg-[#1C2746]"></div>
+                    <div class="token-swatch bg-[#263455]"></div>
+                    <div class="token-swatch bg-[#4C5B7A]"></div>
+                    <div class="token-swatch bg-[#6E7B98]"></div>
+                    <div class="token-swatch bg-[#97A4C3]"></div>
+                    <div class="token-swatch bg-[#E5ECFF]"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-3xl panel p-5">
+            <h2 class="mb-4 text-lg font-bold">2. Design Rules</h2>
+            <ul class="space-y-3 text-sm leading-6 text-textSecondary">
+              <li><span class="font-semibold text-textPrimary">Primary Blue</span>는 주요 CTA, 활성 탭, 핵심 KPI에 사용</li>
+              <li><span class="font-semibold text-textPrimary">Secondary Mint</span>는 성공, 검증, 긍정 상태에 사용</li>
+              <li><span class="font-semibold text-textPrimary">Tertiary Pink</span>는 경고, 삭제, 강조 액션에 제한적으로 사용</li>
+              <li><span class="font-semibold text-textPrimary">Inter</span>는 본문/헤드라인, <span class="font-mono text-textPrimary">JetBrains Mono</span>는 라벨/코드/숫자 강조에 사용</li>
+              <li><span class="font-semibold text-textPrimary">카드 기반 레이아웃</span>과 완만한 라운드, 유리 질감 배경을 기본 규칙으로 유지</li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="space-y-6">
+          <div class="grid gap-6 xl:grid-cols-2">
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-5 flex items-start justify-between">
+                <div>
+                  <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Headline</p>
+                  <p class="mt-1 text-sm text-textSecondary">Inter</p>
+                </div>
+              </div>
+              <div class="text-7xl font-semibold tracking-tight text-textPrimary">Aa</div>
+            </article>
+
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-5 flex items-start justify-between">
+                <div>
+                  <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Label</p>
+                  <p class="mt-1 text-sm text-textSecondary">JetBrains Mono</p>
+                </div>
+              </div>
+              <div class="text-7xl font-mono font-semibold tracking-tight text-textPrimary">Aa</div>
+            </article>
+          </div>
+
+          <article class="rounded-3xl panel p-6">
+            <div class="mb-6 flex items-center justify-between">
+              <div>
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Typography</p>
+                <h2 class="mt-2 text-2xl font-bold">텍스트 위계</h2>
+              </div>
+            </div>
+            <div class="grid gap-6 lg:grid-cols-2">
+              <div class="space-y-4">
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Display / 48 / 800</p>
+                  <p class="text-5xl font-extrabold tracking-tight">Institutional Dashboard</p>
+                </div>
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Headline / 32 / 700</p>
+                  <p class="text-3xl font-bold">Secure Operations Workspace</p>
+                </div>
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Body / 16 / 400</p>
+                  <p class="text-base leading-7 text-textSecondary">
+                    복잡한 정산, 스테이킹, 리포트 화면에서도 읽기 쉬운 밀도를 유지하는 것이 목표입니다.
+                  </p>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Label / 12 / 700</p>
+                  <p class="font-mono text-xs uppercase tracking-[0.22em] text-primary">Portfolio Health</p>
+                </div>
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Data / 18 / Mono</p>
+                  <p class="font-mono text-xl text-textPrimary">APR 12.85% / TVL 3,200,000</p>
+                </div>
+                <div>
+                  <p class="font-mono text-xs text-textMuted">Caption / 14 / 500</p>
+                  <p class="text-sm text-textMuted">작은 설명 텍스트는 대비를 너무 낮추지 않도록 주의합니다.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="grid gap-6 xl:grid-cols-2">
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Buttons</p>
+                <h2 class="mt-2 text-2xl font-bold">버튼 규칙</h2>
+              </div>
+              <div class="grid gap-4">
+                <div class="flex flex-wrap gap-3">
+                  <button class="rounded-xl bg-primary px-5 py-3 font-medium text-[#081223] transition hover:brightness-110">
+                    Primary
+                  </button>
+                  <button class="rounded-xl bg-secondary px-5 py-3 font-medium text-[#03150E] transition hover:brightness-110">
+                    Secondary
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button class="rounded-xl border border-primary/40 bg-white/5 px-5 py-3 font-medium text-textPrimary transition hover:border-primary hover:bg-primary/10">
+                    Inverted
+                  </button>
+                  <button class="rounded-xl border border-borderSoft bg-transparent px-5 py-3 font-medium text-textSecondary transition hover:text-textPrimary">
+                    Outlined
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button class="rounded-xl bg-tertiary px-5 py-3 font-medium text-white transition hover:brightness-110">
+                    Danger
+                  </button>
+                  <button class="cursor-not-allowed rounded-xl bg-white/5 px-5 py-3 font-medium text-textMuted">
+                    Disabled
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Inputs</p>
+                <h2 class="mt-2 text-2xl font-bold">입력 필드 규칙</h2>
+              </div>
+              <div class="space-y-4">
+                <label class="block">
+                  <span class="mb-2 block font-mono text-xs uppercase tracking-[0.18em] text-textSecondary">Search</span>
+                  <div class="flex items-center rounded-2xl border border-borderSoft bg-neutral/60 px-4 py-3">
+                    <span class="material-symbols-outlined mr-3 text-textMuted">search</span>
+                    <input
+                      class="w-full border-0 bg-transparent p-0 text-sm text-textPrimary placeholder:text-textMuted focus:ring-0"
+                      placeholder="Search"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label class="block">
+                  <span class="mb-2 block font-mono text-xs uppercase tracking-[0.18em] text-textSecondary">Focused State</span>
+                  <div class="flex items-center rounded-2xl border border-primary bg-primary/5 px-4 py-3 shadow-[0_0_0_3px_rgba(59,130,246,0.16)]">
+                    <span class="material-symbols-outlined mr-3 text-primary">edit</span>
+                    <input class="w-full border-0 bg-transparent p-0 text-sm text-textPrimary focus:ring-0" value="Editable field" type="text" />
+                  </div>
+                </label>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Metrics</p>
+                <h2 class="mt-2 text-2xl font-bold">상태 바 / 요약 블록</h2>
+              </div>
+              <div class="space-y-5">
+                <div>
+                  <div class="mb-2 flex items-center justify-between text-sm">
+                    <span class="text-textSecondary">Staking Utilization</span>
+                    <span class="font-mono text-textPrimary">74%</span>
+                  </div>
+                  <div class="token-bar bg-white/5">
+                    <div class="token-bar w-[74%] bg-primary"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="mb-2 flex items-center justify-between text-sm">
+                    <span class="text-textSecondary">Settlement Completion</span>
+                    <span class="font-mono text-textPrimary">82%</span>
+                  </div>
+                  <div class="token-bar bg-white/5">
+                    <div class="token-bar w-[82%] bg-secondary"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="mb-2 flex items-center justify-between text-sm">
+                    <span class="text-textSecondary">Risk Alerts</span>
+                    <span class="font-mono text-textPrimary">57%</span>
+                  </div>
+                  <div class="token-bar bg-white/5">
+                    <div class="token-bar w-[57%] bg-[#F6B4C1]"></div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Navigation</p>
+                <h2 class="mt-2 text-2xl font-bold">하단 탭 예시</h2>
+              </div>
+              <div class="mx-auto flex max-w-sm items-center justify-between rounded-2xl bg-white/5 p-2">
+                <button class="flex h-12 w-16 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <span class="material-symbols-outlined">home</span>
+                </button>
+                <button class="flex h-12 w-16 items-center justify-center rounded-xl text-textSecondary">
+                  <span class="material-symbols-outlined">search</span>
+                </button>
+                <button class="flex h-12 w-16 items-center justify-center rounded-xl text-textSecondary">
+                  <span class="material-symbols-outlined">person</span>
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Icon Actions</p>
+                <h2 class="mt-2 text-2xl font-bold">아이콘 액션</h2>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <span class="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+                <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/20 text-secondary">
+                  <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                </button>
+                <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-tertiary/20 text-tertiary">
+                  <span class="material-symbols-outlined text-[20px]">sell</span>
+                </button>
+                <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFDDD8]/90 text-[#8A1F12]">
+                  <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="rounded-3xl panel p-6">
+              <div class="mb-6">
+                <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Page Skeleton</p>
+                <h2 class="mt-2 text-2xl font-bold">페이지 레이아웃 기본 구조</h2>
+              </div>
+              <div class="grid gap-4">
+                <div class="rounded-2xl border border-borderSoft bg-white/5 p-5">
+                  <p class="font-mono text-xs uppercase tracking-[0.18em] text-primary">Header</p>
+                  <div class="mt-3 flex items-center justify-between">
+                    <div>
+                      <p class="text-lg font-semibold">BJC Console</p>
+                      <p class="text-sm text-textSecondary">Dark fintech dashboard baseline</p>
+                    </div>
+                    <button class="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-[#081223]">Primary Action</button>
+                  </div>
+                </div>
+                <div class="grid gap-4 lg:grid-cols-3">
+                  <div class="rounded-2xl border border-borderSoft bg-white/5 p-5">
+                    <p class="font-mono text-xs uppercase tracking-[0.18em] text-textMuted">KPI</p>
+                    <p class="mt-3 text-3xl font-bold">12.85%</p>
+                    <p class="mt-2 text-sm text-secondary">+1.24% today</p>
+                  </div>
+                  <div class="rounded-2xl border border-borderSoft bg-white/5 p-5">
+                    <p class="font-mono text-xs uppercase tracking-[0.18em] text-textMuted">TVL</p>
+                    <p class="mt-3 font-mono text-3xl font-bold">$3.2M</p>
+                    <p class="mt-2 text-sm text-textSecondary">Institutional assets under management</p>
+                  </div>
+                  <div class="rounded-2xl border border-borderSoft bg-white/5 p-5">
+                    <p class="font-mono text-xs uppercase tracking-[0.18em] text-textMuted">Risk</p>
+                    <p class="mt-3 text-3xl font-bold text-tertiary">Medium</p>
+                    <p class="mt-2 text-sm text-textSecondary">2 pending audit actions</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <article class="rounded-3xl panel p-6">
+            <div class="mb-6">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-textMuted">Build Notes</p>
+              <h2 class="mt-2 text-2xl font-bold">이 템플릿을 참고할 때 기준</h2>
+            </div>
+            <div class="grid gap-4 text-sm leading-6 text-textSecondary lg:grid-cols-2">
+              <div class="rounded-2xl bg-white/5 p-5">
+                <p class="mb-2 font-semibold text-textPrimary">추천 적용 범위</p>
+                <p>`login.html`, `signup.html`, `admin_dashboard.html`, `staking.html`, `user_dashboard.html`의 공통 색상/타이포/버튼 기준으로 사용</p>
+              </div>
+              <div class="rounded-2xl bg-white/5 p-5">
+                <p class="mb-2 font-semibold text-textPrimary">주의 사항</p>
+                <p>작은 텍스트와 placeholder는 대비를 너무 낮추지 말고, 핑크는 삭제/경고 역할로 제한해서 사용하는 것을 권장</p>
+              </div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
