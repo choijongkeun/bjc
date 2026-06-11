@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { pool } from "./db/pool.js";
 import { PolicyEngine } from "./services/policyEngine.js";
 import { AuthService } from "./services/authService.js";
+import { NetworkService } from "./services/networkService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -38,12 +39,17 @@ app.use(actorMiddleware);
 
 const engine = new PolicyEngine(pool);
 const authService = new AuthService(pool);
+const networkService = new NetworkService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20)
+});
+
+const networkDepthQuerySchema = z.object({
+  depth: z.coerce.number().int().min(1).max(10).default(3)
 });
 
 const booleanQuerySchema = z.preprocess((value) => {
@@ -149,6 +155,68 @@ app.post("/api/auth/logout", requireSession, async (req, res, next) => {
   try {
     const access_token = extractBearerToken(req.header("authorization"));
     const result = await authService.logout({ access_token });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/referral-tree", requireSession, async (req, res, next) => {
+  try {
+    const query = networkDepthQuerySchema.parse(req.query);
+    const account = requireSessionAccount(req);
+    const result = await networkService.getReferralTree({
+      account_id: account.id,
+      depth: query.depth
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/binary-tree", requireSession, async (req, res, next) => {
+  try {
+    const query = networkDepthQuerySchema.parse(req.query);
+    const account = requireSessionAccount(req);
+    const result = await networkService.getBinaryTree({
+      account_id: account.id,
+      depth: query.depth
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/binary-legs", requireSession, async (req, res, next) => {
+  try {
+    const account = requireSessionAccount(req);
+    const result = await networkService.getBinaryLegs({
+      account_id: account.id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/downlines", requireSession, async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        type: z.enum(["referral", "binary"]),
+        depth: z.coerce.number().int().min(1).max(10).default(3)
+      })
+      .parse(req.query);
+    const account = requireSessionAccount(req);
+    const result = await networkService.listDownlines({
+      account_id: account.id,
+      type: query.type,
+      depth: query.depth,
+      page: query.page,
+      limit: query.limit
+    });
     res.json(result);
   } catch (err) {
     next(err);

@@ -7,6 +7,7 @@ import { withTx } from "../src/db/tx.js";
 import { AppError } from "../src/domain/errors.js";
 import { extractBearerToken } from "../src/http/sessionAuth.js";
 import { AuthService } from "../src/services/authService.js";
+import { NetworkService } from "../src/services/networkService.js";
 import { hashPassword } from "../src/util/passwordHash.js";
 import { hashSessionToken } from "../src/util/sessionToken.js";
 
@@ -21,21 +22,38 @@ function mask(value: string): string {
   return `${value.slice(0, 2)}****${value.slice(-2)}`;
 }
 
+function containsSensitiveKey(value: unknown, key: string): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => containsSensitiveKey(item, key));
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(obj, key)) return true;
+    return Object.values(obj).some((item) => containsSensitiveKey(item, key));
+  }
+  return false;
+}
+
 async function main() {
   const authService = new AuthService(pool);
+  const networkService = new NetworkService(pool);
   const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
   const sponsorId = randomUUID();
   let registeredUserId: string | null = null;
+  let childUserId: string | null = null;
 
   const sponsorLoginId = `smoke_member_sponsor_${suffix}`;
   const sponsorReferralCode = `SMK${suffix.toUpperCase()}`;
   const sponsorDisplayName = `Smoke Sponsor ${suffix}`;
   const userLoginId = `smoke_member_user_${suffix}`;
   const userDisplayName = `Smoke User ${suffix}`;
+  const childLoginId = `smoke_member_child_${suffix}`;
+  const childDisplayName = `Smoke Child ${suffix}`;
   const plainPassword = "Password123";
   const results: Result[] = [];
   let registerToken = "";
   let loginToken = "";
+  let userReferralCode = "";
 
   const [dbRows] = await pool.query("select database() as db, user() as db_user");
   const dbInfo = (dbRows as Array<{ db: string; db_user: string }>)[0];
@@ -86,6 +104,7 @@ async function main() {
       });
       registerToken = registered.access_token;
       registeredUserId = registered.account.id;
+      userReferralCode = registered.account.referral_code ?? "";
       results.push({
         name: "register 성공",
         ok:
@@ -141,6 +160,29 @@ async function main() {
     }
 
     try {
+      const child = await authService.register({
+        login_id: childLoginId,
+        password: plainPassword,
+        display_name: childDisplayName,
+        referral_code: userReferralCode,
+        preferred_binary_position: "LEFT",
+        user_agent: "member-referral-smoke-child",
+        ip_address: "127.0.0.1"
+      });
+      childUserId = child.account.id;
+      results.push({
+        name: "child register 성공",
+        ok:
+          child.account.login_id === childLoginId &&
+          child.account.sponsor_account_id === registeredUserId &&
+          child.account.binary_parent_account_id === registeredUserId &&
+          child.account.binary_position === "LEFT"
+      });
+    } catch (err: any) {
+      results.push({ name: "child register 성공", ok: false, message: err?.message });
+    }
+
+    try {
       const me = await authService.getMe({ access_token: loginToken });
       results.push({
         name: "login token auth/me 성공",
@@ -186,6 +228,109 @@ async function main() {
         ok: err instanceof AppError ? err.status === 401 : false,
         message: err?.message
       });
+    }
+
+    try {
+      const sessionAccount = await authService.authenticateAccessToken(registerToken);
+      const tree = await networkService.getReferralTree({ account_id: sessionAccount.id, depth: 3 });
+      results.push({
+        name: "referral-tree 성공",
+        ok:
+          tree.root.account_id === registeredUserId &&
+          tree.children.length === 1 &&
+          tree.children[0]?.account_id === childUserId &&
+          tree.children[0]?.depth === 1
+      });
+      results.push({
+        name: "referral-tree 민감정보 비포함",
+        ok: !containsSensitiveKey(tree, "password_hash") && !containsSensitiveKey(tree, "session_token_hash")
+      });
+    } catch (err: any) {
+      results.push({ name: "referral-tree 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const sessionAccount = await authService.authenticateAccessToken(registerToken);
+      const tree = await networkService.getBinaryTree({ account_id: sessionAccount.id, depth: 3 });
+      results.push({
+        name: "binary-tree 성공",
+        ok:
+          tree.root.account_id === registeredUserId &&
+          tree.root.children.length === 1 &&
+          tree.root.children[0]?.account_id === childUserId &&
+          tree.root.children[0]?.binary_position === "LEFT"
+      });
+      results.push({
+        name: "binary-tree 민감정보 비포함",
+        ok: !containsSensitiveKey(tree, "password_hash") && !containsSensitiveKey(tree, "session_token_hash")
+      });
+    } catch (err: any) {
+      results.push({ name: "binary-tree 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const sessionAccount = await authService.authenticateAccessToken(registerToken);
+      const legs = await networkService.getBinaryLegs({ account_id: sessionAccount.id });
+      results.push({
+        name: "binary-legs 성공",
+        ok:
+          legs.left.member_count === 1 &&
+          legs.right.member_count === 0 &&
+          legs.weak_leg === "LEFT" &&
+          legs.weak_leg_volume_base === "0"
+      });
+    } catch (err: any) {
+      results.push({ name: "binary-legs 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const sessionAccount = await authService.authenticateAccessToken(registerToken);
+      const downlines = await networkService.listDownlines({
+        account_id: sessionAccount.id,
+        type: "referral",
+        depth: 3,
+        page: 1,
+        limit: 50
+      });
+      results.push({
+        name: "downlines referral 성공",
+        ok:
+          downlines.total === 1 &&
+          downlines.items.length === 1 &&
+          downlines.items[0]?.account_id === childUserId &&
+          downlines.items[0]?.root_leg === null
+      });
+      results.push({
+        name: "downlines referral 민감정보 비포함",
+        ok: !containsSensitiveKey(downlines, "password_hash") && !containsSensitiveKey(downlines, "session_token_hash")
+      });
+    } catch (err: any) {
+      results.push({ name: "downlines referral 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const sessionAccount = await authService.authenticateAccessToken(registerToken);
+      const downlines = await networkService.listDownlines({
+        account_id: sessionAccount.id,
+        type: "binary",
+        depth: 3,
+        page: 1,
+        limit: 50
+      });
+      results.push({
+        name: "downlines binary 성공",
+        ok:
+          downlines.total === 1 &&
+          downlines.items.length === 1 &&
+          downlines.items[0]?.account_id === childUserId &&
+          downlines.items[0]?.root_leg === "LEFT"
+      });
+      results.push({
+        name: "downlines binary 민감정보 비포함",
+        ok: !containsSensitiveKey(downlines, "password_hash") && !containsSensitiveKey(downlines, "session_token_hash")
+      });
+    } catch (err: any) {
+      results.push({ name: "downlines binary 성공", ok: false, message: err?.message });
     }
 
     try {
@@ -279,7 +424,7 @@ async function main() {
       });
     }
   } finally {
-    const ids = [sponsorId, registeredUserId].filter((value): value is string => Boolean(value));
+    const ids = [sponsorId, registeredUserId, childUserId].filter((value): value is string => Boolean(value));
     if (ids.length > 0) {
       const placeholders = ids.map(() => "?").join(", ");
       await withTx(pool, async (conn) => {

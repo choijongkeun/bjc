@@ -28,6 +28,22 @@ export type AccountAuthRow = {
   updated_at: string | null;
 };
 
+export type AccountNetworkRow = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  role: AccountRole;
+  status: AccountStatus;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  binary_parent_account_id: string | null;
+  binary_position: BinaryPosition | null;
+  joined_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
 export async function getAccountById(conn: DbConn, id: string): Promise<AccountRow | null> {
   const [rows] = await conn.query(
     "select id, display_name, role, created_at from accounts where id = ? limit 1",
@@ -63,6 +79,32 @@ export async function getAccountAuthById(conn: DbConn, id: string): Promise<Acco
   const arr = rows as any[];
   if (!arr[0]) return null;
   return arr[0] as AccountAuthRow;
+}
+
+export async function getAccountNetworkById(conn: DbConn, id: string): Promise<AccountNetworkRow | null> {
+  const [rows] = await conn.query(
+    `select
+        id,
+        login_id,
+        display_name,
+        role,
+        status,
+        referral_code,
+        sponsor_account_id,
+        binary_parent_account_id,
+        binary_position,
+        joined_at,
+        last_login_at,
+        created_at,
+        updated_at
+       from accounts
+      where id = ?
+      limit 1`,
+    [id]
+  );
+  const arr = rows as any[];
+  if (!arr[0]) return null;
+  return arr[0] as AccountNetworkRow;
 }
 
 export async function getAccountByIdForUpdate(conn: DbConn, id: string): Promise<AccountAuthRow | null> {
