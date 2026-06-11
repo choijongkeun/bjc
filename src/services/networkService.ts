@@ -286,7 +286,7 @@ export class NetworkService {
     return account;
   }
 
-  async getReferralTree(input: { account_id: string; depth: number }) {
+  async getReferralTreeForAccount(input: { account_id: string; depth: number }) {
     return this.withConnection(async (conn) => {
       const account = await this.requireAccount(conn, input.account_id);
       const rows = await listReferralDescendants(conn, {
@@ -297,7 +297,11 @@ export class NetworkService {
     });
   }
 
-  async getBinaryTree(input: { account_id: string; depth: number }) {
+  async getReferralTree(input: { account_id: string; depth: number }) {
+    return this.getReferralTreeForAccount(input);
+  }
+
+  async getBinaryTreeForAccount(input: { account_id: string; depth: number }) {
     return this.withConnection(async (conn) => {
       const account = await this.requireAccount(conn, input.account_id);
       const rows = await listBinaryDescendants(conn, {
@@ -308,7 +312,11 @@ export class NetworkService {
     });
   }
 
-  async getBinaryLegs(input: { account_id: string }) {
+  async getBinaryTree(input: { account_id: string; depth: number }) {
+    return this.getBinaryTreeForAccount(input);
+  }
+
+  async getBinaryLegsForAccount(input: { account_id: string }) {
     return this.withConnection(async (conn) => {
       await this.requireAccount(conn, input.account_id);
       const rows = await listBinaryDescendants(conn, {
@@ -319,7 +327,11 @@ export class NetworkService {
     });
   }
 
-  async listDownlines(input: {
+  async getBinaryLegs(input: { account_id: string }) {
+    return this.getBinaryLegsForAccount(input);
+  }
+
+  async getDownlinesForAccount(input: {
     account_id: string;
     type: "referral" | "binary";
     depth: number;
@@ -368,5 +380,15 @@ export class NetworkService {
         total
       };
     });
+  }
+
+  async listDownlines(input: {
+    account_id: string;
+    type: "referral" | "binary";
+    depth: number;
+    page: number;
+    limit: number;
+  }) {
+    return this.getDownlinesForAccount(input);
   }
 }

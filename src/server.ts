@@ -8,6 +8,7 @@ import { pool } from "./db/pool.js";
 import { PolicyEngine } from "./services/policyEngine.js";
 import { AuthService } from "./services/authService.js";
 import { NetworkService } from "./services/networkService.js";
+import { AdminAccountService } from "./services/adminAccountService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -40,6 +41,7 @@ app.use(actorMiddleware);
 const engine = new PolicyEngine(pool);
 const authService = new AuthService(pool);
 const networkService = new NetworkService(pool);
+const adminAccountService = new AdminAccountService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -50,6 +52,16 @@ const paginationQuerySchema = z.object({
 
 const networkDepthQuerySchema = z.object({
   depth: z.coerce.number().int().min(1).max(10).default(3)
+});
+
+const adminAccountsListQuerySchema = paginationQuerySchema.extend({
+  q: z.string().trim().min(1).optional(),
+  role: z.enum(["USER", "READER", "ADMIN"]).optional(),
+  status: z.enum(["ACTIVE", "BLOCKED", "WITHDRAWN"]).optional(),
+  sponsor_account_id: z.string().trim().min(1).optional(),
+  binary_parent_account_id: z.string().trim().min(1).optional(),
+  binary_position: z.enum(["LEFT", "RIGHT"]).optional(),
+  sort: z.enum(["joined_at_desc", "joined_at_asc", "login_id_asc", "total_stake_desc"]).default("joined_at_desc")
 });
 
 const booleanQuerySchema = z.preprocess((value) => {
@@ -212,6 +224,112 @@ app.get("/api/me/downlines", requireSession, async (req, res, next) => {
     const account = requireSessionAccount(req);
     const result = await networkService.listDownlines({
       account_id: account.id,
+      type: query.type,
+      depth: query.depth,
+      page: query.page,
+      limit: query.limit
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const query = adminAccountsListQuerySchema.parse(req.query);
+    const result = await adminAccountService.listAccounts({
+      actor_account_id,
+      q: query.q,
+      role: query.role,
+      status: query.status,
+      sponsor_account_id: query.sponsor_account_id,
+      binary_parent_account_id: query.binary_parent_account_id,
+      binary_position: query.binary_position,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const result = await adminAccountService.getAccountDetail({
+      actor_account_id,
+      account_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/referral-tree", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = networkDepthQuerySchema.parse(req.query);
+    const result = await adminAccountService.getReferralTree({
+      actor_account_id,
+      account_id,
+      depth: query.depth
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/binary-tree", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = networkDepthQuerySchema.parse(req.query);
+    const result = await adminAccountService.getBinaryTree({
+      actor_account_id,
+      account_id,
+      depth: query.depth
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/binary-legs", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const result = await adminAccountService.getBinaryLegs({
+      actor_account_id,
+      account_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/downlines", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = paginationQuerySchema
+      .extend({
+        type: z.enum(["referral", "binary"]),
+        depth: z.coerce.number().int().min(1).max(10).default(3)
+      })
+      .parse(req.query);
+    const result = await adminAccountService.listDownlines({
+      actor_account_id,
+      account_id,
       type: query.type,
       depth: query.depth,
       page: query.page,

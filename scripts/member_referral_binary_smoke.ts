@@ -6,6 +6,7 @@ import { pool } from "../src/db/pool.js";
 import { withTx } from "../src/db/tx.js";
 import { AppError } from "../src/domain/errors.js";
 import { extractBearerToken } from "../src/http/sessionAuth.js";
+import { AdminAccountService } from "../src/services/adminAccountService.js";
 import { AuthService } from "../src/services/authService.js";
 import { NetworkService } from "../src/services/networkService.js";
 import { hashPassword } from "../src/util/passwordHash.js";
@@ -37,12 +38,19 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 async function main() {
   const authService = new AuthService(pool);
   const networkService = new NetworkService(pool);
+  const adminAccountService = new AdminAccountService(pool);
   const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
+  const adminId = randomUUID();
+  const readerId = randomUUID();
   const sponsorId = randomUUID();
   let registeredUserId: string | null = null;
   let childUserId: string | null = null;
 
+  const adminLoginId = `smoke_member_admin_${suffix}`;
+  const readerLoginId = `smoke_member_reader_${suffix}`;
   const sponsorLoginId = `smoke_member_sponsor_${suffix}`;
+  const adminReferralCode = `ADM${suffix.toUpperCase()}`;
+  const readerReferralCode = `RDR${suffix.toUpperCase()}`;
   const sponsorReferralCode = `SMK${suffix.toUpperCase()}`;
   const sponsorDisplayName = `Smoke Sponsor ${suffix}`;
   const userLoginId = `smoke_member_user_${suffix}`;
@@ -76,6 +84,32 @@ async function main() {
             updated_at
           ) values (?, ?, ?, ?, 'USER', 'ACTIVE', ?, ?, ?)`,
         [sponsorId, sponsorLoginId, sponsorPasswordHash, sponsorDisplayName, sponsorReferralCode, new Date(), new Date()]
+      );
+      await conn.query(
+        `insert into accounts (
+            id,
+            login_id,
+            display_name,
+            role,
+            status,
+            referral_code,
+            joined_at,
+            updated_at
+          ) values (?, ?, ?, 'ADMIN', 'ACTIVE', ?, ?, ?)`,
+        [adminId, adminLoginId, `Smoke Admin ${suffix}`, adminReferralCode, new Date(), new Date()]
+      );
+      await conn.query(
+        `insert into accounts (
+            id,
+            login_id,
+            display_name,
+            role,
+            status,
+            referral_code,
+            joined_at,
+            updated_at
+          ) values (?, ?, ?, 'READER', 'ACTIVE', ?, ?, ?)`,
+        [readerId, readerLoginId, `Smoke Reader ${suffix}`, readerReferralCode, new Date(), new Date()]
       );
     });
 
@@ -334,6 +368,156 @@ async function main() {
     }
 
     try {
+      const adminAccounts = await adminAccountService.listAccounts({
+        actor_account_id: adminId,
+        q: userLoginId,
+        role: "USER",
+        page: 1,
+        limit: 20,
+        sort: "joined_at_desc"
+      });
+      results.push({
+        name: "ADMIN actor admin/accounts 성공",
+        ok:
+          adminAccounts.total >= 1 &&
+          adminAccounts.items.some((item) => item.id === registeredUserId && item.login_id === userLoginId)
+      });
+      results.push({
+        name: "ADMIN accounts 민감정보 비포함",
+        ok: !containsSensitiveKey(adminAccounts, "password_hash") && !containsSensitiveKey(adminAccounts, "session_token_hash")
+      });
+    } catch (err: any) {
+      results.push({ name: "ADMIN actor admin/accounts 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const readerAccounts = await adminAccountService.listAccounts({
+        actor_account_id: readerId,
+        q: userLoginId,
+        role: "USER",
+        page: 1,
+        limit: 20,
+        sort: "joined_at_desc"
+      });
+      results.push({
+        name: "READER actor admin/accounts 성공",
+        ok: readerAccounts.items.some((item) => item.id === registeredUserId)
+      });
+    } catch (err: any) {
+      results.push({ name: "READER actor admin/accounts 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      await adminAccountService.listAccounts({
+        actor_account_id: sponsorId,
+        page: 1,
+        limit: 20,
+        sort: "joined_at_desc"
+      });
+      results.push({ name: "USER actor admin/accounts 실패", ok: false, message: "unexpected success" });
+    } catch (err: any) {
+      results.push({
+        name: "USER actor admin/accounts 실패",
+        ok: err instanceof AppError ? err.status === 403 : false,
+        message: err?.message
+      });
+    }
+
+    if (registeredUserId) {
+      try {
+        const detail = await adminAccountService.getAccountDetail({
+          actor_account_id: adminId,
+          account_id: registeredUserId
+        });
+        results.push({
+          name: "ADMIN actor admin/accounts/:accountId 성공",
+          ok:
+            detail.account.id === registeredUserId &&
+            detail.account.sponsor_account_id === sponsorId &&
+            detail.account.sponsor_login_id === sponsorLoginId
+        });
+        results.push({
+          name: "ADMIN detail 민감정보 비포함",
+          ok: !containsSensitiveKey(detail, "password_hash") && !containsSensitiveKey(detail, "session_token_hash")
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor admin/accounts/:accountId 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        const tree = await adminAccountService.getReferralTree({
+          actor_account_id: adminId,
+          account_id: registeredUserId,
+          depth: 3
+        });
+        results.push({
+          name: "ADMIN actor 특정 회원 referral-tree 성공",
+          ok: tree.root.account_id === registeredUserId && tree.children[0]?.account_id === childUserId
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 특정 회원 referral-tree 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        const tree = await adminAccountService.getBinaryTree({
+          actor_account_id: adminId,
+          account_id: registeredUserId,
+          depth: 3
+        });
+        results.push({
+          name: "ADMIN actor 특정 회원 binary-tree 성공",
+          ok: tree.root.account_id === registeredUserId && tree.root.children[0]?.account_id === childUserId
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 특정 회원 binary-tree 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        const legs = await adminAccountService.getBinaryLegs({
+          actor_account_id: adminId,
+          account_id: registeredUserId
+        });
+        results.push({
+          name: "ADMIN actor 특정 회원 binary-legs 성공",
+          ok: legs.left.member_count === 1 && legs.right.member_count === 0
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 특정 회원 binary-legs 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        const downlines = await adminAccountService.listDownlines({
+          actor_account_id: adminId,
+          account_id: registeredUserId,
+          type: "binary",
+          depth: 3,
+          page: 1,
+          limit: 50
+        });
+        results.push({
+          name: "ADMIN actor 특정 회원 downlines 성공",
+          ok: downlines.total === 1 && downlines.items[0]?.account_id === childUserId
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 특정 회원 downlines 성공", ok: false, message: err?.message });
+      }
+    }
+
+    try {
+      await adminAccountService.getAccountDetail({
+        actor_account_id: adminId,
+        account_id: randomUUID()
+      });
+      results.push({ name: "존재하지 않는 accountId 404", ok: false, message: "unexpected success" });
+    } catch (err: any) {
+      results.push({
+        name: "존재하지 않는 accountId 404",
+        ok: err instanceof AppError ? err.status === 404 : false,
+        message: err?.message
+      });
+    }
+
+    try {
       await authService.logout({ access_token: loginToken });
       results.push({ name: "logout 성공", ok: true });
     } catch (err: any) {
@@ -424,7 +608,7 @@ async function main() {
       });
     }
   } finally {
-    const ids = [sponsorId, registeredUserId, childUserId].filter((value): value is string => Boolean(value));
+    const ids = [adminId, readerId, sponsorId, registeredUserId, childUserId].filter((value): value is string => Boolean(value));
     if (ids.length > 0) {
       const placeholders = ids.map(() => "?").join(", ");
       await withTx(pool, async (conn) => {
