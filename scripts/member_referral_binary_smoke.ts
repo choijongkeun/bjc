@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { pool } from "../src/db/pool.js";
 import { withTx } from "../src/db/tx.js";
 import { AppError } from "../src/domain/errors.js";
+import { extractBearerToken } from "../src/http/sessionAuth.js";
 import { AuthService } from "../src/services/authService.js";
 import { hashPassword } from "../src/util/passwordHash.js";
 import { hashSessionToken } from "../src/util/sessionToken.js";
@@ -130,6 +131,26 @@ async function main() {
     }
 
     try {
+      const me = await authService.getMe({ access_token: registerToken });
+      results.push({
+        name: "register token auth/me 성공",
+        ok: me.account.id === registeredUserId && me.account.login_id === userLoginId
+      });
+    } catch (err: any) {
+      results.push({ name: "register token auth/me 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      const me = await authService.getMe({ access_token: loginToken });
+      results.push({
+        name: "login token auth/me 성공",
+        ok: me.account.id === registeredUserId && me.account.login_id === userLoginId
+      });
+    } catch (err: any) {
+      results.push({ name: "login token auth/me 성공", ok: false, message: err?.message });
+    }
+
+    try {
       await authService.login({
         login_id: userLoginId,
         password: "WrongPassword123",
@@ -140,6 +161,46 @@ async function main() {
     } catch (err: any) {
       results.push({
         name: "wrong password 실패",
+        ok: err instanceof AppError ? err.status === 401 : false,
+        message: err?.message
+      });
+    }
+
+    try {
+      extractBearerToken(undefined);
+      results.push({ name: "Authorization header 없음 실패", ok: false, message: "unexpected success" });
+    } catch (err: any) {
+      results.push({
+        name: "Authorization header 없음 실패",
+        ok: err instanceof AppError ? err.status === 401 : false,
+        message: err?.message
+      });
+    }
+
+    try {
+      await authService.getMe({ access_token: "invalid-smoke-token" });
+      results.push({ name: "잘못된 token auth/me 실패", ok: false, message: "unexpected success" });
+    } catch (err: any) {
+      results.push({
+        name: "잘못된 token auth/me 실패",
+        ok: err instanceof AppError ? err.status === 401 : false,
+        message: err?.message
+      });
+    }
+
+    try {
+      await authService.logout({ access_token: loginToken });
+      results.push({ name: "logout 성공", ok: true });
+    } catch (err: any) {
+      results.push({ name: "logout 성공", ok: false, message: err?.message });
+    }
+
+    try {
+      await authService.getMe({ access_token: loginToken });
+      results.push({ name: "logout 이후 auth/me 실패", ok: false, message: "unexpected success" });
+    } catch (err: any) {
+      results.push({
+        name: "logout 이후 auth/me 실패",
         ok: err instanceof AppError ? err.status === 401 : false,
         message: err?.message
       });
@@ -207,6 +268,15 @@ async function main() {
         name: "auth_sessions token hash 생성 확인",
         ok: Number((sessionRows as Array<{ total: number | string }>)[0]?.total ?? 0) === 2
       });
+
+      const [revokedRows] = await pool.query(
+        "select count(*) as total from auth_sessions where account_id = ? and session_token_hash = ? and revoked_at is not null",
+        [registeredUserId, hashSessionToken(loginToken)]
+      );
+      results.push({
+        name: "auth_sessions revoke 처리 확인",
+        ok: Number((revokedRows as Array<{ total: number | string }>)[0]?.total ?? 0) === 1
+      });
     }
   } finally {
     const ids = [sponsorId, registeredUserId].filter((value): value is string => Boolean(value));
@@ -229,6 +299,14 @@ async function main() {
           `delete from referral_edges
             where parent_account_id in (${placeholders}) or child_account_id in (${placeholders})`,
           [...ids, ...ids]
+        );
+        await conn.query(
+          `update accounts
+              set sponsor_account_id = null,
+                  binary_parent_account_id = null,
+                  binary_position = null
+            where id in (${placeholders})`,
+          ids
         );
         await conn.query(`delete from accounts where id in (${placeholders})`, ids);
       });

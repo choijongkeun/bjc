@@ -9,6 +9,7 @@ import { PolicyEngine } from "./services/policyEngine.js";
 import { AuthService } from "./services/authService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
+import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
 import { unauthorized, validationError } from "./domain/errors.js";
 
 const app = express();
@@ -20,7 +21,7 @@ app.use((req, res, next) => {
   if (origin && allowedOriginPattern.test(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Vary", "Origin");
-    res.header("Access-Control-Allow-Headers", "Content-Type, x-actor-account-id");
+    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, x-actor-account-id");
     res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   }
 
@@ -37,6 +38,7 @@ app.use(actorMiddleware);
 
 const engine = new PolicyEngine(pool);
 const authService = new AuthService(pool);
+const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
 const paginationQuerySchema = z.object({
@@ -116,6 +118,37 @@ app.post("/api/auth/login", async (req, res, next) => {
       user_agent: req.header("user-agent") ?? null,
       ip_address: req.ip ?? null
     });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/auth/me", requireSession, async (req, res, next) => {
+  try {
+    const account = requireSessionAccount(req);
+    res.json({
+      account: {
+        id: account.id,
+        login_id: account.login_id,
+        display_name: account.display_name,
+        role: account.role,
+        status: account.status,
+        referral_code: account.referral_code,
+        sponsor_account_id: account.sponsor_account_id,
+        binary_parent_account_id: account.binary_parent_account_id,
+        binary_position: account.binary_position
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/auth/logout", requireSession, async (req, res, next) => {
+  try {
+    const access_token = extractBearerToken(req.header("authorization"));
+    const result = await authService.logout({ access_token });
     res.json(result);
   } catch (err) {
     next(err);

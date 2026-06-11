@@ -14,7 +14,12 @@ import {
   type BinaryPosition
 } from "../repos/accountsRepo.js";
 import { insertAdminAuditLog } from "../repos/auditLogRepo.js";
-import { insertAuthSession } from "../repos/authSessionsRepo.js";
+import {
+  findActiveSessionByTokenHash,
+  findActiveSessionByTokenHashForUpdate,
+  insertAuthSession,
+  revokeSessionByTokenHash
+} from "../repos/authSessionsRepo.js";
 import { insertBinaryEdges } from "../repos/binaryEdgesRepo.js";
 import { insertBinaryNode } from "../repos/binaryNodesRepo.js";
 import { insertReferralEdges, listReferralAncestorsByChild } from "../repos/referralRepo.js";
@@ -94,6 +99,33 @@ export class AuthService {
         sponsor_display_name: sponsor.display_name ?? sponsor.login_id ?? sponsor.id
       };
     });
+  }
+
+  async authenticateAccessToken(access_token: string): Promise<AccountAuthRow> {
+    const session_token_hash = hashSessionToken(access_token);
+    return this.withConnection(async (conn) => {
+      const session = await findActiveSessionByTokenHash(conn, session_token_hash);
+      if (!session) {
+        throw unauthorized("invalid or expired session");
+      }
+
+      const account = await getAccountAuthById(conn, session.account_id);
+      if (!account) {
+        throw unauthorized("invalid or expired session");
+      }
+      if (account.status !== "ACTIVE") {
+        throw forbidden("account is not active", { account_id: account.id, status: account.status });
+      }
+
+      return account;
+    });
+  }
+
+  async getMe(input: { access_token: string }) {
+    const account = await this.authenticateAccessToken(input.access_token);
+    return {
+      account: toAuthAccountResponse(account)
+    };
   }
 
   async register(input: {
@@ -301,6 +333,42 @@ export class AuthService {
         access_token,
         account: toAuthAccountResponse(updated)
       };
+    });
+  }
+
+  async logout(input: { access_token: string }) {
+    return withTx(this.pool, async (conn) => {
+      const session_token_hash = hashSessionToken(input.access_token);
+      const session = await findActiveSessionByTokenHashForUpdate(conn, session_token_hash);
+      if (!session) {
+        throw unauthorized("invalid or expired session");
+      }
+
+      const account = await getAccountAuthById(conn, session.account_id);
+      if (!account) {
+        throw unauthorized("invalid or expired session");
+      }
+      if (account.status !== "ACTIVE") {
+        throw forbidden("account is not active", { account_id: account.id, status: account.status });
+      }
+
+      const revoked = await revokeSessionByTokenHash(conn, {
+        session_token_hash,
+        revoked_at: new Date()
+      });
+      if (!revoked) {
+        throw unauthorized("invalid or expired session");
+      }
+
+      await insertAdminAuditLog(conn, {
+        actor_account_id: account.id,
+        action: "AUTH_LOGOUT",
+        target_table: "auth_sessions",
+        target_id: String(session.id),
+        meta: { account_id: account.id }
+      });
+
+      return { ok: true };
     });
   }
 }
