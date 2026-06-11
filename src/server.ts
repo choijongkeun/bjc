@@ -6,6 +6,7 @@ import { z } from "zod";
 import { env } from "./config/env.js";
 import { pool } from "./db/pool.js";
 import { PolicyEngine } from "./services/policyEngine.js";
+import { AuthService } from "./services/authService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { unauthorized, validationError } from "./domain/errors.js";
@@ -35,6 +36,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(actorMiddleware);
 
 const engine = new PolicyEngine(pool);
+const authService = new AuthService(pool);
 const upload = multer({ storage: multer.memoryStorage() });
 
 const paginationQuerySchema = z.object({
@@ -60,6 +62,64 @@ function requireActorId(req: express.Request): string {
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/referrals/resolve", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        referral_code: z.string().trim().min(1)
+      })
+      .parse(req.query);
+
+    const result = await authService.resolveReferralCode({ referral_code: query.referral_code });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/auth/register", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        login_id: z.string().trim().min(3).max(64).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
+        password: z.string().min(8).max(128),
+        display_name: z.string().trim().min(1).max(100),
+        referral_code: z.string().trim().min(1).max(32),
+        preferred_binary_position: z.enum(["LEFT", "RIGHT"]).optional()
+      })
+      .parse(req.body);
+
+    const result = await authService.register({
+      ...body,
+      user_agent: req.header("user-agent") ?? null,
+      ip_address: req.ip ?? null
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/auth/login", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        login_id: z.string().trim().min(3).max(64),
+        password: z.string().min(8).max(128)
+      })
+      .parse(req.body);
+
+    const result = await authService.login({
+      ...body,
+      user_agent: req.header("user-agent") ?? null,
+      ip_address: req.ip ?? null
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.post("/admin/policy-versions", async (req, res, next) => {
