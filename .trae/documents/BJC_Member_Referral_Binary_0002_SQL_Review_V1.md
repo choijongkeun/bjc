@@ -458,3 +458,189 @@
 - trigger 없이도 최소 DB 보호선 확보
 
 다만 실제 서비스 무결성의 핵심은 여전히 app layer에 있다.
+
+---
+
+## 19. 실제 DB 적용 결과
+
+- 적용 일시: 2026-06-11 local time
+- 적용 DB명: `bjc_db`
+- 적용 대상 SQL: [0002_bjc_member_referral_binary_auth_mysql.sql](file:///Users/faster/Projects/bjc/mysql/migrations/0002_bjc_member_referral_binary_auth_mysql.sql)
+- 적용 결과: 성공
+
+### 19.1 적용 전 확인 결과
+
+- `0001` 핵심 테이블 존재 확인:
+  - `accounts`
+  - `referral_edges`
+  - `policy_versions`
+  - `staking_products`
+  - `ledger_events`
+  - `calc_runs`
+  - `settlement_items`
+  - `admin_audit_log`
+- `accounts.id` 타입 확인:
+  - `char(36)`
+- `referral_edges` 구조 확인:
+  - `parent_account_id char(36)`
+  - `child_account_id char(36)`
+  - `depth int`
+  - `path text`
+
+### 19.2 백업 수행
+
+- 수행 여부: 예
+- 방식: `mysqldump --single-transaction --no-tablespaces`
+- 저장 위치: 저장소 외부 임시 경로 `/tmp/bjc_backups/...`
+- 비고:
+  - repo worktree를 깨끗하게 유지하기 위해 프로젝트 내부 `backups/` 대신 `/tmp`를 사용했다.
+
+### 19.3 accounts 신규 컬럼 확인 결과
+
+확인된 신규 컬럼:
+
+- `login_id varchar(64) null`
+- `password_hash varchar(255) null`
+- `status varchar(20) not null default 'ACTIVE'`
+- `referral_code varchar(32) null`
+- `sponsor_account_id char(36) null`
+- `binary_parent_account_id char(36) null`
+- `binary_position varchar(10) null`
+- `joined_at datetime(6) null`
+- `last_login_at datetime(6) null`
+- `updated_at datetime(6) null`
+
+### 19.4 신규 테이블 확인 결과
+
+확인된 신규 테이블:
+
+- `auth_sessions`
+- `binary_nodes`
+- `binary_edges`
+
+### 19.5 constraint / index 확인 결과
+
+`accounts`
+
+- unique:
+  - `uniq_accounts_login_id`
+  - `uniq_accounts_referral_code`
+  - `uniq_accounts_binary_parent_position`
+- foreign key:
+  - `fk_accounts_sponsor_account`
+  - `fk_accounts_binary_parent_account`
+- check:
+  - `chk_accounts_status`
+  - `chk_accounts_binary_position`
+  - `chk_accounts_sponsor_not_self`
+  - `chk_accounts_binary_parent_not_self`
+- index:
+  - `idx_accounts_sponsor_account_id`
+  - `idx_accounts_binary_parent_account_id`
+
+`auth_sessions`
+
+- unique:
+  - `uniq_auth_sessions_token_hash`
+- foreign key:
+  - `fk_auth_sessions_account`
+- index:
+  - `idx_auth_sessions_account_id`
+  - `idx_auth_sessions_expires_at`
+  - `idx_auth_sessions_revoked_at`
+
+`binary_nodes`
+
+- unique:
+  - `uniq_binary_nodes_parent_position`
+- foreign key:
+  - `fk_binary_nodes_account`
+  - `fk_binary_nodes_parent_account`
+  - `fk_binary_nodes_root_account`
+- check:
+  - `chk_binary_nodes_position`
+  - `chk_binary_nodes_parent_not_self`
+- index:
+  - `idx_binary_nodes_parent_account_id`
+  - `idx_binary_nodes_root_account_id`
+
+`binary_edges`
+
+- unique:
+  - `uniq_binary_edges_ancestor_descendant`
+- foreign key:
+  - `fk_binary_edges_ancestor_account`
+  - `fk_binary_edges_descendant_account`
+- check:
+  - `chk_binary_edges_depth`
+  - `chk_binary_edges_root_leg`
+  - `chk_binary_edges_self_row`
+- index:
+  - `idx_binary_edges_ancestor_depth`
+  - `idx_binary_edges_root_leg`
+  - `idx_binary_edges_descendant`
+  - `idx_binary_edges_ancestor_root_leg_depth`
+
+### 19.6 smoke SQL 실행 결과 요약
+
+실행 파일:
+
+- [bjc_member_referral_binary_smoketest.sql](file:///Users/faster/Projects/bjc/mysql/smoke/bjc_member_referral_binary_smoketest.sql)
+
+실행 방식:
+
+- 명시적 `START TRANSACTION`
+- smoke SQL 실행
+- 마지막 `ROLLBACK`
+
+즉, 검증은 수행했지만 테스트 데이터는 최종 커밋하지 않았다.
+
+최종 결과:
+
+- T1 PASS
+- T2 PASS
+- T3 PASS
+- T4 PASS, expected `ERROR 1062`
+- T5 PASS, expected `ERROR 1062`
+- T6 PASS, expected `ERROR 1452`
+- T7 PASS
+- T8 PASS
+- T9 PASS, expected `ERROR 1062`
+- T10 PASS
+- T11 PASS
+- T12 PASS, expected `ERROR 1062`
+- T13 PASS
+- T14 PASS, expected `ERROR 1062`
+- T15 PASS, expected `ERROR 3819`
+- T16 PASS, expected `ERROR 3819`
+
+### 19.7 실패 기대 테스트 결과
+
+기대한 에러와 실제 결과는 아래와 같이 일치했다.
+
+- duplicate key:
+  - T4
+  - T5
+  - T9
+  - T12
+  - T14
+  - 실제 결과: `ERROR 1062`
+- foreign key:
+  - T6
+  - 실제 결과: `ERROR 1452`
+- check:
+  - T15
+  - T16
+  - 실제 결과: `ERROR 3819`
+
+### 19.8 cleanup 수행 여부
+
+- 별도 cleanup DML 수행 여부: 아니오
+- 이유:
+  - smoke를 명시적 트랜잭션으로 감싸고 마지막에 `ROLLBACK`했기 때문에 테스트 데이터가 남지 않도록 처리했다.
+
+### 19.9 남은 이슈
+
+- smoke SQL의 T9는 최초 초안에서 존재하지 않는 account id로 `binary_nodes` insert를 시도해 FK가 먼저 발생했다.
+- 이를 수정하여, 중복 LEFT 테스트 전에 실제 account row를 생성하도록 보완했다.
+- 0002 스키마 자체는 정상 적용되었고, 최종 smoke는 기대 결과와 일치했다.

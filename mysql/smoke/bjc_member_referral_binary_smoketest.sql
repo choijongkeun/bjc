@@ -228,6 +228,28 @@ insert into binary_nodes (
 -- PASS if MySQL returns ERROR 1062
 -- ---------------------------------------------------------------------------
 select 'T9 duplicate LEFT under same parent should fail (PASS if ERROR 1062)' as test;
+set @left_dup_id := uuid();
+insert into accounts (
+  id,
+  login_id,
+  password_hash,
+  display_name,
+  role,
+  status,
+  referral_code,
+  joined_at,
+  updated_at
+) values (
+  @left_dup_id,
+  concat('left_dup_', @suffix),
+  concat('hash_left_dup_', @suffix),
+  'Duplicate Left Candidate',
+  'USER',
+  'ACTIVE',
+  concat('REFLDP', left(@suffix, 8)),
+  now(6),
+  now(6)
+);
 insert into binary_nodes (
   account_id,
   parent_account_id,
@@ -235,7 +257,7 @@ insert into binary_nodes (
   root_account_id,
   updated_at
 ) values (
-  uuid(),
+  @left_dup_id,
   @root_admin_id,
   'LEFT',
   @root_admin_id,
