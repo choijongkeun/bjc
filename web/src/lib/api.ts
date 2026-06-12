@@ -89,7 +89,138 @@ export type ReportSummary = {
   finalized_calc_runs: string;
 };
 
+export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
+export type BinaryPosition = "LEFT" | "RIGHT";
+export type AdminAccountSort = "joined_at_desc" | "joined_at_asc" | "login_id_asc" | "total_stake_desc";
+
+export type AdminAccountListItem = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  role: SessionRole;
+  status: AccountStatus;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  sponsor_login_id: string | null;
+  binary_parent_account_id: string | null;
+  binary_parent_login_id: string | null;
+  binary_position: BinaryPosition | null;
+  joined_at: string | null;
+  last_login_at: string | null;
+  total_stake_amount_base: string;
+  total_reward_amount_base: string;
+  rank_level: number;
+};
+
+export type AdminAccountDetail = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  role: SessionRole;
+  status: AccountStatus;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  sponsor_login_id: string | null;
+  sponsor_display_name: string | null;
+  binary_parent_account_id: string | null;
+  binary_parent_login_id: string | null;
+  binary_parent_display_name: string | null;
+  binary_position: BinaryPosition | null;
+  joined_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  total_stake_amount_base: string;
+  total_reward_amount_base: string;
+  rank_level: number;
+};
+
+export type ReferralTreeRoot = {
+  account_id: string;
+  login_id: string | null;
+  display_name: string | null;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  depth: number;
+  rank_level: number;
+  total_stake_amount_base: string;
+  total_reward_amount_base: string;
+};
+
+export type ReferralTreeNode = {
+  account_id: string;
+  login_id: string | null;
+  display_name: string | null;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  depth: number;
+  rank_level: number;
+  total_stake_amount_base: string;
+  total_reward_amount_base: string;
+  children: ReferralTreeNode[];
+};
+
+export type ReferralTreeResponse = {
+  root: ReferralTreeRoot;
+  children: ReferralTreeNode[];
+};
+
+export type BinaryTreeNode = {
+  account_id: string;
+  login_id: string | null;
+  display_name: string | null;
+  binary_parent_account_id: string | null;
+  binary_position: BinaryPosition | null;
+  depth: number;
+  root_leg: BinaryPosition | null;
+  total_stake_amount_base: string;
+  total_sales_amount_base: string;
+  total_reward_amount_base: string;
+  rank_level: number;
+  children: BinaryTreeNode[];
+};
+
+export type BinaryTreeResponse = {
+  root: BinaryTreeNode;
+};
+
+export type BinaryLegSummary = {
+  member_count: number;
+  total_stake_amount_base: string;
+  total_sales_amount_base: string;
+  total_reward_amount_base: string;
+};
+
+export type BinaryLegsResponse = {
+  left: BinaryLegSummary;
+  right: BinaryLegSummary;
+  weak_leg: BinaryPosition;
+  weak_leg_volume_base: string;
+};
+
+export type DownlineItem = {
+  account_id: string;
+  login_id: string | null;
+  display_name: string | null;
+  depth: number;
+  sponsor_account_id: string | null;
+  binary_parent_account_id: string | null;
+  binary_position: BinaryPosition | null;
+  root_leg: BinaryPosition | null;
+  total_stake_amount_base: string;
+  total_reward_amount_base: string;
+  rank_level: number;
+  joined_at: string | null;
+};
+
 export type PagedResponse<T, K extends string> = Record<K, T[]> & {
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type ItemsPageResponse<T> = {
+  items: T[];
   page: number;
   limit: number;
   total: number;
@@ -195,4 +326,31 @@ export const api = {
     request<ReportSummary>(`/api/reports/summary${params(query as any)}`, { method: "GET", actorId }),
   listAuditLogs: (actorId: string, query: Record<string, unknown>) =>
     request<PagedResponse<AuditLog, "audit_logs">>(`/api/audit-logs${params(query as any)}`, { method: "GET", actorId }),
+  listAdminAccounts: (
+    actorId: string,
+    query: {
+      q?: string;
+      role?: SessionRole;
+      status?: AccountStatus;
+      sponsor_account_id?: string;
+      binary_parent_account_id?: string;
+      binary_position?: BinaryPosition;
+      page?: number;
+      limit?: number;
+      sort?: AdminAccountSort;
+    }
+  ) => request<ItemsPageResponse<AdminAccountListItem>>(`/api/admin/accounts${params(query as any)}`, { method: "GET", actorId }),
+  getAdminAccount: (actorId: string, accountId: string) =>
+    request<{ account: AdminAccountDetail }>(`/api/admin/accounts/${accountId}`, { method: "GET", actorId }),
+  getAdminAccountReferralTree: (actorId: string, accountId: string, query: { depth?: number }) =>
+    request<ReferralTreeResponse>(`/api/admin/accounts/${accountId}/referral-tree${params(query as any)}`, { method: "GET", actorId }),
+  getAdminAccountBinaryTree: (actorId: string, accountId: string, query: { depth?: number }) =>
+    request<BinaryTreeResponse>(`/api/admin/accounts/${accountId}/binary-tree${params(query as any)}`, { method: "GET", actorId }),
+  getAdminAccountBinaryLegs: (actorId: string, accountId: string) =>
+    request<BinaryLegsResponse>(`/api/admin/accounts/${accountId}/binary-legs`, { method: "GET", actorId }),
+  getAdminAccountDownlines: (
+    actorId: string,
+    accountId: string,
+    query: { type: "referral" | "binary"; depth?: number; page?: number; limit?: number }
+  ) => request<ItemsPageResponse<DownlineItem>>(`/api/admin/accounts/${accountId}/downlines${params(query as any)}`, { method: "GET", actorId }),
 };
