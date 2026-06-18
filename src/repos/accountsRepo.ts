@@ -426,6 +426,19 @@ export async function updateAccountLoginSuccess(
   );
 }
 
+export async function updateAccountStatus(
+  conn: DbConn,
+  input: { id: string; status: AccountStatus; updated_at: Date }
+): Promise<void> {
+  await conn.query(
+    `update accounts
+        set status = ?,
+            updated_at = ?
+      where id = ?`,
+    [input.status, input.updated_at, input.id]
+  );
+}
+
 export async function listAccountsForAdmin(
   conn: DbConn,
   input: AdminAccountListFilters & {

@@ -503,6 +503,115 @@ async function main() {
       }
     }
 
+    if (registeredUserId) {
+      try {
+        const updated = await adminAccountService.updateStatus({
+          actor_account_id: adminId,
+          account_id: registeredUserId,
+          status: "BLOCKED",
+          reason: "smoke block"
+        });
+        results.push({
+          name: "ADMIN actor 회원 상태 BLOCKED 변경 성공",
+          ok:
+            updated.account.id === registeredUserId &&
+            updated.previous_status === "ACTIVE" &&
+            updated.account.status === "BLOCKED" &&
+            updated.revoked_session_count >= 1
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 회원 상태 BLOCKED 변경 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        await adminAccountService.updateStatus({
+          actor_account_id: readerId,
+          account_id: registeredUserId,
+          status: "ACTIVE",
+          reason: "reader should fail"
+        });
+        results.push({ name: "READER actor 회원 상태 변경 실패", ok: false, message: "unexpected success" });
+      } catch (err: any) {
+        results.push({
+          name: "READER actor 회원 상태 변경 실패",
+          ok: err instanceof AppError ? err.status === 403 : false,
+          message: err?.message
+        });
+      }
+
+      try {
+        await authService.login({
+          login_id: userLoginId,
+          password: plainPassword,
+          user_agent: "member-referral-smoke-login",
+          ip_address: "127.0.0.1"
+        });
+        results.push({ name: "BLOCKED 회원 login 실패", ok: false, message: "unexpected success" });
+      } catch (err: any) {
+        results.push({
+          name: "BLOCKED 회원 login 실패",
+          ok: err instanceof AppError ? err.status === 403 : false,
+          message: err?.message
+        });
+      }
+
+      try {
+        await authService.getMe({ access_token: registerToken });
+        results.push({ name: "BLOCKED 이후 기존 token auth/me 실패", ok: false, message: "unexpected success" });
+      } catch (err: any) {
+        results.push({
+          name: "BLOCKED 이후 기존 token auth/me 실패",
+          ok: err instanceof AppError ? err.status === 401 : false,
+          message: err?.message
+        });
+      }
+
+      try {
+        const restored = await adminAccountService.updateStatus({
+          actor_account_id: adminId,
+          account_id: registeredUserId,
+          status: "ACTIVE",
+          reason: "smoke restore"
+        });
+        results.push({
+          name: "ADMIN actor 회원 상태 ACTIVE 복구 성공",
+          ok:
+            restored.account.id === registeredUserId &&
+            restored.previous_status === "BLOCKED" &&
+            restored.account.status === "ACTIVE"
+        });
+      } catch (err: any) {
+        results.push({ name: "ADMIN actor 회원 상태 ACTIVE 복구 성공", ok: false, message: err?.message });
+      }
+
+      try {
+        await authService.getMe({ access_token: registerToken });
+        results.push({ name: "복구 후 기존 revoked token auth/me 실패 유지", ok: false, message: "unexpected success" });
+      } catch (err: any) {
+        results.push({
+          name: "복구 후 기존 revoked token auth/me 실패 유지",
+          ok: err instanceof AppError ? err.status === 401 : false,
+          message: err?.message
+        });
+      }
+
+      try {
+        const restoredLogin = await authService.login({
+          login_id: userLoginId,
+          password: plainPassword,
+          user_agent: "member-referral-smoke-login-restored",
+          ip_address: "127.0.0.1"
+        });
+        loginToken = restoredLogin.access_token;
+        results.push({
+          name: "ACTIVE 복구 후 login 성공",
+          ok: restoredLogin.account.id === registeredUserId && restoredLogin.account.status === "ACTIVE"
+        });
+      } catch (err: any) {
+        results.push({ name: "ACTIVE 복구 후 login 성공", ok: false, message: err?.message });
+      }
+    }
+
     try {
       await adminAccountService.getAccountDetail({
         actor_account_id: adminId,

@@ -271,6 +271,28 @@ app.get("/api/admin/accounts/:accountId", async (req, res, next) => {
   }
 });
 
+app.post("/api/admin/accounts/:accountId/status", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const body = z
+      .object({
+        status: z.enum(["ACTIVE", "BLOCKED", "WITHDRAWN"]),
+        reason: z.string().trim().min(1).max(500).optional()
+      })
+      .parse(req.body);
+    const result = await adminAccountService.updateStatus({
+      actor_account_id,
+      account_id,
+      status: body.status,
+      reason: body.reason
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get("/api/admin/accounts/:accountId/referral-tree", async (req, res, next) => {
   try {
     const actor_account_id = requireActorId(req);

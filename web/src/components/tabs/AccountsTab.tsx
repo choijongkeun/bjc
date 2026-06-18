@@ -25,6 +25,12 @@ const defaultFilters: AccountFilters = {
   binary_position: ""
 };
 
+const nextStatusOptions: Record<AdminAccountDetail["status"], Array<AdminAccountDetail["status"]>> = {
+  ACTIVE: ["BLOCKED", "WITHDRAWN"],
+  BLOCKED: ["ACTIVE", "WITHDRAWN"],
+  WITHDRAWN: []
+};
+
 function formatDateTime(value: string | null | undefined) {
   return value ?? "-";
 }
@@ -56,6 +62,11 @@ export function AccountsTab({
   const [selected, setSelected] = useState<AdminAccountDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [statusDraft, setStatusDraft] = useState<AdminAccountDetail["status"] | "">("");
+  const [statusReason, setStatusReason] = useState("");
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const activeAccountId = useMemo(() => selectedAccountId ?? selected?.id ?? null, [selectedAccountId, selected?.id]);
 
@@ -103,9 +114,50 @@ export function AccountsTab({
     void loadAccountDetail(selectedAccountId);
   }, [actorId, selectedAccountId]);
 
+  useEffect(() => {
+    if (!selected) {
+      setStatusDraft("");
+      setStatusReason("");
+      setStatusError(null);
+      setStatusSuccess(null);
+      return;
+    }
+
+    const candidates = nextStatusOptions[selected.status];
+    setStatusDraft(candidates[0] ?? "");
+    setStatusReason("");
+    setStatusError(null);
+    setStatusSuccess(null);
+  }, [selected?.id, selected?.status]);
+
   function applyFilters() {
     setPage(1);
     setAppliedFilters(draftFilters);
+  }
+
+  async function handleStatusUpdate() {
+    if (!selected || !statusDraft) {
+      return;
+    }
+
+    try {
+      setStatusBusy(true);
+      const result = await api.updateAdminAccountStatus(actorId, selected.id, {
+        status: statusDraft,
+        reason: statusReason.trim() || undefined,
+      });
+      setSelected(result.account);
+      setStatusError(null);
+      setStatusSuccess(
+        `상태가 ${result.previous_status} -> ${result.account.status} 로 변경되었습니다. revoke 세션 ${result.revoked_session_count}건`
+      );
+      await loadAccounts(page, limit, appliedFilters, sort);
+    } catch (updateError: any) {
+      setStatusSuccess(null);
+      setStatusError(updateError.message ?? "회원 상태를 변경하지 못했습니다.");
+    } finally {
+      setStatusBusy(false);
+    }
   }
 
   return (
@@ -317,7 +369,65 @@ export function AccountsTab({
                     <div className="mt-2 tabular text-xl font-bold text-slate-50">{selected.rank_level}</div>
                   </div>
                 </div>
-                <FeedbackState title="후속 작업 예정" description="회원 상태 변경, 바이너리 수동 배치, 보안 정보 조회는 이번 범위에 포함하지 않았습니다." />
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">회원 상태 변경</div>
+                      <p className="mt-2 text-sm text-slate-400">
+                        `ADMIN`만 변경할 수 있으며 현재 범위에서는 `USER` 회원만 변경 가능합니다.
+                      </p>
+                    </div>
+                    <StatusBadge value={selected.status} />
+                  </div>
+                  <div className="mt-4">
+                    {role !== "ADMIN" ? (
+                      <FeedbackState title="조회 전용" description="READER는 상태 변경을 수행할 수 없습니다." />
+                    ) : selected.role !== "USER" ? (
+                      <FeedbackState
+                        title="변경 제한"
+                        description="운영 계정 보호를 위해 현재는 USER 역할 계정만 상태 변경을 허용합니다."
+                      />
+                    ) : nextStatusOptions[selected.status].length === 0 ? (
+                      <FeedbackState
+                        title="변경 불가"
+                        description="WITHDRAWN 상태는 종료 상태로 취급하며 이번 범위에서는 재활성화를 허용하지 않습니다."
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        {statusError ? <FeedbackState title="상태 변경 실패" description={statusError} tone="error" /> : null}
+                        {statusSuccess ? <FeedbackState title="상태 변경 완료" description={statusSuccess} /> : null}
+                        <div className="grid gap-3 md:grid-cols-[220px,1fr]">
+                          <select
+                            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                            value={statusDraft}
+                            onChange={(e) => setStatusDraft(e.target.value as AdminAccountDetail["status"])}
+                            disabled={statusBusy}
+                          >
+                            {nextStatusOptions[selected.status].map((nextStatus) => (
+                              <option key={nextStatus} value={nextStatus}>
+                                {nextStatus}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                            placeholder="변경 사유를 남길 수 있습니다."
+                            value={statusReason}
+                            onChange={(e) => setStatusReason(e.target.value)}
+                            disabled={statusBusy}
+                            maxLength={500}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                          <span>BLOCKED/WITHDRAWN 전환 시 활성 세션은 즉시 revoke 됩니다.</span>
+                          <Button onClick={() => void handleStatusUpdate()} disabled={statusBusy || !statusDraft}>
+                            {statusBusy ? "처리 중..." : "상태 변경"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               <FeedbackState title="선택된 회원 없음" description="회원 목록에서 row를 선택하면 상세 정보가 표시됩니다." />

@@ -135,6 +135,12 @@ export type AdminAccountDetail = {
   rank_level: number;
 };
 
+export type AdminAccountStatusUpdateResult = {
+  account: AdminAccountDetail;
+  previous_status: AccountStatus;
+  revoked_session_count: number;
+};
+
 export type ReferralTreeRoot = {
   account_id: string;
   login_id: string | null;
@@ -342,6 +348,16 @@ export const api = {
   ) => request<ItemsPageResponse<AdminAccountListItem>>(`/api/admin/accounts${params(query as any)}`, { method: "GET", actorId }),
   getAdminAccount: (actorId: string, accountId: string) =>
     request<{ account: AdminAccountDetail }>(`/api/admin/accounts/${accountId}`, { method: "GET", actorId }),
+  updateAdminAccountStatus: (
+    actorId: string,
+    accountId: string,
+    body: { status: AccountStatus; reason?: string }
+  ) =>
+    request<AdminAccountStatusUpdateResult>(`/api/admin/accounts/${accountId}/status`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
   getAdminAccountReferralTree: (actorId: string, accountId: string, query: { depth?: number }) =>
     request<ReferralTreeResponse>(`/api/admin/accounts/${accountId}/referral-tree${params(query as any)}`, { method: "GET", actorId }),
   getAdminAccountBinaryTree: (actorId: string, accountId: string, query: { depth?: number }) =>

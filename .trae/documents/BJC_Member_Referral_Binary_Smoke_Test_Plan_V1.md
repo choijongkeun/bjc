@@ -178,21 +178,56 @@
 
 ---
 
-## 4.3 sponsor / referral closure
+## 4.3 관리자 회원 상태 변경
 
-### T13 추천인 sponsor 관계 생성 확인
+### T13 ADMIN 회원 상태 BLOCKED 변경 성공
+
+- 대상 API: `POST /api/admin/accounts/:accountId/status`
+- 기대 결과:
+  - `200`
+  - `accounts.status = BLOCKED`
+  - 활성 `auth_sessions` revoke
+  - 감사로그 생성
+
+### T14 READER 회원 상태 변경 실패
+
+- 대상 API: `POST /api/admin/accounts/:accountId/status`
+- 기대 결과:
+  - `403`
+  - 상태 불변
+
+### T15 BLOCKED 이후 기존 token auth/me 실패
+
+- 대상 API:
+  - `GET /api/auth/me`
+- 기대 결과:
+  - `401` 또는 세션 revoke 기반 인증 실패
+
+### T16 ADMIN 회원 상태 ACTIVE 복구 성공
+
+- 대상 API: `POST /api/admin/accounts/:accountId/status`
+- 기대 결과:
+  - `200`
+  - `accounts.status = ACTIVE`
+  - 이전 revoke token은 재사용 불가 유지
+
+---
+
+## 4.4 sponsor / referral closure
+
+### T17 추천인 sponsor 관계 생성 확인
 
 - 회원가입 후 `accounts.sponsor_account_id` 확인
 - 기대 결과:
   - sponsor가 정확히 저장됨
 
-### T14 referral_edges 1대 생성 확인
+### T18 referral_edges 1대 생성 확인
 
 - sponsor -> child
 - 기대 결과:
   - `depth = 1` row 존재
 
-### T15 referral_edges 2대 생성 확인
+### T19 referral_edges 2대 생성 확인
 
 시나리오:
 
@@ -205,7 +240,7 @@
 - `B -> C depth 1`
 - `A -> C depth 2`
 
-### T16 referral_edges 3대 생성 확인
+### T20 referral_edges 3대 생성 확인
 
 시나리오:
 
@@ -218,7 +253,7 @@
 - `A -> D depth 3`
 - closure 전체 정상 생성
 
-### T17 자기 자신 추천 실패
+### T21 자기 자신 추천 실패
 
 - 자신의 `referral_code`로 가입 시도
 - 기대 결과:
@@ -226,9 +261,9 @@
 
 ---
 
-## 4.4 binary placement
+## 4.5 binary placement
 
-### T18 바이너리 LEFT 배치 성공
+### T22 바이너리 LEFT 배치 성공
 
 조건:
 
@@ -240,7 +275,7 @@
 - `binary_parent_account_id = sponsor`
 - `binary_nodes` row 생성
 
-### T19 바이너리 RIGHT 배치 성공
+### T23 바이너리 RIGHT 배치 성공
 
 조건:
 
@@ -251,7 +286,7 @@
 
 - `binary_position = RIGHT`
 
-### T20 LEFT 중복 배치 실패
+### T24 LEFT 중복 배치 실패
 
 조건:
 
@@ -263,12 +298,12 @@
 - `409`
 - duplicate row 미생성
 
-### T21 RIGHT 중복 배치 실패
+### T25 RIGHT 중복 배치 실패
 
 - 기대 결과:
   - `409`
 
-### T22 자동 하위 배치 성공
+### T26 자동 하위 배치 성공
 
 조건:
 
@@ -279,7 +314,7 @@
 - 하위 depth에서 deterministic한 빈자리 선택
 - 같은 입력 재시도 시 결과 동일
 
-### T23 순환 배치 실패
+### T27 순환 배치 실패
 
 시나리오:
 
@@ -292,35 +327,35 @@
 
 ---
 
-## 4.5 조직도 조회
+## 4.6 조직도 조회
 
-### T24 USER 자기 referral-tree 조회 성공
+### T28 USER 자기 referral-tree 조회 성공
 
 - 대상 API: `GET /api/me/referral-tree`
 - 기대 결과:
   - `200`
   - 본인 root 기준 응답
 
-### T25 USER 자기 binary-tree 조회 성공
+### T29 USER 자기 binary-tree 조회 성공
 
 - 대상 API: `GET /api/me/binary-tree`
 - 기대 결과:
   - `200`
   - left/right children 구조 포함
 
-### T26 ADMIN 특정 회원 referral-tree 조회 성공
+### T30 ADMIN 특정 회원 referral-tree 조회 성공
 
 - 대상 API: `GET /api/admin/accounts/:accountId/referral-tree`
 - 기대 결과:
   - `200`
 
-### T27 ADMIN 특정 회원 binary-tree 조회 성공
+### T31 ADMIN 특정 회원 binary-tree 조회 성공
 
 - 대상 API: `GET /api/admin/accounts/:accountId/binary-tree`
 - 기대 결과:
   - `200`
 
-### T28 binary-legs LEFT/RIGHT 매출 필드 응답 확인
+### T32 binary-legs LEFT/RIGHT 매출 필드 응답 확인
 
 - 대상 API:
   - `GET /api/me/binary-legs`
@@ -365,7 +400,7 @@
 
 - sponsor 또는 binary 단계 실패 시 `accounts` insert도 rollback 되는지 확인
 
-### T29 회원가입 중 binary 충돌 발생 시 전체 rollback
+### T33 회원가입 중 binary 충돌 발생 시 전체 rollback
 
 - 기대 결과:
   - `accounts` row 없음
@@ -374,7 +409,7 @@
 
 ## 6.2 수동 배치 rollback
 
-### T30 binary placement 실패 시 구조 불변
+### T34 binary placement 실패 시 구조 불변
 
 - 기대 결과:
   - 기존 `binary_nodes`, `binary_edges` unchanged

@@ -119,3 +119,19 @@ export async function revokeSessionByTokenHash(
 
   return Number((result as { affectedRows: number }).affectedRows ?? 0) > 0;
 }
+
+export async function revokeActiveSessionsByAccountId(
+  conn: DbConn,
+  input: { account_id: string; revoked_at: Date }
+): Promise<number> {
+  const [result] = await conn.query(
+    `update auth_sessions
+        set revoked_at = ?
+      where account_id = ?
+        and revoked_at is null
+        and expires_at > current_timestamp(6)`,
+    [input.revoked_at, input.account_id]
+  );
+
+  return Number((result as { affectedRows: number }).affectedRows ?? 0);
+}

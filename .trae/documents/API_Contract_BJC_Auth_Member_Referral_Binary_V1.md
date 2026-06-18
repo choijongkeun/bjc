@@ -818,6 +818,71 @@ fallback 원칙:
   - `422` validation / cycle
   - `500` internal
 
+## 3.17 `POST /api/admin/accounts/:accountId/status`
+
+- `method/path`: `POST /api/admin/accounts/:accountId/status`
+- `request body`:
+
+```json
+{
+  "status": "BLOCKED",
+  "reason": "member requested temporary hold"
+}
+```
+
+- `query params`: 없음
+- `response`:
+
+```json
+{
+  "account": {
+    "id": "uuid",
+    "login_id": "user01",
+    "display_name": "User 01",
+    "role": "USER",
+    "status": "BLOCKED",
+    "referral_code": "BJC-SELF-0001",
+    "sponsor_account_id": "uuid",
+    "binary_parent_account_id": "uuid",
+    "binary_position": "LEFT",
+    "joined_at": "2026-06-10T12:00:00.000Z",
+    "last_login_at": "2026-06-11T09:00:00.000Z"
+  },
+  "previous_status": "ACTIVE",
+  "revoked_session_count": 2
+}
+```
+
+- `권한`: `ADMIN`
+- `사용 테이블`:
+  - `accounts`
+  - `auth_sessions`
+  - `admin_audit_log`
+- `트랜잭션 여부`: 예
+- `SELECT ... FOR UPDATE 대상`:
+  - actor account
+  - target account
+  - target active sessions revoke 대상 row
+- `audit_log action`:
+  - `ADMIN_ACCOUNT_STATUS_UPDATED`
+- `JWT/session 기준 여부`: 관리자 write API이므로 session-first 또는 개발용 `x-actor-account-id` fallback
+- `기존 x-actor-account-id fallback 여부`: 예
+- `실패 케이스`:
+  - unauthenticated
+  - forbidden
+  - target not found
+  - self status change
+  - `USER`가 아닌 운영 계정 상태 변경 시도
+  - 허용되지 않은 상태 전이
+  - 동일 상태 재요청
+- `HTTP status code`:
+  - `401`
+  - `403`
+  - `404`
+  - `409` invalid transition / already same status
+  - `422` validation
+  - `500` internal
+
 ---
 
 ## 4. 권장 구현 순서
