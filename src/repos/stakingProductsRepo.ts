@@ -14,6 +14,31 @@ export type StakingProductRow = {
   created_at: string;
 };
 
+export async function getStakingProductById(conn: DbConn, id: string): Promise<StakingProductRow | null> {
+  const [rows] = await conn.query(
+    `select id, policy_version_id, name, symbol, decimals, min_stake_amount_base, max_stake_amount_base, staking_days, daily_interest_bps, is_active, created_at
+       from staking_products
+      where id = ?
+      limit 1`,
+    [id]
+  );
+  const arr = rows as StakingProductRow[];
+  return arr[0] ?? null;
+}
+
+export async function getStakingProductByIdForUpdate(conn: DbConn, id: string): Promise<StakingProductRow | null> {
+  const [rows] = await conn.query(
+    `select id, policy_version_id, name, symbol, decimals, min_stake_amount_base, max_stake_amount_base, staking_days, daily_interest_bps, is_active, created_at
+       from staking_products
+      where id = ?
+      limit 1
+      for update`,
+    [id]
+  );
+  const arr = rows as StakingProductRow[];
+  return arr[0] ?? null;
+}
+
 export async function insertStakingProduct(
   conn: DbConn,
   input: {

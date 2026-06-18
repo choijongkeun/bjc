@@ -2,6 +2,19 @@ import type { DbConn } from "../db/pool.js";
 
 import type { LedgerEventType } from "../../shared/bjc-types.js";
 
+function normalizeEventTime(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toISOString().slice(0, 23).replace("T", " ").replace("Z", "");
+}
+
 export type LedgerEventRow = {
   id: string;
   account_id: string;
@@ -47,7 +60,7 @@ export async function insertLedgerEvent(
       input.product_id,
       input.policy_version_id,
       input.calc_run_id ?? null,
-      input.event_time,
+      normalizeEventTime(input.event_time),
       input.event_type,
       input.amount_base,
       input.decimals,

@@ -19,6 +19,12 @@ export type SettlementType =
 export type LedgerEventType =
   | "STAKE"
   | "UNSTAKE"
+  | "STAKING_REQUESTED"
+  | "STAKING_PRINCIPAL_LOCKED"
+  | "STAKING_ACTIVATED"
+  | "STAKING_CANCELLED"
+  | "STAKING_PRINCIPAL_RELEASED"
+  | "STAKING_MATURED"
   | "DAILY_REWARD_ACCRUAL"
   | "DAILY_REWARD_PAYOUT"
   | "DIRECT_REFERRAL_BONUS"
@@ -53,4 +59,3 @@ export type LedgerEventInput = {
   related_account_id?: string | null;
   meta?: Record<string, unknown>;
 };
-

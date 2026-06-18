@@ -2,71 +2,68 @@
 
 ## 1. Scope
 
-- This document defines the first contract for account staking APIs only.
-- This phase does not implement UI or service code.
-- Amount fields must be returned as strings to preserve `DECIMAL(65,0)` precision.
-- `staking_products` remains the source of truth for product policy definitions.
-- `account_stakings` is introduced as the source of truth for member staking applications and lifecycle state.
+- This document reflects the implemented v1 backend contract for account staking APIs.
+- This phase implements repository, service, route, unit test, and smoke coverage only.
+- This phase does not implement User/Admin staking screens, reward accrual, reward payout, withdrawals, maturity batch, wallet funding confirmation, or real balance deduction.
+- Amount fields mapped from `DECIMAL(65,0)` remain string values in request validation, service logic, DB write inputs, and API responses.
 
 ## 2. Shared Rules
 
-- Auth:
-  - User endpoints require a valid member bearer token.
-  - Admin endpoints require `ADMIN` or `READER` according to each operation.
-- Amount serialization:
-  - `principal_amount_base`
-  - `minimum_amount_base`
-  - `maximum_amount_base`
-  - every future reward / fee / payout amount
-  - all must be serialized as string values
-- Idempotency:
-  - `POST /api/me/stakings` requires `idempotency_key`
-  - retried requests with the same `idempotency_key` must return the existing staking row instead of creating a duplicate
-- Audit:
-  - all admin mutations create `admin_audit_log` rows
-  - user staking request / cancel actions should also create audit rows with actor = current member account
-- Pagination:
-  - default `page=1`
-  - default `limit=20`
-  - max `limit=100`
+- `staking_products` remains the product definition source of truth.
+- `account_stakings` is the lifecycle source of truth for member staking applications and contracts.
+- Public product list excludes inactive products.
+- Admin product list compatibility remains on `GET /api/staking-products` when `x-actor-account-id` is present.
+- Pagination defaults:
+  - `page=1`
+  - `limit=20`
+  - `limit <= 100`
+- Sort values for staking lists:
+  - `created_at_desc`
+  - `created_at_asc`
+  - `matures_at_asc`
+  - `matures_at_desc`
 
-## 3. Canonical Types
+## 3. Auth / Role Rules
 
-### 3.1 Staking Product
+- User endpoints:
+  - require bearer token via session auth
+  - require current account status `ACTIVE` for create/cancel mutations
+- Admin read endpoints:
+  - allow `READER` and `ADMIN`
+- Admin write endpoints:
+  - allow `ADMIN` only
+- Ownership:
+  - `GET /api/me/stakings/:stakingId` returns `404` when the row is missing or owned by another account
+  - `POST /api/me/stakings/:stakingId/cancel` also hides foreign rows behind `404`
+
+## 4. Canonical Response Shapes
+
+### 4.1 Public Product Summary
 
 ```json
 {
   "id": "string",
-  "policy_version_id": "string",
-  "name": "string",
-  "symbol": "string",
+  "name": "30D USDC",
+  "symbol": "USDC",
   "decimals": 6,
-  "minimum_amount_base": "1000000",
-  "maximum_amount_base": "1000000000",
-  "duration_days": 30,
+  "min_stake_amount_base": "100",
+  "max_stake_amount_base": "1000000",
+  "staking_days": 30,
   "daily_interest_bps": "50",
-  "status": "ACTIVE",
-  "display_order": 10,
-  "effective_from": "2026-06-20T00:00:00.000Z",
-  "effective_to": null,
-  "created_at": "2026-06-18T10:00:00.000Z",
-  "updated_at": "2026-06-18T10:00:00.000Z"
+  "is_active": true
 }
 ```
 
-### 3.2 Account Staking
+### 4.2 Staking Summary
 
 ```json
 {
   "id": "string",
   "account_id": "string",
-  "staking_product_id": "string",
-  "policy_version_id": "string",
-  "principal_amount_base": "1000000",
+  "principal_amount_base": "1000",
   "daily_interest_bps_snapshot": "50",
   "duration_days_snapshot": 30,
   "status": "PENDING",
-  "idempotency_key": "staking-request-001",
   "started_at": null,
   "matures_at": null,
   "activated_at": null,
@@ -74,76 +71,129 @@
   "cancelled_at": null,
   "matured_at": null,
   "closed_at": null,
-  "source_ledger_event_id": null,
+  "source_ledger_event_id": "string",
   "cancellation_ledger_event_id": null,
-  "created_at": "2026-06-18T10:00:00.000Z",
-  "updated_at": "2026-06-18T10:00:00.000Z",
-  "staking_product": {
+  "created_at": "2026-06-18T12:00:00.000Z",
+  "updated_at": "2026-06-18T12:00:00.000Z",
+  "product": {
     "id": "string",
-    "name": "30D",
+    "name": "30D USDC",
     "symbol": "USDC",
-    "decimals": 6
+    "decimals": 6,
+    "min_stake_amount_base": "100",
+    "max_stake_amount_base": "1000000",
+    "staking_days": 30,
+    "daily_interest_bps": "50",
+    "is_active": true
   }
 }
 ```
 
-## 4. State Machine
+### 4.3 Admin Staking Summary
 
-### 4.1 Recommended lifecycle
-
-```text
-PENDING
--> ACTIVE
--> MATURED
--> CLOSED
+```json
+{
+  "staking": {
+    "...staking fields": true,
+    "account": {
+      "id": "string",
+      "login_id": "member001",
+      "display_name": "Member 001"
+    }
+  }
+}
 ```
 
-### 4.2 Cancel lifecycle
+## 5. Implemented State Machine
 
 ```text
+PENDING -> ACTIVE
 PENDING -> CANCELLED
-ACTIVE -> CANCEL_REQUESTED -> CANCELLED
+ACTIVE -> CANCEL_REQUESTED
+ACTIVE -> CANCELLED
+CANCEL_REQUESTED -> CANCELLED
 ```
 
-### 4.3 Admin reject mapping
+- `POST /api/admin/stakings/:stakingId/reject` maps `PENDING -> CANCELLED`.
+- `ACTIVE -> MATURED` is not implemented in this phase.
+- `MATURED -> CLOSED` is not implemented in this phase.
 
-- `POST /api/admin/stakings/:stakingId/reject` is mapped to `PENDING -> CANCELLED`
-- audit action must be `ACCOUNT_STAKING_REJECT`
-- rejection reason should be written into audit metadata and response payload
+## 6. Idempotency
 
-## 5. User APIs
+### 6.1 Create staking
 
-### 5.1 GET `/api/staking-products`
+- `POST /api/me/stakings` requires `idempotency_key`.
+- Storage key is `account_stakings.idempotency_key` with a unique constraint.
+- Same key + same `account_id` + same `staking_product_id` + same `principal_amount_base`:
+  - returns the existing staking response
+- Same key + different request payload:
+  - returns `409`
 
-- Purpose:
-  - list products visible to users
-- Auth:
-  - authenticated user
-- Query:
-  - `status=ACTIVE` default
-  - `symbol` optional
-  - `page`, `limit`
-- Response:
+### 6.2 Status transitions
+
+- Ledger `reference_id` values are unique and used to prevent duplicate transition events:
+  - `staking.request:<staking_id>`
+  - `staking.lock:<staking_id>`
+  - `staking.activate:<staking_id>`
+  - `staking.cancel:<staking_id>`
+  - `staking.release:<staking_id>`
+  - `staking.mature:<staking_id>`
+- `POST /api/me/stakings/:stakingId/cancel` treats `CANCEL_REQUESTED` as idempotent success and returns the current row.
+
+## 7. Ledger / Audit Mapping
+
+### 7.1 Ledger events
+
+- Create request:
+  - `STAKING_REQUESTED`
+- User cancel on `PENDING`:
+  - `STAKING_CANCELLED`
+- Admin activate:
+  - `STAKING_PRINCIPAL_LOCKED`
+  - `STAKING_ACTIVATED`
+- Admin reject:
+  - `STAKING_CANCELLED`
+- Admin cancel from `ACTIVE` or `CANCEL_REQUESTED`:
+  - `STAKING_CANCELLED`
+  - `STAKING_PRINCIPAL_RELEASED`
+
+### 7.2 Audit actions
+
+- `USER_STAKING_REQUEST`
+- `USER_STAKING_CANCEL_REQUEST`
+- `USER_STAKING_CANCELLED`
+- `ADMIN_STAKING_ACTIVATE`
+- `ADMIN_STAKING_REJECT`
+- `ADMIN_STAKING_CANCEL`
+
+### 7.3 Audit metadata principles
+
+- include only limited identifiers and transition context
+- do not include password, session token, password hash, session token hash, or raw access token
+- store cancel / reject reason in audit metadata because there is no dedicated DB reason column in `account_stakings`
+
+## 8. User APIs
+
+### 8.1 GET `/api/staking-products`
+
+- Public mode:
+  - no auth required
+  - returns active products only
+  - response shape:
 
 ```json
 {
   "staking_products": [
     {
       "id": "string",
-      "policy_version_id": "string",
-      "name": "30D",
+      "name": "30D USDC",
       "symbol": "USDC",
       "decimals": 6,
-      "minimum_amount_base": "1000000",
-      "maximum_amount_base": "1000000000",
-      "duration_days": 30,
+      "min_stake_amount_base": "100",
+      "max_stake_amount_base": "1000000",
+      "staking_days": 30,
       "daily_interest_bps": "50",
-      "status": "ACTIVE",
-      "display_order": 10,
-      "effective_from": null,
-      "effective_to": null,
-      "created_at": "2026-06-18T10:00:00.000Z",
-      "updated_at": "2026-06-18T10:00:00.000Z"
+      "is_active": true
     }
   ],
   "page": 1,
@@ -152,113 +202,150 @@ ACTIVE -> CANCEL_REQUESTED -> CANCELLED
 }
 ```
 
-- Errors:
-  - `401 unauthorized`
-  - `403 forbidden`
+- Compatibility mode:
+  - when `x-actor-account-id` exists, the legacy admin staking product listing path remains available
 
-### 5.2 POST `/api/me/stakings`
+### 8.2 POST `/api/me/stakings`
 
-- Purpose:
-  - create a staking application row
-- Auth:
-  - authenticated user
 - Request:
 
 ```json
 {
   "staking_product_id": "string",
-  "principal_amount_base": "1000000",
-  "idempotency_key": "staking-request-001"
+  "principal_amount_base": "1000",
+  "idempotency_key": "create-001"
 }
 ```
 
-- Processing rules:
-  - validate active account
-  - load `staking_products`
-  - snapshot `policy_version_id`, `daily_interest_bps`, `duration_days`
-  - validate min/max range using product settings
-  - create `account_stakings` in `PENDING`
-  - create `ledger_events` row with `event_type=STAKING_REQUESTED`
-  - store the ledger row id as `source_ledger_event_id`
-  - all writes happen in one transaction
-- Success response:
+- Validation:
+  - `staking_product_id` required
+  - `principal_amount_base` must be a positive integer string
+  - `idempotency_key` required and `<= 128`
+  - product must exist
+  - product must be active
+  - amount must be within min/max product range
+  - linked policy status must not be `RETIRED`
+  - current account must be `ACTIVE`
+- Transaction:
+  - lock account
+  - check idempotency row
+  - lock product
+  - lock policy version
+  - insert `account_stakings` as `PENDING`
+  - append `STAKING_REQUESTED`
+  - update `source_ledger_event_id`
+  - insert `USER_STAKING_REQUEST` audit row
+- Success:
   - `201 Created`
 
-```json
-{
-  "staking": {
-    "id": "string",
-    "account_id": "string",
-    "staking_product_id": "string",
-    "policy_version_id": "string",
-    "principal_amount_base": "1000000",
-    "daily_interest_bps_snapshot": "50",
-    "duration_days_snapshot": 30,
-    "status": "PENDING",
-    "idempotency_key": "staking-request-001",
-    "started_at": null,
-    "matures_at": null,
-    "activated_at": null,
-    "cancel_requested_at": null,
-    "cancelled_at": null,
-    "matured_at": null,
-    "closed_at": null,
-    "source_ledger_event_id": "string",
-    "cancellation_ledger_event_id": null,
-    "created_at": "2026-06-18T10:00:00.000Z",
-    "updated_at": "2026-06-18T10:00:00.000Z"
-  }
-}
-```
+### 8.3 GET `/api/me/stakings`
 
-- Errors:
-  - `400 invalid_request`
-  - `401 unauthorized`
-  - `403 forbidden`
-  - `404 staking_product_not_found`
-  - `409 duplicate_idempotency_key`
-  - `422 amount_out_of_range`
-  - `422 account_status_invalid`
-
-### 5.3 GET `/api/me/stakings`
-
-- Purpose:
-  - list current member staking rows
-- Auth:
-  - authenticated user
 - Query:
   - `status` optional
-  - `page`, `limit`
-  - `from`, `to` optional on `created_at`
+  - `product_id` optional
+  - `page`
+  - `limit`
+  - `sort`
 - Response:
 
 ```json
 {
-  "stakings": [],
+  "items": [],
   "page": 1,
   "limit": 20,
   "total": 0
 }
 ```
 
-### 5.4 GET `/api/me/stakings/:stakingId`
+### 8.4 GET `/api/me/stakings/:stakingId`
 
-- Purpose:
-  - detail view of a single member staking row
-- Auth:
-  - authenticated user
+- Returns only the owner row.
+- Returns `404` when missing or not owned by the current session account.
+
+### 8.5 POST `/api/me/stakings/:stakingId/cancel`
+
+- Request:
+
+```json
+{
+  "reason": "optional string",
+  "idempotency_key": "cancel-001"
+}
+```
+
 - Rules:
-  - only own `stakingId` is visible
-- Errors:
-  - `404 staking_not_found`
-  - `403 forbidden`
+  - `PENDING -> CANCELLED`
+  - `ACTIVE -> CANCEL_REQUESTED`
+  - `CANCEL_REQUESTED -> current row returned`
+  - `CANCELLED`, `MATURED`, `CLOSED` -> `409`
+- Ledger:
+  - only `PENDING -> CANCELLED` appends `STAKING_CANCELLED`
+  - `ACTIVE -> CANCEL_REQUESTED` writes audit only in this phase
 
-### 5.5 POST `/api/me/stakings/:stakingId/cancel`
+## 9. Admin APIs
 
-- Purpose:
-  - request cancel or immediate cancel depending on current status
+### 9.1 GET `/api/admin/stakings`
+
 - Auth:
-  - authenticated user
+  - `READER` or `ADMIN`
+- Filters:
+  - `q`
+  - `account_id`
+  - `product_id`
+  - `status`
+  - `created_from`
+  - `created_to`
+  - `matures_from`
+  - `matures_to`
+  - `page`
+  - `limit`
+  - `sort`
+
+### 9.2 GET `/api/admin/stakings/:stakingId`
+
+- Auth:
+  - `READER` or `ADMIN`
+- Includes account summary and product snapshot/current product fields from the joined view.
+
+### 9.3 POST `/api/admin/stakings/:stakingId/activate`
+
+- Auth:
+  - `ADMIN`
+- Rules:
+  - only `PENDING`
+  - account must still be `ACTIVE`
+  - product must still be active
+  - linked policy must not be `RETIRED`
+  - sets `status=ACTIVE`
+  - sets `activated_at`
+  - sets `started_at=activated_at`
+  - sets `matures_at = started_at + duration_days_snapshot`
+- Notes:
+  - `STAKING_PRINCIPAL_LOCKED` is an off-chain contract event only in this phase
+  - no actual balance deduction happens yet
+
+### 9.4 POST `/api/admin/stakings/:stakingId/reject`
+
+- Auth:
+  - `ADMIN`
+- Request:
+
+```json
+{
+  "reason": "required string"
+}
+```
+
+- Rules:
+  - only `PENDING`
+  - mapped to `status=CANCELLED`
+  - appends `STAKING_CANCELLED`
+  - writes reject reason to ledger/audit metadata
+
+### 9.5 POST `/api/admin/stakings/:stakingId/cancel`
+
+- Auth:
+  - `ADMIN`
 - Request:
 
 ```json
@@ -267,140 +354,54 @@ ACTIVE -> CANCEL_REQUESTED -> CANCELLED
 }
 ```
 
-- State rules:
-  - `PENDING -> CANCELLED`
-  - `ACTIVE -> CANCEL_REQUESTED`
-  - any other state -> `409 invalid_state_transition`
-- Ledger:
-  - `PENDING -> CANCELLED`: optional `STAKING_CANCELLED` only
-  - `ACTIVE -> CANCEL_REQUESTED`: no principal release event yet
-- Errors:
-  - `404 staking_not_found`
-  - `409 invalid_state_transition`
-
-## 6. Admin APIs
-
-### 6.1 GET `/api/admin/stakings`
-
-- Purpose:
-  - list staking rows across accounts
-- Auth:
-  - `READER` or above
-- Filters:
-  - `account_id`
-  - `login_id`
-  - `staking_product_id`
-  - `policy_version_id`
-  - `status`
-  - `created_from`
-  - `created_to`
-  - `page`, `limit`
-
-### 6.2 GET `/api/admin/stakings/:stakingId`
-
-- Purpose:
-  - full detail with member account and product summary
-- Auth:
-  - `READER` or above
-
-### 6.3 POST `/api/admin/stakings/:stakingId/activate`
-
-- Purpose:
-  - convert `PENDING` request into active contract
-- Auth:
-  - `ADMIN`
 - Rules:
-  - only `PENDING` allowed
-  - set `status=ACTIVE`
-  - set `activated_at`
-  - set `started_at=activated_at`
-  - set `matures_at = activated_at + duration_days_snapshot`
-- Ledger:
-  - create `STAKING_PRINCIPAL_LOCKED`
-  - create `STAKING_ACTIVATED`
-  - same transaction as status transition
-- Errors:
-  - `404 staking_not_found`
-  - `409 invalid_state_transition`
+  - only `ACTIVE` or `CANCEL_REQUESTED`
+  - transitions to `CANCELLED`
+  - appends `STAKING_CANCELLED`
+  - appends `STAKING_PRINCIPAL_RELEASED`
+- Notes:
+  - release is still an off-chain ledger event only in this phase
+  - no actual balance return is implemented
 
-### 6.4 POST `/api/admin/stakings/:stakingId/reject`
+### 9.6 GET `/api/admin/accounts/:accountId/stakings`
 
-- Purpose:
-  - reject a pending application
 - Auth:
-  - `ADMIN`
-- Rules:
-  - only `PENDING` allowed
-  - mapped to `status=CANCELLED`
-  - set `cancelled_at`
-  - write rejection reason into audit log meta
-
-### 6.5 POST `/api/admin/stakings/:stakingId/cancel`
-
-- Purpose:
-  - force cancel a request or active staking
-- Auth:
-  - `ADMIN`
-- Rules:
-  - `PENDING -> CANCELLED`
-  - `ACTIVE or CANCEL_REQUESTED -> CANCELLED`
-- Ledger:
-  - optional `STAKING_CANCELLED`
-  - if principal release is confirmed, add `STAKING_PRINCIPAL_RELEASED`
-
-### 6.6 GET `/api/admin/accounts/:accountId/stakings`
-
-- Purpose:
-  - account detail screen support
-- Auth:
-  - `READER` or above
+  - `READER` or `ADMIN`
+- Returns `404` when the target account does not exist.
 - Query:
   - `status`
-  - `page`, `limit`
+  - `product_id`
+  - `page`
+  - `limit`
+  - `sort`
 
-## 7. Ledger Mapping
+## 10. Security / Data Exposure
 
-### 7.1 Recommended event usage
+- API responses do not include:
+  - `password_hash`
+  - `session_token_hash`
+  - raw session token except normal login response `access_token`
+- Staking responses do not include raw `idempotency_key`.
+- Service validation compares amount strings with `BigInt`; it does not convert to JavaScript `Number`.
 
-- `STAKING_REQUESTED`
-  - emitted when a `PENDING` row is created
-  - `reference_id = staking.request:<account_staking_id>`
-- `STAKING_PRINCIPAL_LOCKED`
-  - emitted when admin activation locks principal
-  - `reference_id = staking.lock:<account_staking_id>`
-- `STAKING_ACTIVATED`
-  - emitted when status becomes `ACTIVE`
-  - `reference_id = staking.activate:<account_staking_id>`
-- `STAKING_CANCELLED`
-  - emitted when a staking request or position is cancelled
-  - `reference_id = staking.cancel:<account_staking_id>`
-- `STAKING_PRINCIPAL_RELEASED`
-  - emitted only when principal is actually released
-  - `reference_id = staking.release:<account_staking_id>`
-- `STAKING_MATURED`
-  - emitted when a staking contract reaches maturity
-  - `reference_id = staking.mature:<account_staking_id>`
+## 11. Smoke Status
 
-### 7.2 Existing event reuse
-
-- `DAILY_REWARD_ACCRUAL` already exists.
-- Do not introduce `DAILY_REWARD_ACCRUED` as a second synonym.
-- Future reward accrual should reuse `DAILY_REWARD_ACCRUAL`.
-
-## 8. Recommended Initial Policy
-
-- Product durations must always be read from `staking_products.staking_days`
-- The UI can seed default product candidates:
-  - `30 days -> 50 bps/day`
-  - `90 days -> 70 bps/day`
-  - `180 days -> 100 bps/day`
-  - `360 days -> 120 bps/day`
-- The code must not hard-code `160 days`
-
-## 9. Recommendation Summary
-
-- User staking should create `PENDING` first
-- Admin activation should be required before `ACTIVE`
-- `account_stakings` should hold immutable commercial snapshots
-- `staking_products` should remain policy definition only
-- `ledger_events.reference_id` unique constraint is compatible with `staking.<action>:<staking_id>` naming
+- `npm run smoke:staking`: pass
+- Covered flows:
+  - public product list
+  - create + create idempotency replay
+  - create conflict on same key
+  - min amount failure
+  - inactive product failure
+  - my list/detail
+  - foreign detail blocked
+  - user cancel from `PENDING`
+  - reader list/detail
+  - reader activate forbidden
+  - admin activate
+  - user cancel request from `ACTIVE`
+  - admin cancel
+  - admin reject
+  - ledger/audit verification
+  - sensitive field absence
+  - fixture cleanup to zero residual rows

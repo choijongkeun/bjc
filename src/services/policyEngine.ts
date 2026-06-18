@@ -25,6 +25,12 @@ import type { LedgerEventInput, LedgerEventType, SettlementType } from "../../sh
 const ledgerEventTypes = new Set([
   "STAKE",
   "UNSTAKE",
+  "STAKING_REQUESTED",
+  "STAKING_PRINCIPAL_LOCKED",
+  "STAKING_ACTIVATED",
+  "STAKING_CANCELLED",
+  "STAKING_PRINCIPAL_RELEASED",
+  "STAKING_MATURED",
   "DAILY_REWARD_ACCRUAL",
   "DAILY_REWARD_PAYOUT",
   "DIRECT_REFERRAL_BONUS",

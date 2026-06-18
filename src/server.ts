@@ -9,6 +9,7 @@ import { PolicyEngine } from "./services/policyEngine.js";
 import { AuthService } from "./services/authService.js";
 import { NetworkService } from "./services/networkService.js";
 import { AdminAccountService } from "./services/adminAccountService.js";
+import { AccountStakingService } from "./services/accountStakingService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -42,6 +43,7 @@ const engine = new PolicyEngine(pool);
 const authService = new AuthService(pool);
 const networkService = new NetworkService(pool);
 const adminAccountService = new AdminAccountService(pool);
+const accountStakingService = new AccountStakingService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -71,6 +73,19 @@ const booleanQuerySchema = z.preprocess((value) => {
   if (value === "false") return false;
   return value;
 }, z.boolean());
+
+const stakingStatusSchema = z.enum([
+  "PENDING",
+  "ACTIVE",
+  "CANCEL_REQUESTED",
+  "CANCELLED",
+  "MATURED",
+  "CLOSED",
+]);
+
+const stakingSortSchema = z
+  .enum(["created_at_desc", "created_at_asc", "matures_at_asc", "matures_at_desc"])
+  .default("created_at_desc");
 
 function requireActorId(req: express.Request): string {
   const actorId = req.header("x-actor-account-id");
@@ -167,6 +182,96 @@ app.post("/api/auth/logout", requireSession, async (req, res, next) => {
   try {
     const access_token = extractBearerToken(req.header("authorization"));
     const result = await authService.logout({ access_token });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/me/stakings", requireSession, async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        staking_product_id: z.string().trim().min(1),
+        principal_amount_base: z.string().trim().min(1),
+        idempotency_key: z.string().trim().min(1).max(128),
+      })
+      .parse(req.body);
+
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountStakingService.createMyStaking({
+      account_id: sessionAccount.id,
+      staking_product_id: body.staking_product_id,
+      principal_amount_base: body.principal_amount_base,
+      idempotency_key: body.idempotency_key,
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/stakings", requireSession, async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        status: stakingStatusSchema.optional(),
+        product_id: z.string().trim().min(1).optional(),
+        sort: stakingSortSchema,
+      })
+      .parse(req.query);
+
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountStakingService.listMyStakings({
+      account_id: sessionAccount.id,
+      status: query.status,
+      product_id: query.product_id,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/stakings/:stakingId", requireSession, async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountStakingService.getMyStaking({
+      account_id: sessionAccount.id,
+      staking_id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/me/stakings/:stakingId/cancel", requireSession, async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const body = z
+      .object({
+        reason: z.string().trim().max(500).optional(),
+        idempotency_key: z.string().trim().min(1).max(128),
+      })
+      .parse(req.body);
+
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountStakingService.cancelMyStaking({
+      account_id: sessionAccount.id,
+      staking_id,
+      reason: body.reason ?? null,
+      idempotency_key: body.idempotency_key,
+    });
     res.json(result);
   } catch (err) {
     next(err);
@@ -381,6 +486,150 @@ app.post("/admin/policy-versions", async (req, res, next) => {
   }
 });
 
+app.get("/api/admin/stakings", async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        q: z.string().trim().min(1).optional(),
+        account_id: z.string().trim().min(1).optional(),
+        product_id: z.string().trim().min(1).optional(),
+        status: stakingStatusSchema.optional(),
+        created_from: z.string().optional(),
+        created_to: z.string().optional(),
+        matures_from: z.string().optional(),
+        matures_to: z.string().optional(),
+        sort: stakingSortSchema,
+      })
+      .parse(req.query);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.listAdminStakings({
+      actor_account_id,
+      q: query.q,
+      account_id: query.account_id,
+      product_id: query.product_id,
+      status: query.status,
+      created_from: query.created_from,
+      created_to: query.created_to,
+      matures_from: query.matures_from,
+      matures_to: query.matures_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/stakings/:stakingId", async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.getAdminStaking({
+      actor_account_id,
+      staking_id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/stakings/:stakingId/activate", async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.activateAdminStaking({
+      actor_account_id,
+      staking_id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/stakings/:stakingId/reject", async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const body = z
+      .object({
+        reason: z.string().trim().min(1).max(500),
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.rejectAdminStaking({
+      actor_account_id,
+      staking_id,
+      reason: body.reason,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/stakings/:stakingId/cancel", async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const body = z
+      .object({
+        reason: z.string().trim().max(500).optional(),
+      })
+      .parse(req.body ?? {});
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.cancelAdminStaking({
+      actor_account_id,
+      staking_id,
+      reason: body.reason ?? null,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/stakings", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = paginationQuerySchema
+      .extend({
+        status: stakingStatusSchema.optional(),
+        product_id: z.string().trim().min(1).optional(),
+        sort: stakingSortSchema,
+      })
+      .parse(req.query);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountStakingService.listAdminAccountStakings({
+      actor_account_id,
+      account_id,
+      status: query.status,
+      product_id: query.product_id,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/api/policies", async (req, res, next) => {
   try {
     const body = z
@@ -561,14 +810,29 @@ app.get("/api/staking-products", async (req, res, next) => {
       })
       .parse(req.query);
 
-    const actor_account_id = requireActorId(req);
-    const result = await engine.listStakingProducts({
-      actor_account_id,
-      policy_version_id: query.policy_id,
-      is_active: query.is_active,
-      symbol: query.symbol,
+    if (req.header("x-actor-account-id")) {
+      const actor_account_id = requireActorId(req);
+      const result = await engine.listStakingProducts({
+        actor_account_id,
+        policy_version_id: query.policy_id,
+        is_active: query.is_active,
+        symbol: query.symbol,
+        page: query.page,
+        limit: query.limit
+      });
+      res.json({
+        staking_products: result.items,
+        page: query.page,
+        limit: query.limit,
+        total: result.total
+      });
+      return;
+    }
+
+    const result = await accountStakingService.listPublicStakingProducts({
       page: query.page,
-      limit: query.limit
+      limit: query.limit,
+      symbol: query.symbol
     });
     res.json({
       staking_products: result.items,
@@ -610,6 +874,12 @@ app.get("/api/ledger-events", async (req, res, next) => {
           .enum([
             "STAKE",
             "UNSTAKE",
+            "STAKING_REQUESTED",
+            "STAKING_PRINCIPAL_LOCKED",
+            "STAKING_ACTIVATED",
+            "STAKING_CANCELLED",
+            "STAKING_PRINCIPAL_RELEASED",
+            "STAKING_MATURED",
             "DAILY_REWARD_ACCRUAL",
             "DAILY_REWARD_PAYOUT",
             "DIRECT_REFERRAL_BONUS",
