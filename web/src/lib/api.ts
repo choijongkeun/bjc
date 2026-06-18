@@ -1,4 +1,6 @@
 export type SessionRole = "ADMIN" | "READER" | "USER";
+export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
+export type AccountStakingSort = "created_at_desc" | "created_at_asc" | "matures_at_asc" | "matures_at_desc";
 
 export type PolicyVersion = {
   id: string;
@@ -14,7 +16,7 @@ export type PolicyVersion = {
 
 export type StakingProduct = {
   id: string;
-  policy_version_id: string;
+  policy_version_id?: string;
   name: string;
   symbol: string;
   decimals: number;
@@ -22,8 +24,45 @@ export type StakingProduct = {
   max_stake_amount_base: string;
   staking_days: number;
   daily_interest_bps: string;
-  is_active: boolean | number;
+  is_active: boolean;
+  created_at?: string;
+};
+
+export type AdminStakingAccount = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+};
+
+export type AdminStakingListItem = {
+  id: string;
+  account_id: string;
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  status: AccountStakingStatus;
+  started_at: string | null;
+  matures_at: string | null;
+  activated_at: string | null;
+  cancel_requested_at: string | null;
+  cancelled_at: string | null;
+  matured_at: string | null;
+  closed_at: string | null;
+  source_ledger_event_id: string | null;
+  cancellation_ledger_event_id: string | null;
   created_at: string;
+  updated_at: string;
+  product: StakingProduct;
+  account: AdminStakingAccount;
+};
+
+export type AdminStakingDetail = AdminStakingListItem;
+
+export type AdminStakingListResponse = {
+  items: AdminStakingListItem[];
+  page: number;
+  limit: number;
+  total: number;
 };
 
 export type LedgerEvent = {
@@ -369,4 +408,45 @@ export const api = {
     accountId: string,
     query: { type: "referral" | "binary"; depth?: number; page?: number; limit?: number }
   ) => request<ItemsPageResponse<DownlineItem>>(`/api/admin/accounts/${accountId}/downlines${params(query as any)}`, { method: "GET", actorId }),
+  listAdminStakings: (
+    actorId: string,
+    query: {
+      q?: string;
+      account_id?: string;
+      product_id?: string;
+      status?: AccountStakingStatus;
+      created_from?: string;
+      created_to?: string;
+      matures_from?: string;
+      matures_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: AccountStakingSort;
+    }
+  ) => request<AdminStakingListResponse>(`/api/admin/stakings${params(query as any)}`, { method: "GET", actorId }),
+  getAdminStaking: (actorId: string, stakingId: string) =>
+    request<{ staking: AdminStakingDetail }>(`/api/admin/stakings/${stakingId}`, { method: "GET", actorId }),
+  activateAdminStaking: (actorId: string, stakingId: string) =>
+    request<{ staking: AdminStakingDetail }>(`/api/admin/stakings/${stakingId}/activate`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify({}),
+    }),
+  rejectAdminStaking: (actorId: string, stakingId: string, body: { reason: string }) =>
+    request<{ staking: AdminStakingDetail }>(`/api/admin/stakings/${stakingId}/reject`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  cancelAdminStaking: (actorId: string, stakingId: string, body: { reason?: string }) =>
+    request<{ staking: AdminStakingDetail }>(`/api/admin/stakings/${stakingId}/cancel`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  listAdminAccountStakings: (
+    actorId: string,
+    accountId: string,
+    query: { status?: AccountStakingStatus; product_id?: string; page?: number; limit?: number; sort?: AccountStakingSort }
+  ) => request<AdminStakingListResponse>(`/api/admin/accounts/${accountId}/stakings${params(query as any)}`, { method: "GET", actorId }),
 };

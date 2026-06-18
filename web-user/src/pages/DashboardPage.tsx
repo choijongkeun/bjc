@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Copy, GitBranch, Sparkles, Wallet } from "lucide-react";
+import { Copy, FolderClock, GitBranch, Sparkles, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api, getErrorMessage, type BinaryLegsResponse } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
@@ -15,6 +15,11 @@ export default function DashboardPage() {
   const account = useSessionStore((state) => state.account);
   const setAccount = useSessionStore((state) => state.setAccount);
   const [legs, setLegs] = useState<BinaryLegsResponse | null>(null);
+  const [stakingSummary, setStakingSummary] = useState({
+    activeCount: 0,
+    pendingCount: 0,
+    cancelRequestedCount: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,10 +30,21 @@ export default function DashboardPage() {
     async function load() {
       try {
         setLoading(true);
-        const [meResult, legsResult] = await Promise.all([api.me(accessToken), api.getMyBinaryLegs(accessToken)]);
+        const [meResult, legsResult, activeStakings, pendingStakings, cancelRequestedStakings] = await Promise.all([
+          api.me(accessToken),
+          api.getMyBinaryLegs(accessToken),
+          api.getMyStakings({ status: "ACTIVE", page: 1, limit: 1 }, accessToken),
+          api.getMyStakings({ status: "PENDING", page: 1, limit: 1 }, accessToken),
+          api.getMyStakings({ status: "CANCEL_REQUESTED", page: 1, limit: 1 }, accessToken),
+        ]);
         if (cancelled) return;
         setAccount(meResult.account);
         setLegs(legsResult);
+        setStakingSummary({
+          activeCount: activeStakings.total,
+          pendingCount: pendingStakings.total,
+          cancelRequestedCount: cancelRequestedStakings.total,
+        });
         setError(null);
       } catch (loadError) {
         if (cancelled) return;
@@ -79,14 +95,10 @@ export default function DashboardPage() {
               />
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: "총 스테이킹 금액", value: "0", accent: "text-blue-200" },
+                  { label: "활성 스테이킹 건수", value: String(stakingSummary.activeCount), accent: "text-blue-200" },
+                  { label: "대기 중 건수", value: String(stakingSummary.pendingCount), accent: "text-cyan-200" },
+                  { label: "취소 요청 건수", value: String(stakingSummary.cancelRequestedCount), accent: "text-amber-200" },
                   { label: "총 보상 금액", value: "0", accent: "text-emerald-200" },
-                  { label: "직급", value: "0", accent: "text-slate-100" },
-                  {
-                    label: "weak_leg_volume_base",
-                    value: formatBaseAmount(legs?.weak_leg_volume_base ?? "0", 0),
-                    accent: "text-violet-200",
-                  },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4">
                     <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
@@ -132,7 +144,12 @@ export default function DashboardPage() {
             icon={<GitBranch className="h-5 w-5" />}
             href="/network"
           />
-          <ActionCard title="스테이킹 준비 중" description="상품 신청 UI는 다음 단계에서 연결됩니다." icon={<Sparkles className="h-5 w-5" />} disabled />
+          <ActionCard
+            title="스테이킹 보기"
+            description="상품 목록, 내 스테이킹 목록, 상세 상태 확인 화면으로 이동합니다."
+            icon={<FolderClock className="h-5 w-5" />}
+            href="/staking"
+          />
           <ActionCard title="보상 준비 중" description="정산/보상 내역은 추후 API 연결 후 활성화됩니다." icon={<Sparkles className="h-5 w-5" />} disabled />
           <ActionCard title="출금 준비 중" description="출금 신청과 이력은 현재 범위에 포함하지 않았습니다." icon={<Wallet className="h-5 w-5" />} disabled />
         </div>

@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { Activity, ClipboardList, FileClock, GitBranch, Layers3, LogOut, Package2, ShieldCheck, Users2 } from "lucide-react";
+import { Activity, ClipboardList, Coins, FileClock, GitBranch, Layers3, LogOut, Package2, ShieldCheck, Users2 } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button, cn } from "@/components/ui";
 
-type AdminTab = "policies" | "ledger" | "calc" | "reports" | "audit" | "accounts" | "network";
+type AdminTab = "policies" | "stakings" | "ledger" | "calc" | "reports" | "audit" | "accounts" | "network";
 
 const navItems = [
   { key: "policies", label: "정책/상품", icon: Layers3 },
+  { key: "stakings", label: "스테이킹 관리", icon: Coins },
   { key: "accounts", label: "회원", icon: Users2 },
   { key: "network", label: "추천/바이너리", icon: GitBranch },
   { key: "ledger", label: "원장 이벤트", icon: Activity },
@@ -74,8 +75,8 @@ export function AdminShell({
           <header className="glass-card flex flex-wrap items-center justify-between gap-4 px-6 py-5">
             <div>
               <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Desktop-first Dark Console</div>
-              <h1 className="mt-2 text-2xl font-extrabold text-slate-50">BJC 스테이킹 정책 엔진 관리자</h1>
-              <p className="mt-1 text-sm text-slate-400">정책, 회원, 추천/바이너리 조직, 원장, 계산, 리포트, 감사 로그를 오프체인 기준으로 관리합니다.</p>
+              <h1 className="mt-2 text-2xl font-extrabold text-slate-50">BJC 스테이킹 운영 관리자</h1>
+              <p className="mt-1 text-sm text-slate-400">정책, 스테이킹, 회원, 추천/바이너리 조직, 원장, 계산, 리포트, 감사 로그를 오프체인 기준으로 관리합니다.</p>
             </div>
             <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{role}</span>
           </header>

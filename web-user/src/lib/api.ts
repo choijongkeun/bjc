@@ -1,5 +1,7 @@
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
 export type BinaryPosition = "LEFT" | "RIGHT";
+export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
+export type AccountStakingSort = "created_at_desc" | "created_at_asc" | "matures_at_asc" | "matures_at_desc";
 
 export type SessionAccount = {
   id: string;
@@ -103,6 +105,66 @@ export type DownlineResponse = {
   total: number;
 };
 
+export type StakingProduct = {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  min_stake_amount_base: string;
+  max_stake_amount_base: string;
+  staking_days: number;
+  daily_interest_bps: string;
+  is_active: boolean;
+};
+
+export type AccountStakingProduct = StakingProduct;
+
+export type AccountStaking = {
+  id: string;
+  account_id: string;
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  status: AccountStakingStatus;
+  started_at: string | null;
+  matures_at: string | null;
+  activated_at: string | null;
+  cancel_requested_at: string | null;
+  cancelled_at: string | null;
+  matured_at: string | null;
+  closed_at: string | null;
+  source_ledger_event_id: string | null;
+  cancellation_ledger_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+  product: AccountStakingProduct;
+};
+
+export type StakingProductsResponse = {
+  staking_products: StakingProduct[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type AccountStakingListResponse = {
+  items: AccountStaking[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type CreateStakingRequest = {
+  staking_product_id: string;
+  principal_amount_base: string;
+  idempotency_key: string;
+};
+
+export type CancelStakingRequest = {
+  reason?: string;
+  idempotency_key: string;
+};
+
 export class ApiError extends Error {
   status: number;
   details: unknown;
@@ -145,10 +207,13 @@ function toFriendlyMessage(status: number, message: string) {
   }
   if (status === 409) {
     if (message.includes("login_id")) return "이미 사용 중인 로그인 ID입니다.";
+    if (message.includes("idempotency_key")) return "이미 처리된 요청이거나 현재 상태와 충돌합니다.";
     return "현재 상태로는 요청을 처리할 수 없습니다.";
   }
   if (status === 422) {
     if (message.includes("referral sponsor is not active")) return "추천인 계정이 활성 상태가 아닙니다.";
+    if (message.includes("principal_amount_base")) return "스테이킹 금액을 다시 확인해 주세요.";
+    if (message.includes("staking_product")) return "현재 신청할 수 없는 스테이킹 상품입니다.";
     return "입력값을 다시 확인해 주세요.";
   }
   return message || "요청 처리 중 오류가 발생했습니다.";
@@ -252,6 +317,40 @@ export const api = {
     return request<DownlineResponse>(`/api/me/downlines${params(query as Record<string, string | number | undefined>)}`, {
       method: "GET",
       accessToken,
+    });
+  },
+  getStakingProducts(query: { symbol?: string; page?: number; limit?: number } = {}) {
+    return request<StakingProductsResponse>(`/api/staking-products${params(query as Record<string, string | number | undefined>)}`, {
+      method: "GET",
+    });
+  },
+  createMyStaking(body: CreateStakingRequest, accessToken?: string | null) {
+    return request<{ staking: AccountStaking }>("/api/me/stakings", {
+      method: "POST",
+      accessToken,
+      body: JSON.stringify(body),
+    });
+  },
+  getMyStakings(
+    query: { status?: AccountStakingStatus; product_id?: string; page?: number; limit?: number; sort?: AccountStakingSort } = {},
+    accessToken?: string | null
+  ) {
+    return request<AccountStakingListResponse>(`/api/me/stakings${params(query as Record<string, string | number | undefined>)}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyStaking(stakingId: string, accessToken?: string | null) {
+    return request<{ staking: AccountStaking }>(`/api/me/stakings/${stakingId}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  cancelMyStaking(stakingId: string, body: CancelStakingRequest, accessToken?: string | null) {
+    return request<{ staking: AccountStaking }>(`/api/me/stakings/${stakingId}/cancel`, {
+      method: "POST",
+      accessToken,
+      body: JSON.stringify(body),
     });
   },
 };

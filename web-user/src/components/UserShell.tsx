@@ -8,8 +8,8 @@ import { Badge, Button, Card, cn } from "@/components/ui";
 
 const menuItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
+  { label: "Staking", href: "/staking", icon: Coins, enabled: true },
   { label: "Network", href: "/network", icon: GitBranch, enabled: true },
-  { label: "Staking", href: "#", icon: Coins, enabled: false },
   { label: "Rewards", href: "#", icon: ArrowUpRight, enabled: false },
   { label: "Withdrawals", href: "#", icon: Wallet, enabled: false },
 ] as const;

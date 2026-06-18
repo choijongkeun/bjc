@@ -3,6 +3,8 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import DashboardPage from "@/pages/DashboardPage";
 import NetworkPage from "@/pages/NetworkPage";
+import StakingPage from "@/pages/StakingPage";
+import StakingDetailPage from "@/pages/StakingDetailPage";
 import { PrivateRoute } from "@/routes/PrivateRoute";
 import { useSessionStore } from "@/store/sessionStore";
 
@@ -28,6 +30,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <NetworkPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staking"
+          element={
+            <PrivateRoute>
+              <StakingPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staking/:stakingId"
+          element={
+            <PrivateRoute>
+              <StakingDetailPage />
             </PrivateRoute>
           }
         />

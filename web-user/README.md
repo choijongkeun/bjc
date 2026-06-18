@@ -1,6 +1,6 @@
 # BJC User Front
 
-일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증과 네트워크 조회 흐름만 구현합니다.
+일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증, 네트워크 조회, 스테이킹 신청/상세 흐름을 구현합니다.
 
 ## 설치
 
@@ -18,6 +18,7 @@ npm run dev
 
 - 기본 포트: `5174`
 - dev 환경에서는 `vite.config.ts`의 proxy로 `/api` 요청을 `http://localhost:3000`으로 전달합니다.
+- 오래된 API 서버를 피하려면 `VITE_API_BASE_URL=http://127.0.0.1:3001 npm run dev`처럼 최신 백엔드 포트를 명시해서 실행할 수 있습니다.
 
 ## 빌드
 
@@ -52,7 +53,7 @@ VITE_API_BASE_URL=http://localhost:3000
 
 ## API 서버 실행 필요
 
-회원가입/로그인/조직도 조회는 루트 API 서버가 실행 중이어야 합니다.
+회원가입/로그인/조직도/스테이킹 조회는 루트 API 서버가 실행 중이어야 합니다.
 
 ```bash
 cd ..
@@ -65,6 +66,8 @@ npm run dev
 - `/login`
 - `/register`
 - `/dashboard`
+- `/staking`
+- `/staking/:stakingId`
 - `/network`
 
 ## 현재 구현 범위
@@ -74,6 +77,11 @@ npm run dev
 - 추천인 코드 확인
 - 세션 저장 및 보호 라우트
 - 사용자 대시보드
+- 스테이킹 상품 목록
+- 스테이킹 신청
+- 내 스테이킹 목록
+- 내 스테이킹 상세
+- PENDING 취소 / ACTIVE 취소 요청
 - 추천 조직도
 - 바이너리 조직도
 - 바이너리 레그 요약
@@ -82,8 +90,13 @@ npm run dev
 
 ## 현재 placeholder 기능
 
-- `Staking`
 - `Rewards`
 - `Withdrawals`
 
 위 메뉴는 `Coming Soon` 상태로 표시되며 클릭 시 빈 화면이나 오류 페이지로 이동하지 않습니다.
+
+## 스테이킹 참고
+
+- 신청 후 상태는 먼저 `PENDING`으로 생성됩니다.
+- `ACTIVE` 전환은 관리자 화면에서 처리합니다.
+- 현재 범위에는 reward 지급, principal 실제 차감/반환, 자동 만기 처리가 포함되지 않습니다.

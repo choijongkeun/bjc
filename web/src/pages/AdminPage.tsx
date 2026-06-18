@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminShell } from "@/components/AdminShell";
 import { PoliciesTab } from "@/components/tabs/PoliciesTab";
+import { StakingsTab } from "@/components/tabs/StakingsTab";
 import { AccountsTab } from "@/components/tabs/AccountsTab";
 import { NetworkTab } from "@/components/tabs/NetworkTab";
 import { LedgerEventsTab } from "@/components/tabs/LedgerEventsTab";
@@ -10,9 +11,9 @@ import { ReportsTab } from "@/components/tabs/ReportsTab";
 import { AuditLogsTab } from "@/components/tabs/AuditLogsTab";
 import { useSessionStore } from "@/store/sessionStore";
 
-type TabKey = "policies" | "accounts" | "network" | "ledger" | "calc" | "reports" | "audit";
+type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "reports" | "audit";
 
-const allowedTabs = new Set<TabKey>(["policies", "accounts", "network", "ledger", "calc", "reports", "audit"]);
+const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "reports", "audit"]);
 
 export default function AdminPage() {
   const actorId = useSessionStore((state) => state.actorId)!;
@@ -54,9 +55,16 @@ export default function AdminPage() {
     updateParams({ tab: "network", accountId });
   }
 
+  function openStakings(accountId: string) {
+    updateParams({ tab: "stakings", accountId });
+  }
+
   return (
     <AdminShell activeTab={safeTab} onTabChange={changeTab}>
       {safeTab === "policies" ? <PoliciesTab actorId={actorId} role={role} /> : null}
+      {safeTab === "stakings" ? (
+        <StakingsTab actorId={actorId} role={role} selectedAccountId={selectedAccountId} onSelectAccountId={selectAccount} />
+      ) : null}
       {safeTab === "accounts" ? (
         <AccountsTab
           actorId={actorId}
@@ -64,6 +72,7 @@ export default function AdminPage() {
           selectedAccountId={selectedAccountId}
           onSelectAccount={selectAccount}
           onOpenNetwork={openNetwork}
+          onOpenStakings={openStakings}
         />
       ) : null}
       {safeTab === "network" ? (

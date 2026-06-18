@@ -4,12 +4,14 @@ import {
   api,
   type AdminAccountDetail,
   type AdminAccountListItem,
+  type AdminStakingListItem,
   type AdminAccountSort,
   type BinaryPosition,
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
+import { StakingStatusBadge } from "@/components/StakingStatusBadge";
 
 type AccountFilters = {
   q: string;
@@ -45,12 +47,14 @@ export function AccountsTab({
   selectedAccountId,
   onSelectAccount,
   onOpenNetwork,
+  onOpenStakings,
 }: {
   actorId: string;
   role: SessionRole;
   selectedAccountId: string | null;
   onSelectAccount: (accountId: string) => void;
   onOpenNetwork: (accountId: string) => void;
+  onOpenStakings: (accountId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -67,6 +71,8 @@ export function AccountsTab({
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [recentStakings, setRecentStakings] = useState<AdminStakingListItem[]>([]);
+  const [stakingError, setStakingError] = useState<string | null>(null);
 
   const activeAccountId = useMemo(() => selectedAccountId ?? selected?.id ?? null, [selectedAccountId, selected?.id]);
 
@@ -94,11 +100,18 @@ export function AccountsTab({
 
   async function loadAccountDetail(accountId: string) {
     try {
-      const result = await api.getAdminAccount(actorId, accountId);
+      const [result, stakingResult] = await Promise.all([
+        api.getAdminAccount(actorId, accountId),
+        api.listAdminAccountStakings(actorId, accountId, { page: 1, limit: 5, sort: "created_at_desc" }),
+      ]);
       setSelected(result.account);
+      setRecentStakings(stakingResult.items);
+      setStakingError(null);
       setDetailError(null);
     } catch (loadError: any) {
       setSelected(null);
+      setRecentStakings([]);
+      setStakingError(loadError.message ?? "회원 스테이킹 내역을 불러오지 못했습니다.");
       setDetailError(loadError.message ?? "회원 상세를 불러오지 못했습니다.");
     }
   }
@@ -318,10 +331,15 @@ export function AccountsTab({
               <p className="text-sm text-slate-400">선택한 회원의 sponsor/binary 관계를 확인합니다.</p>
             </div>
             {selected ? (
-              <Button variant="secondary" onClick={() => onOpenNetwork(selected.id)}>
-                네트워크 보기
-                <ArrowRightCircle className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => onOpenStakings(selected.id)}>
+                  스테이킹 내역 보기
+                </Button>
+                <Button variant="secondary" onClick={() => onOpenNetwork(selected.id)}>
+                  네트워크 보기
+                  <ArrowRightCircle className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             ) : null}
           </div>
           <div className="mt-4">
@@ -426,6 +444,49 @@ export function AccountsTab({
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 스테이킹</div>
+                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며, 전체 내역은 스테이킹 관리 탭으로 이동합니다.</p>
+                    </div>
+                    <Button variant="secondary" onClick={() => onOpenStakings(selected.id)}>
+                      전체 스테이킹 보기
+                    </Button>
+                  </div>
+                  <div className="mt-4">
+                    {stakingError ? <FeedbackState title="스테이킹 조회 실패" description={stakingError} tone="error" /> : null}
+                    {!stakingError && recentStakings.length === 0 ? (
+                      <FeedbackState title="스테이킹 내역 없음" description="해당 회원의 최근 스테이킹 내역이 없습니다." />
+                    ) : null}
+                    {recentStakings.length > 0 ? (
+                      <div className="overflow-auto rounded-2xl border border-slate-800">
+                        <table className="data-table min-w-full">
+                          <thead>
+                            <tr>
+                              <th>상품명</th>
+                              <th>원금</th>
+                              <th>상태</th>
+                              <th>신청일</th>
+                              <th>만기 예정일</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recentStakings.map((staking) => (
+                              <tr key={staking.id}>
+                                <td>{staking.product.name}</td>
+                                <td className="tabular text-right">{formatBaseAmount(staking.principal_amount_base, staking.product.decimals)}</td>
+                                <td><StakingStatusBadge status={staking.status} /></td>
+                                <td className="text-slate-400">{formatDateTime(staking.created_at)}</td>
+                                <td className="text-slate-400">{formatDateTime(staking.matures_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
