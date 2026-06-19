@@ -4,6 +4,11 @@ import AdminPage from "@/pages/AdminPage";
 import LedgerDetailPage from "@/pages/LedgerDetailPage";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 function RootRedirect() {
   const actorId = useSessionStore((state) => state.actorId);
   const role = useSessionStore((state) => state.role);
@@ -23,7 +28,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={routerFuture}>
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<LoginPage />} />

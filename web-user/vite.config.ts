@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from "vite-plugin-trae-solo-badge";
 
+const apiBaseUrl = process.env.BJC_API_BASE_URL ?? "http://127.0.0.1:3001";
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
@@ -10,11 +12,11 @@ export default defineConfig({
     port: 5174,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: apiBaseUrl,
         changeOrigin: true,
       },
       "/health": {
-        target: "http://localhost:3000",
+        target: apiBaseUrl,
         changeOrigin: true,
       },
     },

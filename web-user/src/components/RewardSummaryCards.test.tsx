@@ -3,10 +3,15 @@ import { describe, expect, it } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { RewardSummaryCards } from "@/components/RewardSummaryCards";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 describe("RewardSummaryCards", () => {
   it("renders reward summary values and links withdrawal cards", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={routerFuture}>
         <RewardSummaryCards
           summary={{
             pending_reward_amount_base: "100",

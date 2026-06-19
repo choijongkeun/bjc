@@ -12,11 +12,16 @@ import WithdrawalDetailPage from "@/pages/WithdrawalDetailPage";
 import { PrivateRoute } from "@/routes/PrivateRoute";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 export default function App() {
   const accessToken = useSessionStore((state) => state.accessToken);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={routerFuture}>
       <Routes>
         <Route path="/" element={<Navigate to={accessToken ? "/dashboard" : "/login"} replace />} />
         <Route path="/login" element={<LoginPage />} />

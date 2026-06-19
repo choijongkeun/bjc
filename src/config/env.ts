@@ -21,6 +21,5 @@ export const env: Env = {
   DB_PASSWORD: mustGet("DB_PASSWORD"),
   DB_NAME: mustGet("DB_NAME"),
   DB_CONNECTION_LIMIT: Number(process.env.DB_CONNECTION_LIMIT ?? "30"),
-  PORT: Number(process.env.PORT ?? "3000")
+  PORT: Number(process.env.PORT ?? process.env.BJC_API_PORT ?? "3000")
 };
-

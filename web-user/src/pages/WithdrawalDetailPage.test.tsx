@@ -4,6 +4,11 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import WithdrawalDetailPage from "@/pages/WithdrawalDetailPage";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const apiMock = vi.hoisted(() => ({
   getMyWithdrawal: vi.fn(),
   cancelMyWithdrawal: vi.fn(),
@@ -76,7 +81,7 @@ describe("WithdrawalDetailPage", () => {
     apiMock.getMyWithdrawal.mockResolvedValueOnce({ withdrawal: createWithdrawal("REQUESTED") });
 
     render(
-      <MemoryRouter initialEntries={["/withdrawals/withdrawal-1"]}>
+      <MemoryRouter future={routerFuture} initialEntries={["/withdrawals/withdrawal-1"]}>
         <Routes>
           <Route path="/withdrawals/:withdrawalId" element={<WithdrawalDetailPage />} />
         </Routes>
@@ -92,7 +97,7 @@ describe("WithdrawalDetailPage", () => {
     apiMock.getMyWithdrawal.mockResolvedValueOnce({ withdrawal: createWithdrawal("COMPLETED") });
 
     render(
-      <MemoryRouter initialEntries={["/withdrawals/withdrawal-1"]}>
+      <MemoryRouter future={routerFuture} initialEntries={["/withdrawals/withdrawal-1"]}>
         <Routes>
           <Route path="/withdrawals/:withdrawalId" element={<WithdrawalDetailPage />} />
         </Routes>

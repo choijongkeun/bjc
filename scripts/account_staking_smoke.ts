@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { pool } from "../src/db/pool.js";
 import { withTx } from "../src/db/tx.js";
 import { hashPassword } from "../src/util/passwordHash.js";
+import { resolveSmokeBaseUrl } from "./smoke_config.js";
 
 type Result = {
   name: string;
@@ -53,7 +54,7 @@ async function http<T>(
   path: string,
   init: RequestInit & { actorId?: string; accessToken?: string } = {}
 ): Promise<T> {
-  const baseUrl = process.env.BJC_SMOKE_BASE_URL ?? "http://127.0.0.1:3000";
+  const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   if (!(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");

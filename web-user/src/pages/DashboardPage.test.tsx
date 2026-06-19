@@ -4,6 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import DashboardPage from "@/pages/DashboardPage";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const apiMock = vi.hoisted(() => ({
   me: vi.fn(),
   getMyBinaryLegs: vi.fn(),
@@ -99,7 +104,7 @@ describe("DashboardPage", () => {
 
   it("renders staking and rewards summary from APIs", async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={routerFuture}>
         <DashboardPage />
       </MemoryRouter>
     );

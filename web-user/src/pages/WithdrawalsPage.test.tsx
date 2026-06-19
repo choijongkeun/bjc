@@ -4,6 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import WithdrawalsPage from "@/pages/WithdrawalsPage";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const apiMock = vi.hoisted(() => ({
   getMyWithdrawalBalance: vi.fn(),
   listMyWithdrawals: vi.fn(),
@@ -81,7 +86,7 @@ describe("WithdrawalsPage", () => {
 
   it("renders withdrawal balance cards and preview result", async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={routerFuture}>
         <WithdrawalsPage />
       </MemoryRouter>
     );

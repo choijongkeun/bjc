@@ -132,7 +132,12 @@ function requireActorId(req: express.Request): string {
 }
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    service: "bjc-api",
+    environment: process.env.NODE_ENV ?? "development",
+    ...(process.env.BJC_BUILD_COMMIT ? { build_commit: process.env.BJC_BUILD_COMMIT } : {}),
+  });
 });
 
 app.get("/api/referrals/resolve", async (req, res, next) => {
@@ -1874,5 +1879,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 app.listen(env.PORT, () => {
-  process.stdout.write(`listening on :${env.PORT}\n`);
+  process.stdout.write(`BJC API listening on http://127.0.0.1:${env.PORT}\n`);
 });

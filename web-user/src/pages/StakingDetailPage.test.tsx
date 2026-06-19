@@ -4,6 +4,11 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import StakingDetailPage from "@/pages/StakingDetailPage";
 import { useSessionStore } from "@/store/sessionStore";
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const apiMock = vi.hoisted(() => ({
   getMyStaking: vi.fn(),
   getMyStakingRewards: vi.fn(),
@@ -95,7 +100,7 @@ describe("StakingDetailPage", () => {
 
   it("renders staking rewards section", async () => {
     render(
-      <MemoryRouter initialEntries={["/staking/staking-1"]}>
+      <MemoryRouter future={routerFuture} initialEntries={["/staking/staking-1"]}>
         <Routes>
           <Route path="/staking/:stakingId" element={<StakingDetailPage />} />
         </Routes>

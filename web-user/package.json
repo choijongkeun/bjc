@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:bjc": "node ../scripts/run_with_env.mjs BJC_USER_PORT=4188 BJC_API_BASE_URL=http://127.0.0.1:3001 VITE_API_BASE_URL=http://127.0.0.1:3001 -- vite --host 127.0.0.1 --port 4188",
     "build": "tsc -b && vite build",
+    "build:bjc": "node ../scripts/run_with_env.mjs BJC_USER_PORT=4188 BJC_API_BASE_URL=http://127.0.0.1:3001 VITE_API_BASE_URL=http://127.0.0.1:3001 -- npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:bjc": "npm run build:bjc && node ../scripts/run_with_env.mjs BJC_USER_PORT=4188 BJC_API_BASE_URL=http://127.0.0.1:3001 VITE_API_BASE_URL=http://127.0.0.1:3001 -- vite preview --host 127.0.0.1 --port 4188",
     "check": "tsc -b --noEmit",
     "test": "vitest run"
   },
