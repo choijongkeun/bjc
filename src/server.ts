@@ -10,6 +10,8 @@ import { AuthService } from "./services/authService.js";
 import { NetworkService } from "./services/networkService.js";
 import { AdminAccountService } from "./services/adminAccountService.js";
 import { AccountStakingService } from "./services/accountStakingService.js";
+import { AccountRewardService } from "./services/accountRewardService.js";
+import { DailyRewardService } from "./services/dailyRewardService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -44,6 +46,8 @@ const authService = new AuthService(pool);
 const networkService = new NetworkService(pool);
 const adminAccountService = new AdminAccountService(pool);
 const accountStakingService = new AccountStakingService(pool);
+const accountRewardService = new AccountRewardService(pool);
+const dailyRewardService = new DailyRewardService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -86,6 +90,30 @@ const stakingStatusSchema = z.enum([
 const stakingSortSchema = z
   .enum(["created_at_desc", "created_at_asc", "matures_at_asc", "matures_at_desc"])
   .default("created_at_desc");
+
+const rewardTypeSchema = z.enum([
+  "DAILY_REWARD",
+  "DIRECT_REFERRAL",
+  "RANK_BONUS",
+  "CONTRIBUTION",
+  "WITHDRAWAL_FEE",
+  "SIDECAR",
+  "ADJUSTMENT",
+  "REVERSAL",
+]);
+
+const rewardStatusSchema = z.enum(["PENDING", "CONFIRMED", "REVERSED"]);
+
+const rewardSortSchema = z
+  .enum([
+    "reward_date_desc",
+    "reward_date_asc",
+    "created_at_desc",
+    "created_at_asc",
+    "available_at_desc",
+    "available_at_asc",
+  ])
+  .default("reward_date_desc");
 
 function requireActorId(req: express.Request): string {
   const actorId = req.header("x-actor-account-id");
@@ -226,6 +254,114 @@ app.get("/api/me/stakings", requireSession, async (req, res, next) => {
       account_id: sessionAccount.id,
       status: query.status,
       product_id: query.product_id,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/stakings/summary", requireSession, async (req, res, next) => {
+  try {
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountRewardService.getMyStakingSummary({
+      account_id: sessionAccount.id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/rewards/summary", requireSession, async (req, res, next) => {
+  try {
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountRewardService.getMyRewardSummary({
+      account_id: sessionAccount.id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/rewards", requireSession, async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional(),
+        reward_date_from: z.string().optional(),
+        reward_date_to: z.string().optional(),
+        staking_id: z.string().trim().min(1).optional(),
+        sort: rewardSortSchema,
+      })
+      .parse(req.query);
+
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountRewardService.listMyRewards({
+      account_id: sessionAccount.id,
+      reward_type: query.reward_type,
+      status: query.status,
+      reward_date_from: query.reward_date_from,
+      reward_date_to: query.reward_date_to,
+      staking_id: query.staking_id,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/rewards/:rewardId", requireSession, async (req, res, next) => {
+  try {
+    const reward_id = z.string().trim().min(1).parse(req.params.rewardId);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountRewardService.getMyReward({
+      account_id: sessionAccount.id,
+      reward_id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/stakings/:stakingId/rewards", requireSession, async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const query = paginationQuerySchema
+      .extend({
+        status: rewardStatusSchema.optional(),
+        reward_date_from: z.string().optional(),
+        reward_date_to: z.string().optional(),
+        sort: rewardSortSchema,
+      })
+      .parse(req.query);
+
+    const sessionAccount = requireSessionAccount(req);
+    const result = await accountRewardService.listMyStakingRewards({
+      account_id: sessionAccount.id,
+      staking_id,
+      status: query.status,
+      reward_date_from: query.reward_date_from,
+      reward_date_to: query.reward_date_to,
       page: query.page,
       limit: query.limit,
       sort: query.sort,
@@ -620,6 +756,177 @@ app.get("/api/admin/accounts/:accountId/stakings", async (req, res, next) => {
       sort: query.sort,
     });
     res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/rewards", async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        q: z.string().trim().min(1).optional(),
+        account_id: z.string().trim().min(1).optional(),
+        staking_id: z.string().trim().min(1).optional(),
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional(),
+        calc_run_id: z.string().trim().min(1).optional(),
+        reward_date_from: z.string().optional(),
+        reward_date_to: z.string().optional(),
+        sort: rewardSortSchema,
+      })
+      .parse(req.query);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountRewardService.listAdminRewards({
+      actor_account_id,
+      q: query.q,
+      account_id: query.account_id,
+      staking_id: query.staking_id,
+      reward_type: query.reward_type,
+      status: query.status,
+      calc_run_id: query.calc_run_id,
+      reward_date_from: query.reward_date_from,
+      reward_date_to: query.reward_date_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/rewards/:rewardId", async (req, res, next) => {
+  try {
+    const reward_id = z.string().trim().min(1).parse(req.params.rewardId);
+    const actor_account_id = requireActorId(req);
+    const result = await accountRewardService.getAdminReward({
+      actor_account_id,
+      reward_id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/rewards", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = paginationQuerySchema
+      .extend({
+        staking_id: z.string().trim().min(1).optional(),
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional(),
+        calc_run_id: z.string().trim().min(1).optional(),
+        reward_date_from: z.string().optional(),
+        reward_date_to: z.string().optional(),
+        sort: rewardSortSchema,
+      })
+      .parse(req.query);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountRewardService.listAdminAccountRewards({
+      actor_account_id,
+      account_id,
+      staking_id: query.staking_id,
+      reward_type: query.reward_type,
+      status: query.status,
+      calc_run_id: query.calc_run_id,
+      reward_date_from: query.reward_date_from,
+      reward_date_to: query.reward_date_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/rewards/:rewardId/reverse", async (req, res, next) => {
+  try {
+    const reward_id = z.string().trim().min(1).parse(req.params.rewardId);
+    const body = z
+      .object({
+        reason: z.string().trim().min(1).max(500),
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountRewardService.reverseReward({
+      actor_account_id,
+      reward_id,
+      reason: body.reason,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/calc-runs/daily-reward", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        reward_date: z.string().trim().min(1),
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await dailyRewardService.runDailyReward({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      reward_date: body.reward_date,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/calc-runs/:calcRunId/rewards", async (req, res, next) => {
+  try {
+    const calc_run_id = z.string().trim().min(1).parse(req.params.calcRunId);
+    const query = paginationQuerySchema
+      .extend({
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional(),
+        sort: rewardSortSchema,
+      })
+      .parse(req.query);
+
+    const actor_account_id = requireActorId(req);
+    const result = await accountRewardService.listCalcRunRewards({
+      actor_account_id,
+      calc_run_id,
+      reward_type: query.reward_type,
+      status: query.status,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort,
+    });
+    res.json({
+      calc_run: result.calc_run,
       items: result.items,
       page: query.page,
       limit: query.limit,

@@ -261,16 +261,17 @@ async function cleanupFixture(fixture: Fixture): Promise<{
 }
 
 async function main() {
-  const results: Result[] = [];
-  const fixture = await createFixture();
-  let userToken = "";
-  let otherUserToken = "";
-  let pendingCancelledId = "";
-  let activeCancelledId = "";
-  let rejectedId = "";
-  let currentStep = "fixture created";
-
   try {
+    const results: Result[] = [];
+    const fixture = await createFixture();
+    let userToken = "";
+    let otherUserToken = "";
+    let pendingCancelledId = "";
+    let activeCancelledId = "";
+    let rejectedId = "";
+    let currentStep = "fixture created";
+
+    try {
     currentStep = "db info";
     const [dbRows] = await pool.query("select database() as db, user() as db_user");
     const dbInfo = (dbRows as Array<{ db: string; db_user: string }>)[0];
@@ -626,31 +627,34 @@ async function main() {
         !containsSensitiveKey(createPending, "session_token_hash") &&
         !containsSensitiveKey(createPending, "access_token"),
     });
-  } catch (error) {
-    const apiError = error as Partial<ApiFailure>;
-    const details =
-      typeof apiError.details === "string" ? apiError.details : JSON.stringify(apiError.details ?? null);
-    process.stderr.write(
-      `account staking smoke failed at step=${currentStep}: ${String(apiError.message ?? error)}${
-        apiError.status ? ` (status=${apiError.status})` : ""
-      } details=${details}\n`
-    );
-    throw error;
+    } catch (error) {
+      const apiError = error as Partial<ApiFailure>;
+      const details =
+        typeof apiError.details === "string" ? apiError.details : JSON.stringify(apiError.details ?? null);
+      process.stderr.write(
+        `account staking smoke failed at step=${currentStep}: ${String(apiError.message ?? error)}${
+          apiError.status ? ` (status=${apiError.status})` : ""
+        } details=${details}\n`
+      );
+      throw error;
+    } finally {
+      const cleanup = await cleanupFixture(fixture);
+      results.push({
+        name: "cleanup 후 관련 row 0",
+        ok: Object.values(cleanup.remaining).every((value) => value === 0),
+        message: JSON.stringify(cleanup.remaining),
+      });
+    }
+
+    for (const result of results) {
+      process.stdout.write(`${result.ok ? "PASS" : "FAIL"} ${result.name}${result.message ? ` :: ${result.message}` : ""}\n`);
+    }
+
+    if (results.some((result) => !result.ok)) {
+      process.exitCode = 1;
+    }
   } finally {
-    const cleanup = await cleanupFixture(fixture);
-    results.push({
-      name: "cleanup 후 관련 row 0",
-      ok: Object.values(cleanup.remaining).every((value) => value === 0),
-      message: JSON.stringify(cleanup.remaining),
-    });
-  }
-
-  for (const result of results) {
-    process.stdout.write(`${result.ok ? "PASS" : "FAIL"} ${result.name}${result.message ? ` :: ${result.message}` : ""}\n`);
-  }
-
-  if (results.some((result) => !result.ok)) {
-    process.exitCode = 1;
+    await pool.end();
   }
 }
 

@@ -2,8 +2,8 @@
 
 ## 1. Goal
 
-- Define the implementation plan for reward ledger and daily reward accrual after staking v1 is complete.
-- Finalize schema, contracts, and operational rules before repo/service/API/front implementation starts.
+- Record the implemented reward ledger and daily reward accrual scope after staking v1 is complete.
+- Keep the design, code structure, and operations aligned with the current server implementation.
 - Keep the reward domain compatible with later withdrawal, dashboard summary, and admin reporting work.
 
 ## 2. Current Gap Analysis
@@ -131,7 +131,7 @@ Operationally, the runtime target set is expected to be current `ACTIVE` and `CA
 
 ```text
 started_at is not null
-and started_at < reward_day_start
+and started_at < reward_day_end
 and matures_at > reward_day_start
 and (cancelled_at is null or cancelled_at > reward_day_start)
 and (closed_at is null or closed_at > reward_day_start)
@@ -141,7 +141,7 @@ Policy decisions:
 
 - `CANCEL_REQUESTED` continues to accrue until admin cancel is finalized
 - `CANCELLED`, `MATURED`, and `CLOSED` do not accrue after their terminal timestamp
-- first reward day begins on the next business date after activation when activation occurred after midnight
+- same-day KST starts accrue when they fall before `reward_day_end`
 
 ## 6. Balance Aggregation Model
 
@@ -199,6 +199,12 @@ create calc_run
 -> FINALIZED when operator lock is required
 ```
 
+Actual V1 behavior:
+
+- `SUCCEEDED` runs are not auto-finalized
+- `FAILED` runs can retry with the same `calc_run_id`
+- retry clears stale `error_message` before rerun
+
 ## 8. Ledger Integration
 
 ### 8.1 Positive accrual
@@ -230,6 +236,7 @@ create calc_run
 - `GET /api/me/rewards/summary`
 - `GET /api/me/rewards/:rewardId`
 - `GET /api/me/stakings/:stakingId/rewards`
+- `GET /api/me/stakings/summary`
 
 ### 9.2 Admin APIs
 
@@ -277,20 +284,31 @@ Reason:
 - reward availability may diverge from confirmation once withdrawals introduce holds
 - admin rerun behavior must stay compatible with `FINALIZED` lock semantics
 
-## 12. Deferred / Open Policy Items
+## 12. Smoke Status
+
+- implemented files:
+  - `src/repos/accountRewardsRepo.ts`
+  - `src/services/accountRewardService.ts`
+  - `src/services/dailyRewardService.ts`
+  - `scripts/account_reward_smoke.ts`
+- verified:
+  - daily reward run
+  - reward user/admin list/detail APIs
+  - staking/reward summaries
+  - reversal append flow
+  - `smoke:staking` normal exit with `pool.end()`
+
+## 13. Deferred / Open Policy Items
 
 - whether reversal ledger events deserve a dedicated enum after implementation starts
 - whether future reward withdrawal uses separate domain tables or reward-type rows
 - whether `metadata_json` needs stricter schema conventions by reward type
 - whether same-run retry should always reuse the same `calc_run_id` or create sub-attempt logs
 
-## 13. Recommended Implementation Order
+## 14. Recommended Next Steps
 
-1. apply `0004` and validate schema/smoke
-2. add reward repository reads/writes
-3. add daily reward batch service using `calc_runs`
-4. add admin trigger and run inspection APIs
-5. add user/admin reward read APIs
-6. add dashboard reward summary APIs
-7. add user/admin reward screens
-8. design reward withdrawal and reservation model
+1. add User/Admin rewards UI screens
+2. design withdrawal reservation and payout tables
+3. connect withdrawal-safe reward balances
+4. add scheduler / cron for daily reward runs
+5. implement remaining reward types beyond `DAILY_REWARD`

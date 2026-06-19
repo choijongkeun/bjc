@@ -3,8 +3,8 @@
 ## 1. Scope
 
 - This document defines the planned V1 contract for reward ledger, reward summary, and daily reward batch APIs.
-- This phase adds schema, migration, SQL smoke, and design contracts only.
-- This phase does not implement reward repo/service/API/front code yet.
+- Reward repo/service, daily reward batch, and User/Admin reward APIs are implemented in the API server.
+- Reward UI screens, withdrawal flows, and scheduler automation remain out of scope in this phase.
 - All amount fields sourced from `DECIMAL(65,0)` remain string values in API responses and request bodies.
 
 ## 2. Source of Truth
@@ -99,7 +99,7 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
 - Query:
   - `reward_type`
   - `status`
-  - `account_staking_id`
+  - `staking_id`
   - `reward_date_from`
   - `reward_date_to`
   - `page`
@@ -140,7 +140,12 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
         "duration_days_snapshot": 30,
         "status": "ACTIVE"
       },
-      "metadata": {}
+      "product": {
+        "id": "string",
+        "name": "BJC 30D",
+        "symbol": "USDC",
+        "decimals": 6
+      }
     }
   ],
   "page": 1,
@@ -172,7 +177,8 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
   "confirmed_reward_amount_base": "1200",
   "withdrawable_reward_amount_base": "1200",
   "withdrawn_reward_amount_base": "0",
-  "latest_reward_date": "2026-06-19"
+  "daily_reward_amount_base": "1200",
+  "reward_count": 3
 }
 ```
 
@@ -262,18 +268,18 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
 
 ```json
 {
-  "reason": "required string",
-  "idempotency_key": "reverse-001"
+  "reason": "required string"
 }
 ```
 
 - Rules:
   - only original rows may be reversed
-  - original row must not already be `REVERSED`
+  - original row must be `CONFIRMED`
+  - original row must not be `REVERSAL`
   - reversal creates:
     - original row status update -> `REVERSED`
     - one new `REVERSAL` row
-    - one ledger reversal entry or `ADJUSTMENT` ledger entry, depending on finalized batch policy
+    - one `ADJUSTMENT` ledger entry with negative amount
     - admin audit row
 - Errors:
   - `404` reward row missing
@@ -291,15 +297,15 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
 ```json
 {
   "policy_version_id": "string",
-  "reward_date": "2026-06-19",
-  "dry_run": false
+  "reward_date": "2026-06-19"
 }
 ```
 
 - Rules:
   - same `(policy_version_id, run_type='DAILY_REWARD', run_date)` must be unique
-  - duplicate request returns existing run or `409`, depending on final handler policy
-  - dry-run must not create ledger entries
+  - `SUCCEEDED` or `FINALIZED` rerun returns `409`
+  - `FAILED` run is retried with the same `calc_run_id`
+  - `available_at = confirmed_at` for created daily reward rows in V1
 
 ## 6.6 GET `/api/admin/calc-runs/:id/rewards`
 
@@ -312,6 +318,7 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
   - `reward_type`
   - `page`
   - `limit`
+  - `sort`
 
 ## 7. Dashboard Summary Contracts
 
@@ -337,6 +344,9 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
   "pending_count": 1,
   "active_count": 4,
   "cancel_requested_count": 1,
+  "cancelled_count": 1,
+  "matured_count": 1,
+  "closed_count": 1,
   "active_principal_amount_base": "4000000",
   "pending_principal_amount_base": "500000"
 }
@@ -349,7 +359,9 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
   "pending_reward_amount_base": "0",
   "confirmed_reward_amount_base": "1200",
   "withdrawable_reward_amount_base": "1200",
-  "withdrawn_reward_amount_base": "0"
+  "withdrawn_reward_amount_base": "0",
+  "daily_reward_amount_base": "1200",
+  "reward_count": 3
 }
 ```
 
@@ -366,11 +378,8 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
 ## 9. Audit Rules
 
 - Planned audit actions:
-  - `DAILY_REWARD_RUN_CREATE`
-  - `DAILY_REWARD_RUN_START`
-  - `DAILY_REWARD_RUN_SUCCEED`
-  - `DAILY_REWARD_RUN_FAIL`
-  - `ACCOUNT_REWARD_REVERSE`
+  - `ADMIN_DAILY_REWARD_RUN`
+  - `ADMIN_REWARD_REVERSE`
 - Audit metadata should contain:
   - `reward_id`
   - `calc_run_id`
@@ -378,11 +387,16 @@ daily_reward_base = floor(principal_amount_base * daily_interest_bps_snapshot / 
   - `source_reference`
   - minimal reason fields
 
-## 10. Not Implemented In This Phase
+## 10. Implemented / Deferred
 
-- reward repo/service implementation
-- reward API routes
-- reward front screens
-- actual daily reward batch runner
-- reward withdrawal flows
-- reward reservation / withdrawal deduction tables
+- Implemented:
+  - reward repo/service implementation
+  - reward API routes
+  - actual daily reward batch runner
+  - reward/staking summary APIs
+  - reward reversal flow
+- Deferred:
+  - reward front screens
+  - reward withdrawal flows
+  - reward reservation / withdrawal deduction tables
+  - scheduler / cron automation

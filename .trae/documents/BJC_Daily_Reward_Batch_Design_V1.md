@@ -2,7 +2,7 @@
 
 ## 1. Goal
 
-- Define the business contract for daily staking reward accrual before service implementation.
+- Define the business contract and implementation behavior for daily staking reward accrual.
 - Reuse existing `calc_runs`.
 - Persist reward rows into `account_rewards`.
 - Append financial audit rows into `ledger_events`.
@@ -81,7 +81,7 @@ A staking is eligible for `reward_date = D` when:
 
 ```text
 started_at is not null
-and started_at < reward_day_start
+and started_at < reward_day_end
 and matures_at > reward_day_start
 and (cancelled_at is null or cancelled_at > reward_day_start)
 and (closed_at is null or closed_at > reward_day_start)
@@ -91,9 +91,11 @@ Result:
 
 - activation day does not accrue same-day reward when activation happened after `00:00`
 - the first reward date is the next Asia/Seoul business day
-- the maturity date still accrues when `matures_at > reward_day_start`
-- cancel-requested rows still accrue until actual cancel
+- activation day accrues when `DATE(started_at, Asia/Seoul) <= reward_date`
+- a row started exactly at the next business-day boundary (`reward_day_end`) does not accrue
 - replay after later cancellation remains correct because timestamps preserve history
+
+## 4.3 Zero-result rows
 
 ## 4.3 Zero-result rows
 
@@ -277,6 +279,7 @@ Reason:
 - already inserted daily reward rows are skipped by:
   - `account_rewards` unique daily reward key
   - `ledger_events.reference_id` unique key
+- successful rows stay committed; if any row fails, the run ends in `FAILED`
 
 ## 11. Recalculation / Replay Policy
 
@@ -318,11 +321,8 @@ The daily batch will mainly need:
 
 Recommended audit actions:
 
-- `DAILY_REWARD_RUN_CREATE`
-- `DAILY_REWARD_RUN_START`
-- `DAILY_REWARD_RUN_SUCCEED`
-- `DAILY_REWARD_RUN_FAIL`
-- `DAILY_REWARD_ROW_REVERSE`
+- `ADMIN_DAILY_REWARD_RUN`
+- `ADMIN_REWARD_REVERSE`
 
 Audit metadata should include:
 
@@ -340,8 +340,8 @@ Manual operation should support:
 
 - selecting one `policy_version_id`
 - selecting one `reward_date`
-- dry-run option
 - rerun of a failed run
+- V1 does not implement `dry_run`
 
 ## 14.2 Scheduler
 
@@ -350,10 +350,21 @@ Future scheduler recommendation:
 - trigger once per day after Korea midnight
 - process `reward_date = yesterday in Asia/Seoul`
 
-## 15. Open Items Deferred To Next Phase
+## 15. Smoke-Verified Behavior
 
-- actual batch service implementation
-- dry-run output artifact format
+- `POST /api/admin/calc-runs/daily-reward`
+  - returns `target_count`, `created_count`, `zero_reward_skip_count`, `duplicate_skip_count`, `failed_count`, and `total_reward_amount_base`
+- smoke fixture confirms:
+  - `ACTIVE` and `CANCEL_REQUESTED` accrual
+  - same-day KST start inclusion
+  - zero-reward skip
+  - duplicate rerun `409`
+  - reward/ledger/source linkage
+  - reversal and net summary change
+
+## 16. Open Items Deferred To Next Phase
+
 - admin calc UI changes for reward-specific run inspection
 - reward withdrawal reservation / deduction tables
 - whether reversal ledger event gets its own dedicated enum after implementation begins
+- dry-run output artifact format

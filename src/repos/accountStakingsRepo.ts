@@ -50,6 +50,35 @@ export type AccountStakingSort =
   | "matures_at_asc"
   | "matures_at_desc";
 
+export type DailyRewardEligibleStakingRow = {
+  id: string;
+  account_id: string;
+  staking_product_id: string;
+  policy_version_id: string;
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  status: AccountStakingStatus;
+  started_at: string;
+  matures_at: string;
+  cancelled_at: string | null;
+  closed_at: string | null;
+  product_name: string;
+  product_symbol: string;
+  product_decimals: number;
+};
+
+export type AccountStakingSummaryRow = {
+  pending_count: number;
+  active_count: number;
+  cancel_requested_count: number;
+  cancelled_count: number;
+  matured_count: number;
+  closed_count: number;
+  pending_principal_amount_base: string;
+  active_principal_amount_base: string;
+};
+
 function toOrderBy(sort: AccountStakingSort): string {
   switch (sort) {
     case "created_at_asc":
@@ -393,4 +422,87 @@ export async function listAccountStakings(
   );
 
   return { items: rows as AccountStakingViewRow[], total };
+}
+
+export async function listDailyRewardEligibleStakings(
+  conn: DbConn,
+  input: {
+    policy_version_id: string;
+    reward_day_start: string;
+    reward_day_end: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<DailyRewardEligibleStakingRow[]> {
+  const [rows] = await conn.query(
+    `select
+        s.id,
+        s.account_id,
+        s.staking_product_id,
+        s.policy_version_id,
+        s.principal_amount_base,
+        s.daily_interest_bps_snapshot,
+        s.duration_days_snapshot,
+        s.status,
+        s.started_at,
+        s.matures_at,
+        s.cancelled_at,
+        s.closed_at,
+        p.name as product_name,
+        p.symbol as product_symbol,
+        p.decimals as product_decimals
+       from account_stakings s
+       inner join staking_products p
+         on p.id = s.staking_product_id
+      where s.policy_version_id = ?
+        and s.status in ('ACTIVE', 'CANCEL_REQUESTED')
+        and s.started_at is not null
+        and s.matures_at is not null
+        and s.started_at < ?
+        and s.matures_at > ?
+        and (s.cancelled_at is null or s.cancelled_at > ?)
+        and (s.closed_at is null or s.closed_at > ?)
+      order by s.started_at asc, s.id asc
+      limit ? offset ?`,
+    [
+      input.policy_version_id,
+      input.reward_day_end,
+      input.reward_day_start,
+      input.reward_day_start,
+      input.reward_day_start,
+      input.limit ?? 1000,
+      input.offset ?? 0
+    ]
+  );
+
+  return rows as DailyRewardEligibleStakingRow[];
+}
+
+export async function getMyStakingSummary(conn: DbConn, account_id: string): Promise<AccountStakingSummaryRow> {
+  const [rows] = await conn.query(
+    `select
+        cast(sum(case when status = 'PENDING' then 1 else 0 end) as unsigned) as pending_count,
+        cast(sum(case when status = 'ACTIVE' then 1 else 0 end) as unsigned) as active_count,
+        cast(sum(case when status = 'CANCEL_REQUESTED' then 1 else 0 end) as unsigned) as cancel_requested_count,
+        cast(sum(case when status = 'CANCELLED' then 1 else 0 end) as unsigned) as cancelled_count,
+        cast(sum(case when status = 'MATURED' then 1 else 0 end) as unsigned) as matured_count,
+        cast(sum(case when status = 'CLOSED' then 1 else 0 end) as unsigned) as closed_count,
+        coalesce(sum(case when status = 'PENDING' then principal_amount_base else 0 end), 0) as pending_principal_amount_base,
+        coalesce(sum(case when status = 'ACTIVE' then principal_amount_base else 0 end), 0) as active_principal_amount_base
+       from account_stakings
+      where account_id = ?`,
+    [account_id]
+  );
+
+  const row = (rows as Array<Record<string, unknown>>)[0] ?? {};
+  return {
+    pending_count: Number(row.pending_count ?? 0),
+    active_count: Number(row.active_count ?? 0),
+    cancel_requested_count: Number(row.cancel_requested_count ?? 0),
+    cancelled_count: Number(row.cancelled_count ?? 0),
+    matured_count: Number(row.matured_count ?? 0),
+    closed_count: Number(row.closed_count ?? 0),
+    pending_principal_amount_base: String(row.pending_principal_amount_base ?? "0"),
+    active_principal_amount_base: String(row.active_principal_amount_base ?? "0")
+  };
 }
