@@ -188,3 +188,21 @@ export async function listLedgerEvents(
 
   return { items: rows as LedgerEventRow[], total };
 }
+
+export async function listLedgerEventsByReferenceIds(
+  conn: DbConn,
+  referenceIds: string[]
+): Promise<LedgerEventRow[]> {
+  if (!referenceIds.length) {
+    return [];
+  }
+  const placeholders = referenceIds.map(() => "?").join(", ");
+  const [rows] = await conn.query(
+    `select id, account_id, product_id, policy_version_id, calc_run_id, event_time, event_type, amount_base, decimals, symbol, reference_id, related_account_id, meta, created_by, created_at
+       from ledger_events
+      where reference_id in (${placeholders})
+      order by event_time asc, created_at asc, id asc`,
+    referenceIds
+  );
+  return rows as LedgerEventRow[];
+}

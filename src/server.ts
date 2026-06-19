@@ -12,6 +12,7 @@ import { AdminAccountService } from "./services/adminAccountService.js";
 import { AccountStakingService } from "./services/accountStakingService.js";
 import { AccountRewardService } from "./services/accountRewardService.js";
 import { DailyRewardService } from "./services/dailyRewardService.js";
+import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -48,6 +49,7 @@ const adminAccountService = new AdminAccountService(pool);
 const accountStakingService = new AccountStakingService(pool);
 const accountRewardService = new AccountRewardService(pool);
 const dailyRewardService = new DailyRewardService(pool);
+const rewardWithdrawalService = new RewardWithdrawalService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -103,6 +105,12 @@ const rewardTypeSchema = z.enum([
 ]);
 
 const rewardStatusSchema = z.enum(["PENDING", "CONFIRMED", "REVERSED"]);
+
+const withdrawalTypeSchema = z.enum(["DAILY_REWARD", "BONUS"]);
+const withdrawalStatusSchema = z.enum(["REQUESTED", "APPROVED", "PROCESSING", "COMPLETED", "REJECTED", "FAILED", "CANCELLED"]);
+const withdrawalSortSchema = z
+  .enum(["requested_at_desc", "requested_at_asc", "created_at_desc", "created_at_asc", "completed_at_desc", "completed_at_asc"])
+  .default("requested_at_desc");
 
 const rewardSortSchema = z
   .enum([
@@ -286,6 +294,125 @@ app.get("/api/me/rewards/summary", requireSession, async (req, res, next) => {
     const sessionAccount = requireSessionAccount(req);
     const result = await accountRewardService.getMyRewardSummary({
       account_id: sessionAccount.id,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/withdrawal-balance", requireSession, async (req, res, next) => {
+  try {
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.getMyWithdrawalBalance({
+      account_id: sessionAccount.id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/me/withdrawal-preview", requireSession, async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        withdrawal_type: withdrawalTypeSchema,
+        requested_amount_base: z.string().trim().min(1)
+      })
+      .parse(req.body);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.previewMyWithdrawal({
+      account_id: sessionAccount.id,
+      withdrawal_type: body.withdrawal_type,
+      requested_amount_base: body.requested_amount_base
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/me/withdrawals", requireSession, async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        withdrawal_type: withdrawalTypeSchema,
+        requested_amount_base: z.string().trim().min(1),
+        idempotency_key: z.string().trim().min(1).max(128),
+        wallet_address: z.string().trim().min(1).max(255),
+        network: z.string().trim().min(1).max(64)
+      })
+      .parse(req.body);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.createMyWithdrawal({
+      account_id: sessionAccount.id,
+      withdrawal_type: body.withdrawal_type,
+      requested_amount_base: body.requested_amount_base,
+      idempotency_key: body.idempotency_key,
+      wallet_address: body.wallet_address,
+      network: body.network
+    });
+    res.status(result.created ? 201 : 200).json(result.result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/withdrawals", requireSession, async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        withdrawal_type: withdrawalTypeSchema.optional(),
+        status: withdrawalStatusSchema.optional(),
+        requested_from: z.string().optional(),
+        requested_to: z.string().optional(),
+        sort: withdrawalSortSchema
+      })
+      .parse(req.query);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.listMyWithdrawals({
+      account_id: sessionAccount.id,
+      withdrawal_type: query.withdrawal_type,
+      status: query.status,
+      requested_from: query.requested_from,
+      requested_to: query.requested_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/withdrawals/:withdrawalId", requireSession, async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.getMyWithdrawal({
+      account_id: sessionAccount.id,
+      withdrawal_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/me/withdrawals/:withdrawalId/cancel", requireSession, async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rewardWithdrawalService.cancelMyWithdrawal({
+      account_id: sessionAccount.id,
+      withdrawal_id
     });
     res.json(result);
   } catch (err) {
@@ -876,6 +1003,225 @@ app.post("/api/admin/rewards/:rewardId/reverse", async (req, res, next) => {
       actor_account_id,
       reward_id,
       reason: body.reason,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/withdrawals", async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema
+      .extend({
+        q: z.string().trim().min(1).optional(),
+        account_id: z.string().trim().min(1).optional(),
+        withdrawal_type: withdrawalTypeSchema.optional(),
+        status: withdrawalStatusSchema.optional(),
+        network: z.string().trim().min(1).optional(),
+        requested_from: z.string().optional(),
+        requested_to: z.string().optional(),
+        completed_from: z.string().optional(),
+        completed_to: z.string().optional(),
+        sort: withdrawalSortSchema
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.listAdminWithdrawals({
+      actor_account_id,
+      q: query.q,
+      account_id: query.account_id,
+      withdrawal_type: query.withdrawal_type,
+      status: query.status,
+      network: query.network,
+      requested_from: query.requested_from,
+      requested_to: query.requested_to,
+      completed_from: query.completed_from,
+      completed_to: query.completed_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/withdrawals/:withdrawalId", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.getAdminWithdrawal({
+      actor_account_id,
+      withdrawal_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/withdrawals/:withdrawalId/approve", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.approveWithdrawal({
+      actor_account_id,
+      withdrawal_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/withdrawals/:withdrawalId/reject", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const body = z
+      .object({
+        reason: z.string().trim().min(1).max(500)
+      })
+      .parse(req.body);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.rejectWithdrawal({
+      actor_account_id,
+      withdrawal_id,
+      reason: body.reason
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/withdrawals/:withdrawalId/processing", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const body = z
+      .object({
+        network: z.string().trim().min(1).max(64)
+      })
+      .parse(req.body);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.markWithdrawalProcessing({
+      actor_account_id,
+      withdrawal_id,
+      network: body.network
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/withdrawals/:withdrawalId/complete", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const body = z
+      .object({
+        tx_hash: z.string().trim().min(1).max(255),
+        network: z.string().trim().min(1).max(64)
+      })
+      .parse(req.body);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.completeWithdrawal({
+      actor_account_id,
+      withdrawal_id,
+      tx_hash: body.tx_hash,
+      network: body.network
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/withdrawals/:withdrawalId/fail", async (req, res, next) => {
+  try {
+    const withdrawal_id = z.string().trim().min(1).parse(req.params.withdrawalId);
+    const body = z
+      .object({
+        reason: z.string().trim().min(1).max(500)
+      })
+      .parse(req.body);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.failWithdrawal({
+      actor_account_id,
+      withdrawal_id,
+      reason: body.reason
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/withdrawals", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = paginationQuerySchema
+      .extend({
+        withdrawal_type: withdrawalTypeSchema.optional(),
+        status: withdrawalStatusSchema.optional(),
+        network: z.string().trim().min(1).optional(),
+        requested_from: z.string().optional(),
+        requested_to: z.string().optional(),
+        completed_from: z.string().optional(),
+        completed_to: z.string().optional(),
+        sort: withdrawalSortSchema
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.listAdminAccountWithdrawals({
+      actor_account_id,
+      account_id,
+      withdrawal_type: query.withdrawal_type,
+      status: query.status,
+      network: query.network,
+      requested_from: query.requested_from,
+      requested_to: query.requested_to,
+      completed_from: query.completed_from,
+      completed_to: query.completed_to,
+      page: query.page,
+      limit: query.limit,
+      sort: query.sort
+    });
+    res.json({
+      account: result.account,
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/reports/withdrawal-summary", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        withdrawal_type: withdrawalTypeSchema.optional(),
+        network: z.string().trim().min(1).optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await rewardWithdrawalService.getAdminWithdrawalSummary({
+      actor_account_id,
+      date_from: query.date_from,
+      date_to: query.date_to,
+      withdrawal_type: query.withdrawal_type,
+      network: query.network
     });
     res.json(result);
   } catch (err) {

@@ -10,7 +10,8 @@
     "smoke:mysql": "tsx scripts/mysql_smoke.ts",
     "smoke:member": "tsx scripts/member_referral_binary_smoke.ts",
     "smoke:staking": "tsx scripts/account_staking_smoke.ts",
-    "smoke:reward": "tsx scripts/account_reward_smoke.ts"
+    "smoke:reward": "tsx scripts/account_reward_smoke.ts",
+    "smoke:withdrawal": "tsx scripts/reward_withdrawal_smoke.ts"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",

@@ -444,8 +444,50 @@ export async function getMyRewardSummary(
     `select
         coalesce(sum(case when r.status = 'PENDING' then r.amount_base else 0 end), 0) as pending_reward_amount_base,
         coalesce(sum(case when r.status = 'CONFIRMED' then r.amount_base else 0 end), 0) as confirmed_reward_amount_base,
-        coalesce(sum(case when r.status = 'CONFIRMED' and (r.available_at is null or r.available_at <= ?) then r.amount_base else 0 end), 0) as withdrawable_reward_amount_base,
-        '0' as withdrawn_reward_amount_base,
+        cast(
+          coalesce(
+            sum(
+              case
+                when r.status = 'CONFIRMED'
+                  and (r.available_at is null or r.available_at <= ?)
+                  and r.reward_type in ('DAILY_REWARD', 'DIRECT_REFERRAL', 'RANK_BONUS', 'CONTRIBUTION', 'SIDECAR')
+                  then r.amount_base
+                when r.status = 'CONFIRMED'
+                  and (r.available_at is null or r.available_at <= ?)
+                  and r.reward_type = 'REVERSAL'
+                  and original.reward_type in ('DAILY_REWARD', 'DIRECT_REFERRAL', 'RANK_BONUS', 'CONTRIBUTION', 'SIDECAR')
+                  then r.amount_base
+                else 0
+              end
+            ),
+            0
+          )
+          -
+          coalesce((
+            select sum(case when a.status = 'RESERVED' then a.allocated_amount_base else 0 end)
+            from reward_withdrawal_allocations a
+            inner join reward_withdrawals w
+              on w.id = a.withdrawal_id
+            where w.account_id = ?
+          ), 0)
+          -
+          coalesce((
+            select sum(case when a.status = 'CONSUMED' then a.allocated_amount_base else 0 end)
+            from reward_withdrawal_allocations a
+            inner join reward_withdrawals w
+              on w.id = a.withdrawal_id
+            where w.account_id = ?
+          ), 0)
+        as char) as withdrawable_reward_amount_base,
+        cast(
+          coalesce((
+            select sum(case when a.status = 'CONSUMED' then a.allocated_amount_base else 0 end)
+            from reward_withdrawal_allocations a
+            inner join reward_withdrawals w
+              on w.id = a.withdrawal_id
+            where w.account_id = ?
+          ), 0)
+        as char) as withdrawn_reward_amount_base,
         coalesce(
           sum(
             case
@@ -461,7 +503,7 @@ export async function getMyRewardSummary(
        left join account_rewards original
          on original.id = r.reversal_reward_id
       where r.account_id = ?`,
-    [input.now, input.account_id]
+    [input.now, input.now, input.account_id, input.account_id, input.account_id, input.account_id]
   );
 
   const row = (rows as Array<Record<string, unknown>>)[0] ?? {};
