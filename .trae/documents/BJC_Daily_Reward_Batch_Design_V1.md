@@ -89,9 +89,9 @@ and (closed_at is null or closed_at > reward_day_start)
 
 Result:
 
-- activation day does not accrue same-day reward when activation happened after `00:00`
-- the first reward date is the next Asia/Seoul business day
-- activation day accrues when `DATE(started_at, Asia/Seoul) <= reward_date`
+- current implemented V1 policy pays one full daily reward on the staking start date
+- current user/admin UI and smoke expectations follow start-date inclusion
+- future policy may revisit partial-day / next-day-first accrual handling
 - a row started exactly at the next business-day boundary (`reward_day_end`) does not accrue
 - replay after later cancellation remains correct because timestamps preserve history
 
@@ -368,3 +368,4 @@ Future scheduler recommendation:
 - reward withdrawal reservation / deduction tables
 - whether reversal ledger event gets its own dedicated enum after implementation begins
 - dry-run output artifact format
+- TODO: review whether start-date full accrual should remain or move to next business day in a future policy version

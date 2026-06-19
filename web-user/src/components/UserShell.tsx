@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Coins, GitBranch, LayoutDashboard, LogOut, Menu, Wallet } from "lucide-react";
+import { ArrowUpRight, Coins, Gift, GitBranch, LayoutDashboard, LogOut, Menu, Wallet } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
@@ -9,8 +9,8 @@ import { Badge, Button, Card, cn } from "@/components/ui";
 const menuItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { label: "Staking", href: "/staking", icon: Coins, enabled: true },
+  { label: "Rewards", href: "/rewards", icon: Gift, enabled: true },
   { label: "Network", href: "/network", icon: GitBranch, enabled: true },
-  { label: "Rewards", href: "#", icon: ArrowUpRight, enabled: false },
   { label: "Withdrawals", href: "#", icon: Wallet, enabled: false },
 ] as const;
 

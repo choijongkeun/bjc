@@ -4,7 +4,15 @@ import { api, type CalcRun, type SessionRole, type SettlementItem } from "@/lib/
 import { formatTokenAmount } from "@/lib/amount";
 import { Button, Card, FeedbackState, JsonPanel, Pagination, StatusBadge, TableShell } from "@/components/ui";
 
-export function CalcSettlementTab({ actorId, role }: { actorId: string; role: SessionRole }) {
+export function CalcSettlementTab({
+  actorId,
+  role,
+  onOpenRewards,
+}: {
+  actorId: string;
+  role: SessionRole;
+  onOpenRewards: (calcRunId: string) => void;
+}) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({ policy_id: "", run_type: "", status: "" });
@@ -96,16 +104,30 @@ export function CalcSettlementTab({ actorId, role }: { actorId: string; role: Se
                   <th>status</th>
                   <th>policy</th>
                   <th>에러</th>
+                  <th>연결</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id} className="cursor-pointer hover:bg-slate-800/60" onClick={() => setSelected(run)}>
                     <td>{run.run_date}</td>
-                    <td>{run.run_type}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span>{run.run_type}</span>
+                        {run.run_type === "DAILY_REWARD" ? <StatusBadge value="DAILY_REWARD" tone="blue" /> : null}
+                      </div>
+                    </td>
                     <td><StatusBadge value={run.status} /></td>
                     <td className="font-mono text-xs text-slate-400">{run.policy_version_id}</td>
                     <td className="text-slate-500">{run.error_message ?? "-"}</td>
+                    <td>
+                      <Button variant="ghost" onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenRewards(run.id);
+                      }}>
+                        보상 보기
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -143,6 +165,11 @@ export function CalcSettlementTab({ actorId, role }: { actorId: string; role: Se
               <div>run_type: {selected.run_type}</div>
               <div>policy_id: <span className="font-mono text-xs text-slate-400">{selected.policy_version_id}</span></div>
               {selected.status === "FINALIZED" ? <FeedbackState title="FINALIZED 잠금" description="정산이 확정된 calc_run은 settlement_items 수정이 불가합니다." /> : null}
+            </div>
+            <div className="mt-4">
+              <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                rewards 탭 이동
+              </Button>
             </div>
             {role === "ADMIN" ? (
               <div className="mt-4 space-y-3">

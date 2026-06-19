@@ -1,6 +1,23 @@
 export type SessionRole = "ADMIN" | "READER" | "USER";
 export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
 export type AccountStakingSort = "created_at_desc" | "created_at_asc" | "matures_at_asc" | "matures_at_desc";
+export type RewardType =
+  | "DAILY_REWARD"
+  | "DIRECT_REFERRAL"
+  | "RANK_BONUS"
+  | "CONTRIBUTION"
+  | "WITHDRAWAL_FEE"
+  | "SIDECAR"
+  | "ADJUSTMENT"
+  | "REVERSAL";
+export type RewardStatus = "PENDING" | "CONFIRMED" | "REVERSED";
+export type RewardSort =
+  | "reward_date_desc"
+  | "reward_date_asc"
+  | "created_at_desc"
+  | "created_at_asc"
+  | "available_at_desc"
+  | "available_at_asc";
 
 export type PolicyVersion = {
   id: string;
@@ -126,6 +143,118 @@ export type ReportSummary = {
   total_ledger_events: string;
   total_calc_runs: string;
   finalized_calc_runs: string;
+};
+
+export type RewardSummary = {
+  pending_reward_amount_base: string;
+  confirmed_reward_amount_base: string;
+  withdrawable_reward_amount_base: string;
+  withdrawn_reward_amount_base: string;
+  daily_reward_amount_base: string;
+  reward_count: number;
+};
+
+export type RewardMetadata = Partial<{
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  denominator: string;
+  original_reward_id: string;
+  original_source_reference: string;
+  reason: string;
+  reward_type: RewardType;
+}>;
+
+export type RewardStakingSummary = {
+  id: string;
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  status: AccountStakingStatus;
+};
+
+export type RewardProductSummary = {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
+export type RewardAccountSummary = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+};
+
+export type RewardCalcRunSummary = {
+  id: string;
+  policy_version_id?: string;
+  run_type: string;
+  run_date: string | null;
+  status: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  finalized_at?: string | null;
+  error_message?: string | null;
+  created_at?: string | null;
+};
+
+export type RewardRelation = {
+  id: string;
+  amount_base: string;
+};
+
+export type OriginalRewardRelation = {
+  id: string;
+  reward_type: RewardType;
+  amount_base: string;
+};
+
+export type AdminRewardListItem = {
+  id: string;
+  account_id: string;
+  reward_type: RewardType;
+  reward_date: string | null;
+  amount_base: string;
+  status: RewardStatus;
+  account_staking_id: string | null;
+  policy_version_id: string;
+  calc_run_id: string | null;
+  source_reference: string;
+  source_ledger_event_id: string | null;
+  reversal_reward_id: string | null;
+  available_at: string | null;
+  confirmed_at: string | null;
+  reversed_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  staking: RewardStakingSummary | null;
+  product: RewardProductSummary | null;
+  account?: RewardAccountSummary;
+  calc_run?: RewardCalcRunSummary | null;
+};
+
+export type AdminRewardDetail = AdminRewardListItem & {
+  metadata?: RewardMetadata;
+  reversal: RewardRelation | null;
+  original_reward?: OriginalRewardRelation | null;
+};
+
+export type AdminRewardListResponse = ItemsPageResponse<AdminRewardListItem>;
+
+export type DailyRewardRunRequest = {
+  policy_version_id: string;
+  reward_date: string;
+};
+
+export type DailyRewardRunResponse = {
+  calc_run: RewardCalcRunSummary;
+  target_count: number;
+  created_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
 };
 
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
@@ -280,6 +409,16 @@ export class ApiError extends Error {
     this.status = status;
     this.details = details ?? null;
   }
+}
+
+export function getErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "알 수 없는 오류가 발생했습니다.";
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -449,4 +588,60 @@ export const api = {
     accountId: string,
     query: { status?: AccountStakingStatus; product_id?: string; page?: number; limit?: number; sort?: AccountStakingSort }
   ) => request<AdminStakingListResponse>(`/api/admin/accounts/${accountId}/stakings${params(query as any)}`, { method: "GET", actorId }),
+  listAdminRewards: (
+    actorId: string,
+    query: {
+      q?: string;
+      account_id?: string;
+      staking_id?: string;
+      reward_type?: RewardType;
+      status?: RewardStatus;
+      calc_run_id?: string;
+      reward_date_from?: string;
+      reward_date_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: RewardSort;
+    }
+  ) => request<AdminRewardListResponse>(`/api/admin/rewards${params(query as any)}`, { method: "GET", actorId }),
+  getAdminReward: (actorId: string, rewardId: string) =>
+    request<{ reward: AdminRewardDetail }>(`/api/admin/rewards/${rewardId}`, { method: "GET", actorId }),
+  listAdminAccountRewards: (
+    actorId: string,
+    accountId: string,
+    query: {
+      staking_id?: string;
+      reward_type?: RewardType;
+      status?: RewardStatus;
+      calc_run_id?: string;
+      reward_date_from?: string;
+      reward_date_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: RewardSort;
+    }
+  ) => request<AdminRewardListResponse>(`/api/admin/accounts/${accountId}/rewards${params(query as any)}`, { method: "GET", actorId }),
+  listAdminCalcRunRewards: (
+    actorId: string,
+    calcRunId: string,
+    query: {
+      reward_type?: RewardType;
+      status?: RewardStatus;
+      page?: number;
+      limit?: number;
+      sort?: RewardSort;
+    }
+  ) =>
+    request<{ calc_run: RewardCalcRunSummary; items: AdminRewardListItem[]; page: number; limit: number; total: number }>(
+      `/api/admin/calc-runs/${calcRunId}/rewards${params(query as any)}`,
+      { method: "GET", actorId }
+    ),
+  runDailyReward: (actorId: string, body: DailyRewardRunRequest) =>
+    request<DailyRewardRunResponse>(`/api/admin/calc-runs/daily-reward`, { method: "POST", actorId, body: JSON.stringify(body) }),
+  reverseAdminReward: (actorId: string, rewardId: string, body: { reason: string }) =>
+    request<{ reward: AdminRewardDetail }>(`/api/admin/rewards/${rewardId}/reverse`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
 };

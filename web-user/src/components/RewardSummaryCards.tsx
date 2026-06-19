@@ -1,0 +1,56 @@
+import type { RewardSummary } from "@/lib/api";
+import { formatRewardAmountBase } from "@/lib/rewards";
+import { Card } from "@/components/ui";
+
+export function RewardSummaryCards({
+  summary,
+  loading,
+}: {
+  summary: RewardSummary | null;
+  loading?: boolean;
+}) {
+  const items = [
+    {
+      label: "대기 보상",
+      value: summary ? formatRewardAmountBase(summary.pending_reward_amount_base) : "...",
+      note: "정산 대기 중인 보상",
+    },
+    {
+      label: "확정 보상",
+      value: summary ? formatRewardAmountBase(summary.confirmed_reward_amount_base) : "...",
+      note: "확정 처리된 보상",
+    },
+    {
+      label: "출금 가능 보상",
+      value: summary ? formatRewardAmountBase(summary.withdrawable_reward_amount_base) : "...",
+      note: "현재 출금 가능 금액",
+    },
+    {
+      label: "출금 완료 보상",
+      value: summary ? formatRewardAmountBase(summary.withdrawn_reward_amount_base) : "...",
+      note: "출금 기능 준비 중",
+    },
+    {
+      label: "DAILY_REWARD 누적",
+      value: summary ? formatRewardAmountBase(summary.daily_reward_amount_base) : "...",
+      note: "일일 보상 누적 합계",
+    },
+    {
+      label: "총 보상 건수",
+      value: summary ? String(summary.reward_count) : "...",
+      note: "전체 reward row 수",
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {items.map((item) => (
+        <Card key={item.label} className="p-5">
+          <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
+          <div className="mt-3 tabular text-3xl font-bold text-slate-50">{item.value}</div>
+          <div className="mt-2 text-sm text-slate-400">{loading && !summary ? "요약 데이터를 불러오는 중입니다." : item.note}</div>
+        </Card>
+      ))}
+    </div>
+  );
+}

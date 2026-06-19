@@ -5,6 +5,8 @@ import DashboardPage from "@/pages/DashboardPage";
 import NetworkPage from "@/pages/NetworkPage";
 import StakingPage from "@/pages/StakingPage";
 import StakingDetailPage from "@/pages/StakingDetailPage";
+import RewardsPage from "@/pages/RewardsPage";
+import RewardDetailPage from "@/pages/RewardDetailPage";
 import { PrivateRoute } from "@/routes/PrivateRoute";
 import { useSessionStore } from "@/store/sessionStore";
 
@@ -46,6 +48,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <StakingDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/rewards"
+          element={
+            <PrivateRoute>
+              <RewardsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/rewards/:rewardId"
+          element={
+            <PrivateRoute>
+              <RewardDetailPage />
             </PrivateRoute>
           }
         />

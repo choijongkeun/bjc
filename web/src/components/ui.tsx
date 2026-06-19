@@ -82,10 +82,26 @@ const toneMap: Record<string, string> = {
   SUCCEEDED: "bg-cyan-500/15 text-cyan-300 ring-cyan-400/30",
 };
 
-export function StatusBadge({ value }: { value: string | null | undefined }) {
+export function StatusBadge({
+  value,
+  tone,
+}: {
+  value: string | null | undefined;
+  tone?: "blue" | "emerald" | "rose" | "slate";
+}) {
   const safe = value ?? "N/A";
+  const customTone =
+    tone === "blue"
+      ? "bg-blue-500/15 text-blue-300 ring-blue-400/30"
+      : tone === "emerald"
+        ? "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30"
+        : tone === "rose"
+          ? "bg-rose-500/15 text-rose-300 ring-rose-400/30"
+          : tone === "slate"
+            ? "bg-slate-500/15 text-slate-300 ring-slate-400/20"
+            : null;
   return (
-    <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1", toneMap[safe] ?? "bg-slate-500/15 text-slate-200 ring-slate-400/20")}>
+    <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1", customTone ?? toneMap[safe] ?? "bg-slate-500/15 text-slate-200 ring-slate-400/20")}>
       {safe}
     </span>
   );
@@ -107,10 +123,19 @@ export function FeedbackState({
 }: {
   title: string;
   description: string;
-  tone?: "default" | "error";
+  tone?: "default" | "error" | "success";
 }) {
   return (
-    <div className={cn("rounded-2xl border p-4 text-sm", tone === "error" ? "border-rose-500/30 bg-rose-500/10 text-rose-100" : "border-slate-800 bg-slate-900/40 text-slate-300")}>
+    <div
+      className={cn(
+        "rounded-2xl border p-4 text-sm",
+        tone === "error"
+          ? "border-rose-500/30 bg-rose-500/10 text-rose-100"
+          : tone === "success"
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+            : "border-slate-800 bg-slate-900/40 text-slate-300"
+      )}
+    >
       <div className="font-semibold">{title}</div>
       <div className="mt-1 text-slate-400">{description}</div>
     </div>

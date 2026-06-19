@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Copy, FolderClock, GitBranch, Sparkles, Wallet } from "lucide-react";
+import { Copy, FolderClock, Gift, GitBranch, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api, getErrorMessage, type BinaryLegsResponse } from "@/lib/api";
+import { api, getErrorMessage, type BinaryLegsResponse, type RewardSummary, type StakingSummary } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { formatRewardAmountBase } from "@/lib/rewards";
 import { useSessionStore } from "@/store/sessionStore";
 import { BinaryLegsCard } from "@/components/BinaryLegsCard";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -15,11 +16,8 @@ export default function DashboardPage() {
   const account = useSessionStore((state) => state.account);
   const setAccount = useSessionStore((state) => state.setAccount);
   const [legs, setLegs] = useState<BinaryLegsResponse | null>(null);
-  const [stakingSummary, setStakingSummary] = useState({
-    activeCount: 0,
-    pendingCount: 0,
-    cancelRequestedCount: 0,
-  });
+  const [stakingSummary, setStakingSummary] = useState<StakingSummary | null>(null);
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,21 +28,17 @@ export default function DashboardPage() {
     async function load() {
       try {
         setLoading(true);
-        const [meResult, legsResult, activeStakings, pendingStakings, cancelRequestedStakings] = await Promise.all([
+        const [meResult, legsResult, stakingSummaryResult, rewardSummaryResult] = await Promise.all([
           api.me(accessToken),
           api.getMyBinaryLegs(accessToken),
-          api.getMyStakings({ status: "ACTIVE", page: 1, limit: 1 }, accessToken),
-          api.getMyStakings({ status: "PENDING", page: 1, limit: 1 }, accessToken),
-          api.getMyStakings({ status: "CANCEL_REQUESTED", page: 1, limit: 1 }, accessToken),
+          api.getMyStakingSummary(accessToken),
+          api.getMyRewardsSummary(accessToken),
         ]);
         if (cancelled) return;
         setAccount(meResult.account);
         setLegs(legsResult);
-        setStakingSummary({
-          activeCount: activeStakings.total,
-          pendingCount: pendingStakings.total,
-          cancelRequestedCount: cancelRequestedStakings.total,
-        });
+        setStakingSummary(stakingSummaryResult);
+        setRewardSummary(rewardSummaryResult);
         setError(null);
       } catch (loadError) {
         if (cancelled) return;
@@ -91,14 +85,40 @@ export default function DashboardPage() {
               <SectionTitle
                 eyebrow="Member Dashboard"
                 title={`${account?.display_name ?? account?.login_id ?? "회원"} 님, 네트워크 현황입니다.`}
-                description="`template/user_dashboard.html`의 hero와 KPI 카드를 기준으로 현재 계정/레그/추천코드 흐름만 먼저 연결했습니다."
+                description="스테이킹 summary와 rewards summary API를 연결해 실제 원금/보상 지표를 표시합니다."
               />
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {[
-                  { label: "활성 스테이킹 건수", value: String(stakingSummary.activeCount), accent: "text-blue-200" },
-                  { label: "대기 중 건수", value: String(stakingSummary.pendingCount), accent: "text-cyan-200" },
-                  { label: "취소 요청 건수", value: String(stakingSummary.cancelRequestedCount), accent: "text-amber-200" },
-                  { label: "총 보상 금액", value: "0", accent: "text-emerald-200" },
+                  {
+                    label: "활성 스테이킹 원금",
+                    value: stakingSummary ? formatBaseAmount(stakingSummary.active_principal_amount_base, 0) : "...",
+                    accent: "text-blue-200",
+                  },
+                  {
+                    label: "대기 스테이킹 원금",
+                    value: stakingSummary ? formatBaseAmount(stakingSummary.pending_principal_amount_base, 0) : "...",
+                    accent: "text-cyan-200",
+                  },
+                  {
+                    label: "확정 보상",
+                    value: rewardSummary ? formatRewardAmountBase(rewardSummary.confirmed_reward_amount_base) : "...",
+                    accent: "text-emerald-200",
+                  },
+                  {
+                    label: "출금 가능 보상",
+                    value: rewardSummary ? formatRewardAmountBase(rewardSummary.withdrawable_reward_amount_base) : "...",
+                    accent: "text-violet-200",
+                  },
+                  {
+                    label: "DAILY_REWARD 누적",
+                    value: rewardSummary ? formatRewardAmountBase(rewardSummary.daily_reward_amount_base) : "...",
+                    accent: "text-amber-200",
+                  },
+                  {
+                    label: "활성 / 대기 건수",
+                    value: stakingSummary ? `${stakingSummary.active_count} / ${stakingSummary.pending_count}` : "...",
+                    accent: "text-slate-100",
+                  },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4">
                     <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
@@ -150,11 +170,16 @@ export default function DashboardPage() {
             icon={<FolderClock className="h-5 w-5" />}
             href="/staking"
           />
-          <ActionCard title="보상 준비 중" description="정산/보상 내역은 추후 API 연결 후 활성화됩니다." icon={<Sparkles className="h-5 w-5" />} disabled />
+          <ActionCard
+            title="보상 보기"
+            description="보상 요약, 목록, 상세를 확인하고 역분개 반영 내역까지 조회합니다."
+            icon={<Gift className="h-5 w-5" />}
+            href="/rewards"
+          />
           <ActionCard title="출금 준비 중" description="출금 신청과 이력은 현재 범위에 포함하지 않았습니다." icon={<Wallet className="h-5 w-5" />} disabled />
         </div>
 
-        {loading ? <FeedbackState title="데이터 로딩 중" description="auth/me와 binary-legs 응답을 불러오고 있습니다." /> : null}
+        {loading ? <FeedbackState title="데이터 로딩 중" description="계정, 바이너리 레그, 스테이킹/보상 summary를 불러오고 있습니다." /> : null}
       </div>
     </UserShell>
   );

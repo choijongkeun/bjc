@@ -2,6 +2,23 @@ export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
 export type BinaryPosition = "LEFT" | "RIGHT";
 export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
 export type AccountStakingSort = "created_at_desc" | "created_at_asc" | "matures_at_asc" | "matures_at_desc";
+export type RewardType =
+  | "DAILY_REWARD"
+  | "DIRECT_REFERRAL"
+  | "RANK_BONUS"
+  | "CONTRIBUTION"
+  | "WITHDRAWAL_FEE"
+  | "SIDECAR"
+  | "ADJUSTMENT"
+  | "REVERSAL";
+export type RewardStatus = "PENDING" | "CONFIRMED" | "REVERSED";
+export type RewardSort =
+  | "reward_date_desc"
+  | "reward_date_asc"
+  | "created_at_desc"
+  | "created_at_asc"
+  | "available_at_desc"
+  | "available_at_asc";
 
 export type SessionAccount = {
   id: string;
@@ -165,6 +182,106 @@ export type CancelStakingRequest = {
   idempotency_key: string;
 };
 
+export type RewardMetadata = Partial<{
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  denominator: string;
+  original_reward_id: string;
+  original_source_reference: string;
+  reason: string;
+  reward_type: RewardType;
+}>;
+
+export type RewardStakingSummary = {
+  id: string;
+  principal_amount_base: string;
+  daily_interest_bps_snapshot: string;
+  duration_days_snapshot: number;
+  status: AccountStakingStatus;
+};
+
+export type RewardProductSummary = {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
+export type RewardCalcRunSummary = {
+  id: string;
+  status: string;
+  run_type: string;
+  run_date: string | null;
+};
+
+export type RewardRelation = {
+  id: string;
+  amount_base: string;
+};
+
+export type OriginalRewardRelation = {
+  id: string;
+  reward_type: RewardType;
+  amount_base: string;
+};
+
+export type AccountReward = {
+  id: string;
+  account_id: string;
+  reward_type: RewardType;
+  reward_date: string | null;
+  amount_base: string;
+  status: RewardStatus;
+  account_staking_id: string | null;
+  policy_version_id: string;
+  calc_run_id: string | null;
+  source_reference: string;
+  source_ledger_event_id: string | null;
+  reversal_reward_id: string | null;
+  available_at: string | null;
+  confirmed_at: string | null;
+  reversed_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  staking: RewardStakingSummary | null;
+  product: RewardProductSummary | null;
+  calc_run?: RewardCalcRunSummary | null;
+  metadata?: RewardMetadata;
+};
+
+export type AccountRewardDetail = AccountReward & {
+  reversal: RewardRelation | null;
+  original_reward?: OriginalRewardRelation | null;
+};
+
+export type RewardSummary = {
+  pending_reward_amount_base: string;
+  confirmed_reward_amount_base: string;
+  withdrawable_reward_amount_base: string;
+  withdrawn_reward_amount_base: string;
+  daily_reward_amount_base: string;
+  reward_count: number;
+};
+
+export type StakingSummary = {
+  pending_count: number;
+  active_count: number;
+  cancel_requested_count: number;
+  cancelled_count: number;
+  matured_count: number;
+  closed_count: number;
+  pending_principal_amount_base: string;
+  active_principal_amount_base: string;
+};
+
+export type RewardListResponse = {
+  items: AccountReward[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export class ApiError extends Error {
   status: number;
   details: unknown;
@@ -208,12 +325,14 @@ function toFriendlyMessage(status: number, message: string) {
   if (status === 409) {
     if (message.includes("login_id")) return "이미 사용 중인 로그인 ID입니다.";
     if (message.includes("idempotency_key")) return "이미 처리된 요청이거나 현재 상태와 충돌합니다.";
+    if (message.includes("reversed")) return "이미 역분개 처리된 보상입니다.";
     return "현재 상태로는 요청을 처리할 수 없습니다.";
   }
   if (status === 422) {
     if (message.includes("referral sponsor is not active")) return "추천인 계정이 활성 상태가 아닙니다.";
     if (message.includes("principal_amount_base")) return "스테이킹 금액을 다시 확인해 주세요.";
     if (message.includes("staking_product")) return "현재 신청할 수 없는 스테이킹 상품입니다.";
+    if (message.includes("reason")) return "필수 입력값을 다시 확인해 주세요.";
     return "입력값을 다시 확인해 주세요.";
   }
   return message || "요청 처리 중 오류가 발생했습니다.";
@@ -351,6 +470,62 @@ export const api = {
       method: "POST",
       accessToken,
       body: JSON.stringify(body),
+    });
+  },
+  getMyRewards(
+    query: {
+      reward_type?: RewardType;
+      status?: RewardStatus;
+      reward_date_from?: string;
+      reward_date_to?: string;
+      staking_id?: string;
+      page?: number;
+      limit?: number;
+      sort?: RewardSort;
+    } = {},
+    accessToken?: string | null
+  ) {
+    return request<RewardListResponse>(`/api/me/rewards${params(query as Record<string, string | number | undefined>)}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyRewardsSummary(accessToken?: string | null) {
+    return request<RewardSummary>("/api/me/rewards/summary", {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyReward(rewardId: string, accessToken?: string | null) {
+    return request<{ reward: AccountRewardDetail }>(`/api/me/rewards/${rewardId}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyStakingRewards(
+    stakingId: string,
+    query: {
+      status?: RewardStatus;
+      reward_date_from?: string;
+      reward_date_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: RewardSort;
+    } = {},
+    accessToken?: string | null
+  ) {
+    return request<RewardListResponse>(
+      `/api/me/stakings/${stakingId}/rewards${params(query as Record<string, string | number | undefined>)}`,
+      {
+        method: "GET",
+        accessToken,
+      }
+    );
+  },
+  getMyStakingSummary(accessToken?: string | null) {
+    return request<StakingSummary>("/api/me/stakings/summary", {
+      method: "GET",
+      accessToken,
     });
   },
 };

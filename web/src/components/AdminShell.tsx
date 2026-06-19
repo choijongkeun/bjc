@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { Activity, ClipboardList, Coins, FileClock, GitBranch, Layers3, LogOut, Package2, ShieldCheck, Users2 } from "lucide-react";
+import { Activity, ClipboardList, Coins, FileClock, Gift, GitBranch, Layers3, LogOut, Package2, ShieldCheck, Users2 } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button, cn } from "@/components/ui";
 
-type AdminTab = "policies" | "stakings" | "ledger" | "calc" | "reports" | "audit" | "accounts" | "network";
+type AdminTab = "policies" | "stakings" | "ledger" | "calc" | "rewards" | "reports" | "audit" | "accounts" | "network";
 
 const navItems = [
   { key: "policies", label: "정책/상품", icon: Layers3 },
@@ -12,6 +12,7 @@ const navItems = [
   { key: "network", label: "추천/바이너리", icon: GitBranch },
   { key: "ledger", label: "원장 이벤트", icon: Activity },
   { key: "calc", label: "계산/정산", icon: Package2 },
+  { key: "rewards", label: "Rewards", icon: Gift },
   { key: "reports", label: "리포트", icon: ClipboardList },
   { key: "audit", label: "감사로그", icon: FileClock },
 ] as const;

@@ -4,13 +4,17 @@ import {
   api,
   type AdminAccountDetail,
   type AdminAccountListItem,
+  type AdminRewardListItem,
   type AdminStakingListItem,
   type AdminAccountSort,
   type BinaryPosition,
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { formatRewardAmountBase, formatRewardDate } from "@/lib/rewards";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
+import { RewardStatusBadge } from "@/components/RewardStatusBadge";
+import { RewardTypeBadge } from "@/components/RewardTypeBadge";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
 
 type AccountFilters = {
@@ -48,6 +52,7 @@ export function AccountsTab({
   onSelectAccount,
   onOpenNetwork,
   onOpenStakings,
+  onOpenRewards,
 }: {
   actorId: string;
   role: SessionRole;
@@ -55,6 +60,7 @@ export function AccountsTab({
   onSelectAccount: (accountId: string) => void;
   onOpenNetwork: (accountId: string) => void;
   onOpenStakings: (accountId: string) => void;
+  onOpenRewards: (accountId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -72,7 +78,9 @@ export function AccountsTab({
   const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
   const [recentStakings, setRecentStakings] = useState<AdminStakingListItem[]>([]);
+  const [recentRewards, setRecentRewards] = useState<AdminRewardListItem[]>([]);
   const [stakingError, setStakingError] = useState<string | null>(null);
+  const [rewardError, setRewardError] = useState<string | null>(null);
 
   const activeAccountId = useMemo(() => selectedAccountId ?? selected?.id ?? null, [selectedAccountId, selected?.id]);
 
@@ -100,18 +108,23 @@ export function AccountsTab({
 
   async function loadAccountDetail(accountId: string) {
     try {
-      const [result, stakingResult] = await Promise.all([
+      const [result, stakingResult, rewardResult] = await Promise.all([
         api.getAdminAccount(actorId, accountId),
         api.listAdminAccountStakings(actorId, accountId, { page: 1, limit: 5, sort: "created_at_desc" }),
+        api.listAdminAccountRewards(actorId, accountId, { page: 1, limit: 5, sort: "reward_date_desc" }),
       ]);
       setSelected(result.account);
       setRecentStakings(stakingResult.items);
+      setRecentRewards(rewardResult.items);
       setStakingError(null);
+      setRewardError(null);
       setDetailError(null);
     } catch (loadError: any) {
       setSelected(null);
       setRecentStakings([]);
+      setRecentRewards([]);
       setStakingError(loadError.message ?? "회원 스테이킹 내역을 불러오지 못했습니다.");
+      setRewardError(loadError.message ?? "회원 보상 내역을 불러오지 못했습니다.");
       setDetailError(loadError.message ?? "회원 상세를 불러오지 못했습니다.");
     }
   }
@@ -335,6 +348,9 @@ export function AccountsTab({
                 <Button variant="secondary" onClick={() => onOpenStakings(selected.id)}>
                   스테이킹 내역 보기
                 </Button>
+                <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                  보상 내역 보기
+                </Button>
                 <Button variant="secondary" onClick={() => onOpenNetwork(selected.id)}>
                   네트워크 보기
                   <ArrowRightCircle className="ml-2 h-4 w-4" />
@@ -481,6 +497,47 @@ export function AccountsTab({
                                 <td><StakingStatusBadge status={staking.status} /></td>
                                 <td className="text-slate-400">{formatDateTime(staking.created_at)}</td>
                                 <td className="text-slate-400">{formatDateTime(staking.matures_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 보상 내역</div>
+                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며 전체 내역은 Rewards 탭에서 회원 필터로 조회합니다.</p>
+                    </div>
+                    <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                      전체 보상 보기
+                    </Button>
+                  </div>
+                  <div className="mt-4">
+                    {rewardError ? <FeedbackState title="보상 조회 실패" description={rewardError} tone="error" /> : null}
+                    {!rewardError && recentRewards.length === 0 ? (
+                      <FeedbackState title="보상 내역 없음" description="해당 회원의 최근 보상 내역이 없습니다." />
+                    ) : null}
+                    {recentRewards.length > 0 ? (
+                      <div className="overflow-auto rounded-2xl border border-slate-800">
+                        <table className="data-table min-w-full">
+                          <thead>
+                            <tr>
+                              <th>reward date</th>
+                              <th>type</th>
+                              <th>amount</th>
+                              <th>status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recentRewards.map((reward) => (
+                              <tr key={reward.id}>
+                                <td className="text-slate-400">{formatRewardDate(reward.reward_date)}</td>
+                                <td><RewardTypeBadge type={reward.reward_type} /></td>
+                                <td className="tabular text-right">{formatRewardAmountBase(reward.amount_base)}</td>
+                                <td><RewardStatusBadge status={reward.status} /></td>
                               </tr>
                             ))}
                           </tbody>

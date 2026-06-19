@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCcw, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, RefreshCcw, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { ApiError, api, getErrorMessage, type AccountStaking } from "@/lib/api";
+import { ApiError, api, getErrorMessage, type AccountStaking, type RewardListResponse } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { createClientIdempotencyKey, formatDailyInterestBps, getAvailableUserStakingAction } from "@/lib/staking";
+import { formatRewardAmountBase, formatRewardDate, isNegativeRewardAmount } from "@/lib/rewards";
 import { useSessionStore } from "@/store/sessionStore";
 import { FeedbackState } from "@/components/FeedbackState";
+import { Pagination } from "@/components/Pagination";
+import { RewardStatusBadge } from "@/components/RewardStatusBadge";
+import { RewardTypeBadge } from "@/components/RewardTypeBadge";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
 import { UserShell } from "@/components/UserShell";
-import { Badge, Button, Card, SectionTitle } from "@/components/ui";
+import { Badge, Button, Card, SectionTitle, TableShell } from "@/components/ui";
 
 export default function StakingDetailPage() {
   const { stakingId = "" } = useParams();
@@ -21,6 +25,10 @@ export default function StakingDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [rewardPage, setRewardPage] = useState(1);
+  const [rewardState, setRewardState] = useState<RewardListResponse | null>(null);
+  const [rewardLoading, setRewardLoading] = useState(true);
+  const [rewardError, setRewardError] = useState<string | null>(null);
 
   const availableAction = useMemo(() => (staking ? getAvailableUserStakingAction(staking.status) : "none"), [staking]);
 
@@ -42,6 +50,40 @@ export default function StakingDetailPage() {
     void loadDetail();
   }, [accessToken, stakingId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRewards() {
+      if (!accessToken || !stakingId) return;
+      try {
+        setRewardLoading(true);
+        const result = await api.getMyStakingRewards(
+          stakingId,
+          {
+            page: rewardPage,
+            limit: 10,
+            sort: "reward_date_desc",
+          },
+          accessToken
+        );
+        if (cancelled) return;
+        setRewardState(result);
+        setRewardError(null);
+      } catch (loadError) {
+        if (cancelled) return;
+        setRewardError(getErrorMessage(loadError));
+      } finally {
+        if (!cancelled) setRewardLoading(false);
+      }
+    }
+
+    void loadRewards();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, rewardPage, stakingId]);
+
   async function handleCancel() {
     if (!accessToken || !staking) return;
     try {
@@ -56,6 +98,7 @@ export default function StakingDetailPage() {
         accessToken
       );
       setStaking(result.staking);
+      setRewardPage(1);
       setActionSuccess(
         availableAction === "cancel"
           ? "PENDING 스테이킹이 취소되어 CANCELLED 상태로 변경되었습니다."
@@ -63,6 +106,16 @@ export default function StakingDetailPage() {
       );
       setConfirmOpen(false);
       setReason("");
+      const rewards = await api.getMyStakingRewards(
+        staking.id,
+        {
+          page: 1,
+          limit: 10,
+          sort: "reward_date_desc",
+        },
+        accessToken
+      );
+      setRewardState(rewards);
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 409) {
         setActionError("현재 상태가 이미 변경되었습니다. 최신 상세 정보를 다시 불러왔습니다.");
@@ -168,6 +221,73 @@ export default function StakingDetailPage() {
                 ) : null}
                 {availableAction === "none" && staking.status !== "CANCEL_REQUESTED" ? (
                   <FeedbackState title="추가 액션 없음" description="현재 상태에서는 취소 또는 취소 요청을 진행할 수 없습니다." />
+                ) : null}
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <SectionTitle
+                  eyebrow="Staking Rewards"
+                  title="이 스테이킹에서 발생한 보상"
+                  description="해당 staking_id 기준 reward 목록을 최신순으로 표시합니다."
+                />
+                <div className="text-sm text-slate-400">
+                  전체 건수 <span className="tabular text-slate-100">{rewardState?.total ?? 0}</span>
+                </div>
+              </div>
+              <div className="mt-5">
+                {rewardError ? <FeedbackState title="보상 조회 오류" description={rewardError} tone="error" /> : null}
+                {rewardLoading ? <FeedbackState title="보상 목록 로딩 중" description="이 스테이킹에서 발생한 rewards를 불러오고 있습니다." /> : null}
+                {!rewardLoading && !rewardError && (rewardState?.items.length ?? 0) === 0 ? (
+                  <FeedbackState title="보상 내역 없음" description="이 스테이킹에서 아직 발생한 보상이 없습니다." />
+                ) : null}
+                {rewardState?.items.length ? (
+                  <>
+                    <TableShell>
+                      <table className="min-w-full text-left text-sm text-slate-300">
+                        <thead className="sticky top-0 bg-slate-950/95 text-xs uppercase tracking-[0.16em] text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">reward date</th>
+                            <th className="px-4 py-3">type</th>
+                            <th className="px-4 py-3">amount</th>
+                            <th className="px-4 py-3">status</th>
+                            <th className="px-4 py-3 text-right">상세</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rewardState.items.map((reward) => {
+                            const negative = reward.reward_type === "REVERSAL" || isNegativeRewardAmount(reward.amount_base);
+                            return (
+                              <tr key={reward.id} className="border-t border-slate-800/80">
+                                <td className="px-4 py-3 text-slate-200">{formatRewardDate(reward.reward_date)}</td>
+                                <td className="px-4 py-3">
+                                  <RewardTypeBadge type={reward.reward_type} />
+                                </td>
+                                <td className={`tabular px-4 py-3 font-semibold ${negative ? "text-rose-200" : "text-slate-100"}`}>
+                                  {formatRewardAmountBase(reward.amount_base)}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <RewardStatusBadge status={reward.status} />
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <Link to={`/rewards/${reward.id}`}>
+                                    <Button variant="secondary">
+                                      상세 이동
+                                      <ArrowUpRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </TableShell>
+                    <div className="mt-4">
+                      <Pagination page={rewardState.page} limit={rewardState.limit} total={rewardState.total} onChange={setRewardPage} />
+                    </div>
+                  </>
                 ) : null}
               </div>
             </Card>

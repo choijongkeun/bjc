@@ -7,13 +7,14 @@ import { AccountsTab } from "@/components/tabs/AccountsTab";
 import { NetworkTab } from "@/components/tabs/NetworkTab";
 import { LedgerEventsTab } from "@/components/tabs/LedgerEventsTab";
 import { CalcSettlementTab } from "@/components/tabs/CalcSettlementTab";
+import { RewardsTab } from "@/components/tabs/RewardsTab";
 import { ReportsTab } from "@/components/tabs/ReportsTab";
 import { AuditLogsTab } from "@/components/tabs/AuditLogsTab";
 import { useSessionStore } from "@/store/sessionStore";
 
-type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "reports" | "audit";
+type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "rewards" | "reports" | "audit";
 
-const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "reports", "audit"]);
+const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "rewards", "reports", "audit"]);
 
 export default function AdminPage() {
   const actorId = useSessionStore((state) => state.actorId)!;
@@ -21,6 +22,7 @@ export default function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = (searchParams.get("tab") as TabKey | null) ?? "policies";
   const selectedAccountId = searchParams.get("accountId");
+  const selectedCalcRunId = searchParams.get("calcRunId");
 
   const safeTab = useMemo<TabKey>(() => {
     if (!allowedTabs.has(currentTab)) {
@@ -32,13 +34,18 @@ export default function AdminPage() {
     return currentTab;
   }, [currentTab, role]);
 
-  function updateParams(next: { tab?: TabKey; accountId?: string | null }) {
+  function updateParams(next: { tab?: TabKey; accountId?: string | null; calcRunId?: string | null }) {
     const params = new URLSearchParams(searchParams);
     if (next.tab) params.set("tab", next.tab);
     if (next.accountId === null) {
       params.delete("accountId");
     } else if (next.accountId) {
       params.set("accountId", next.accountId);
+    }
+    if (next.calcRunId === null) {
+      params.delete("calcRunId");
+    } else if (next.calcRunId) {
+      params.set("calcRunId", next.calcRunId);
     }
     setSearchParams(params);
   }
@@ -59,6 +66,14 @@ export default function AdminPage() {
     updateParams({ tab: "stakings", accountId });
   }
 
+  function openRewards(target: { accountId?: string | null; calcRunId?: string | null }) {
+    updateParams({
+      tab: "rewards",
+      accountId: target.accountId ?? null,
+      calcRunId: target.calcRunId ?? null,
+    });
+  }
+
   return (
     <AdminShell activeTab={safeTab} onTabChange={changeTab}>
       {safeTab === "policies" ? <PoliciesTab actorId={actorId} role={role} /> : null}
@@ -73,6 +88,7 @@ export default function AdminPage() {
           onSelectAccount={selectAccount}
           onOpenNetwork={openNetwork}
           onOpenStakings={openStakings}
+          onOpenRewards={(accountId) => openRewards({ accountId })}
         />
       ) : null}
       {safeTab === "network" ? (
@@ -84,7 +100,17 @@ export default function AdminPage() {
         />
       ) : null}
       {safeTab === "ledger" ? <LedgerEventsTab actorId={actorId} role={role} /> : null}
-      {safeTab === "calc" ? <CalcSettlementTab actorId={actorId} role={role} /> : null}
+      {safeTab === "calc" ? <CalcSettlementTab actorId={actorId} role={role} onOpenRewards={(calcRunId) => openRewards({ calcRunId })} /> : null}
+      {safeTab === "rewards" ? (
+        <RewardsTab
+          actorId={actorId}
+          role={role}
+          selectedAccountId={selectedAccountId}
+          selectedCalcRunId={selectedCalcRunId}
+          onSelectAccountId={(accountId) => updateParams({ accountId })}
+          onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
+        />
+      ) : null}
       {safeTab === "reports" ? <ReportsTab actorId={actorId} role={role} /> : null}
       {safeTab === "audit" ? <AuditLogsTab actorId={actorId} role={role} /> : null}
     </AdminShell>

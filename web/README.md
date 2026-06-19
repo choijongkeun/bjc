@@ -74,6 +74,8 @@ npm run preview -- --host 0.0.0.0 --port 4175
 - `USER actor id`: `accounts.role = 'USER'` 인 계정 UUID
 - `READER`: 조회 전용, staking mutate 버튼 비노출
 - `ADMIN`: staking 조회 + 활성화/거절/관리자 취소 가능
+- `READER`: rewards 조회 가능, `DAILY_REWARD` 실행/`Reward reversal` 버튼 비노출
+- `ADMIN`: rewards 조회 + 수동 `DAILY_REWARD` 실행 + `Reward reversal` 가능
 
 ## Verify
 
@@ -134,3 +136,15 @@ npm run build
 - `ACTIVE`, `CANCEL_REQUESTED` 관리자 취소
 - `Accounts` 탭에서 회원별 최근 스테이킹 표시 및 `stakings` 탭 이동
 - reward 지급, principal 실제 차감/반환, maturity 자동 처리 미구현
+
+## Rewards UI 범위
+
+- `rewards` 탭에서 전체 보상 목록/필터/상세 패널 조회
+- `Accounts` 탭에서 회원별 최근 보상 표시 및 `/admin?tab=rewards&accountId=<id>` 이동
+- `Calc` 탭에서 `DAILY_REWARD` run에 대해 rewards 탭 이동
+- `ADMIN` 전용 수동 `DAILY_REWARD` 실행 모달
+- `ADMIN` 전용 `CONFIRMED` 일반 보상 reversal
+- `READER`는 조회 전용이며 실행/reversal 버튼이 노출되지 않음
+- 현재 출금 기능은 미구현이며, rewards 화면은 조회/운영 액션에 한정
+- 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급
+- TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 조정 가능
