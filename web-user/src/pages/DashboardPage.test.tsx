@@ -9,6 +9,7 @@ const apiMock = vi.hoisted(() => ({
   getMyBinaryLegs: vi.fn(),
   getMyStakingSummary: vi.fn(),
   getMyRewardsSummary: vi.fn(),
+  getMyWithdrawalBalance: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -78,6 +79,22 @@ describe("DashboardPage", () => {
       daily_reward_amount_base: "350",
       reward_count: 7,
     });
+    apiMock.getMyWithdrawalBalance.mockResolvedValue({
+      daily_reward: {
+        available_amount_base: "150",
+        reserved_amount_base: "0",
+        completed_amount_base: "0",
+      },
+      bonus: {
+        available_amount_base: "30",
+        reserved_amount_base: "0",
+        completed_amount_base: "0",
+      },
+      total: {
+        reserved_amount_base: "20",
+        completed_amount_base: "10",
+      },
+    });
   });
 
   it("renders staking and rewards summary from APIs", async () => {
@@ -92,8 +109,11 @@ describe("DashboardPage", () => {
       expect(screen.getByText("12,000")).toBeInTheDocument();
       expect(screen.getByText("확정 보상")).toBeInTheDocument();
       expect(screen.getByText("200")).toBeInTheDocument();
+      expect(screen.getByText("출금 가능 보상")).toBeInTheDocument();
+      expect(screen.getByText("180")).toBeInTheDocument();
       expect(screen.getByText("활성 / 대기 건수")).toBeInTheDocument();
       expect(screen.getByText("3 / 2")).toBeInTheDocument();
+      expect(screen.getByText(/DAILY 150 \/ BONUS 30/)).toBeInTheDocument();
     });
   });
 });

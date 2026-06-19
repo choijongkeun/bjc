@@ -19,6 +19,15 @@ export type RewardSort =
   | "created_at_asc"
   | "available_at_desc"
   | "available_at_asc";
+export type WithdrawalType = "DAILY_REWARD" | "BONUS";
+export type WithdrawalStatus = "REQUESTED" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED" | "FAILED" | "CANCELLED";
+export type WithdrawalSort =
+  | "requested_at_desc"
+  | "requested_at_asc"
+  | "created_at_desc"
+  | "created_at_asc"
+  | "completed_at_desc"
+  | "completed_at_asc";
 
 export type SessionAccount = {
   id: string;
@@ -264,6 +273,148 @@ export type RewardSummary = {
   reward_count: number;
 };
 
+export type WithdrawalBalanceBucket = {
+  confirmed_amount_base: string;
+  reserved_amount_base: string;
+  completed_amount_base: string;
+  available_amount_base: string;
+};
+
+export type WithdrawalBalance = {
+  daily_reward: WithdrawalBalanceBucket;
+  bonus: WithdrawalBalanceBucket;
+  total: {
+    reserved_amount_base: string;
+    completed_amount_base: string;
+  };
+};
+
+export type WithdrawalPreviewAllocation = {
+  reward_id: string;
+  allocated_amount_base: string;
+  holding_days: number;
+  fee_schedule_days: number;
+  fee_rate_bps: string;
+  fee_amount_base: string;
+  net_amount_base: string;
+};
+
+export type WithdrawalPreview = {
+  withdrawal_type: WithdrawalType;
+  requested_amount_base: string;
+  fee_amount_base: string;
+  net_amount_base: string;
+  available_amount_base: string;
+  allocations: WithdrawalPreviewAllocation[];
+  preview_only: true;
+};
+
+export type WithdrawalAccount = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  status: AccountStatus;
+};
+
+export type WithdrawalReward = {
+  id: string;
+  account_id: string;
+  account_staking_id: string | null;
+  policy_version_id: string;
+  reward_type: RewardType;
+  reward_date: string | null;
+  amount_base: string;
+  status: RewardStatus;
+  source_reference: string;
+  available_at: string | null;
+  confirmed_at: string | null;
+  reversed_at: string | null;
+};
+
+export type WithdrawalAllocation = {
+  id: number;
+  withdrawal_id: string;
+  reward_id: string;
+  allocated_amount_base: string;
+  fee_policy_version_id: string;
+  fee_schedule_days_snapshot: number;
+  fee_rate_snapshot: string;
+  fee_mode_snapshot: "DEDUCT_FROM_WITHDRAWAL";
+  holding_days_snapshot: number;
+  fee_amount_base: string;
+  net_amount_base: string;
+  status: "RESERVED" | "CONSUMED" | "RELEASED";
+  reserved_at: string | null;
+  consumed_at: string | null;
+  released_at: string | null;
+  created_at: string | null;
+  reward: WithdrawalReward;
+};
+
+export type WithdrawalAllocationSummary = {
+  allocation_count: number;
+  reserved_amount_base: string;
+  consumed_amount_base: string;
+  released_amount_base: string;
+};
+
+export type WithdrawalListItem = {
+  id: string;
+  account_id: string;
+  fee_policy_version_id: string;
+  withdrawal_type: WithdrawalType;
+  requested_amount_base: string;
+  fee_amount_base: string;
+  net_amount_base: string;
+  fee_mode_snapshot: "DEDUCT_FROM_WITHDRAWAL";
+  status: WithdrawalStatus;
+  idempotency_key: string;
+  wallet_address: string | null;
+  network: string | null;
+  tx_hash: string | null;
+  requested_kst_date: string | null;
+  requested_at: string | null;
+  approved_at: string | null;
+  processing_at: string | null;
+  completed_at: string | null;
+  rejected_at: string | null;
+  failed_at: string | null;
+  cancelled_at: string | null;
+  reject_reason: string | null;
+  failure_reason: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  account?: WithdrawalAccount;
+};
+
+export type WithdrawalDetail = WithdrawalListItem & {
+  allocation_summary: WithdrawalAllocationSummary;
+  allocations: WithdrawalAllocation[];
+  ledger_events?: Array<{
+    id: string;
+    event_type: string;
+    amount_base: string;
+    reference_id: string;
+    event_time: string | null;
+    created_at: string | null;
+  }>;
+  audit_logs?: Array<{
+    id: string;
+    actor_account_id: string | null;
+    action: string;
+    target_table: string | null;
+    target_id: string | null;
+    created_at: string | null;
+  }>;
+};
+
+export type WithdrawalListResponse = {
+  items: WithdrawalListItem[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export type StakingSummary = {
   pending_count: number;
   active_count: number;
@@ -280,6 +431,14 @@ export type RewardListResponse = {
   page: number;
   limit: number;
   total: number;
+};
+
+export type CreateWithdrawalRequest = {
+  withdrawal_type: WithdrawalType;
+  requested_amount_base: string;
+  idempotency_key: string;
+  wallet_address: string;
+  network: string;
 };
 
 export class ApiError extends Error {
@@ -326,6 +485,7 @@ function toFriendlyMessage(status: number, message: string) {
     if (message.includes("login_id")) return "이미 사용 중인 로그인 ID입니다.";
     if (message.includes("idempotency_key")) return "이미 처리된 요청이거나 현재 상태와 충돌합니다.";
     if (message.includes("reversed")) return "이미 역분개 처리된 보상입니다.";
+    if (message.includes("withdrawal")) return "현재 출금 상태로는 이 요청을 처리할 수 없습니다.";
     return "현재 상태로는 요청을 처리할 수 없습니다.";
   }
   if (status === 422) {
@@ -333,6 +493,10 @@ function toFriendlyMessage(status: number, message: string) {
     if (message.includes("principal_amount_base")) return "스테이킹 금액을 다시 확인해 주세요.";
     if (message.includes("staking_product")) return "현재 신청할 수 없는 스테이킹 상품입니다.";
     if (message.includes("reason")) return "필수 입력값을 다시 확인해 주세요.";
+    if (message.includes("requested_amount_base")) return "출금 신청 금액을 다시 확인해 주세요.";
+    if (message.includes("wallet_address")) return "지갑 주소를 다시 확인해 주세요.";
+    if (message.includes("network")) return "네트워크 값을 다시 확인해 주세요.";
+    if (message.includes("fee")) return "출금 수수료 계산 조건을 다시 확인해 주세요.";
     return "입력값을 다시 확인해 주세요.";
   }
   return message || "요청 처리 중 오류가 발생했습니다.";
@@ -494,6 +658,56 @@ export const api = {
     return request<RewardSummary>("/api/me/rewards/summary", {
       method: "GET",
       accessToken,
+    });
+  },
+  getMyWithdrawalBalance(accessToken?: string | null) {
+    return request<WithdrawalBalance>("/api/me/withdrawal-balance", {
+      method: "GET",
+      accessToken,
+    });
+  },
+  previewMyWithdrawal(body: { withdrawal_type: WithdrawalType; requested_amount_base: string }, accessToken?: string | null) {
+    return request<WithdrawalPreview>("/api/me/withdrawal-preview", {
+      method: "POST",
+      accessToken,
+      body: JSON.stringify(body),
+    });
+  },
+  createMyWithdrawal(body: CreateWithdrawalRequest, accessToken?: string | null) {
+    return request<{ withdrawal: WithdrawalDetail }>("/api/me/withdrawals", {
+      method: "POST",
+      accessToken,
+      body: JSON.stringify(body),
+    });
+  },
+  listMyWithdrawals(
+    query: {
+      withdrawal_type?: WithdrawalType;
+      status?: WithdrawalStatus;
+      requested_from?: string;
+      requested_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: WithdrawalSort;
+    } = {},
+    accessToken?: string | null
+  ) {
+    return request<WithdrawalListResponse>(`/api/me/withdrawals${params(query as Record<string, string | number | undefined>)}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyWithdrawal(withdrawalId: string, accessToken?: string | null) {
+    return request<{ withdrawal: WithdrawalDetail }>(`/api/me/withdrawals/${withdrawalId}`, {
+      method: "GET",
+      accessToken,
+    });
+  },
+  cancelMyWithdrawal(withdrawalId: string, accessToken?: string | null) {
+    return request<{ withdrawal: WithdrawalDetail }>(`/api/me/withdrawals/${withdrawalId}/cancel`, {
+      method: "POST",
+      accessToken,
+      body: JSON.stringify({}),
     });
   },
   getMyReward(rewardId: string, accessToken?: string | null) {

@@ -7,6 +7,8 @@ import StakingPage from "@/pages/StakingPage";
 import StakingDetailPage from "@/pages/StakingDetailPage";
 import RewardsPage from "@/pages/RewardsPage";
 import RewardDetailPage from "@/pages/RewardDetailPage";
+import WithdrawalsPage from "@/pages/WithdrawalsPage";
+import WithdrawalDetailPage from "@/pages/WithdrawalDetailPage";
 import { PrivateRoute } from "@/routes/PrivateRoute";
 import { useSessionStore } from "@/store/sessionStore";
 
@@ -64,6 +66,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <RewardDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/withdrawals"
+          element={
+            <PrivateRoute>
+              <WithdrawalsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/withdrawals/:withdrawalId"
+          element={
+            <PrivateRoute>
+              <WithdrawalDetailPage />
             </PrivateRoute>
           }
         />

@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Copy, FolderClock, Gift, GitBranch, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api, getErrorMessage, type BinaryLegsResponse, type RewardSummary, type StakingSummary } from "@/lib/api";
+import { api, getErrorMessage, type BinaryLegsResponse, type RewardSummary, type StakingSummary, type WithdrawalBalance } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { formatRewardAmountBase } from "@/lib/rewards";
+import { formatWithdrawalAmountBase } from "@/lib/withdrawals";
 import { useSessionStore } from "@/store/sessionStore";
 import { BinaryLegsCard } from "@/components/BinaryLegsCard";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [legs, setLegs] = useState<BinaryLegsResponse | null>(null);
   const [stakingSummary, setStakingSummary] = useState<StakingSummary | null>(null);
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
+  const [withdrawalBalance, setWithdrawalBalance] = useState<WithdrawalBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,17 +30,19 @@ export default function DashboardPage() {
     async function load() {
       try {
         setLoading(true);
-        const [meResult, legsResult, stakingSummaryResult, rewardSummaryResult] = await Promise.all([
+        const [meResult, legsResult, stakingSummaryResult, rewardSummaryResult, withdrawalBalanceResult] = await Promise.all([
           api.me(accessToken),
           api.getMyBinaryLegs(accessToken),
           api.getMyStakingSummary(accessToken),
           api.getMyRewardsSummary(accessToken),
+          api.getMyWithdrawalBalance(accessToken),
         ]);
         if (cancelled) return;
         setAccount(meResult.account);
         setLegs(legsResult);
         setStakingSummary(stakingSummaryResult);
         setRewardSummary(rewardSummaryResult);
+        setWithdrawalBalance(withdrawalBalanceResult);
         setError(null);
       } catch (loadError) {
         if (cancelled) return;
@@ -106,7 +110,13 @@ export default function DashboardPage() {
                   },
                   {
                     label: "출금 가능 보상",
-                    value: rewardSummary ? formatRewardAmountBase(rewardSummary.withdrawable_reward_amount_base) : "...",
+                    value: withdrawalBalance
+                      ? formatWithdrawalAmountBase(
+                          (BigInt(withdrawalBalance.daily_reward.available_amount_base) + BigInt(withdrawalBalance.bonus.available_amount_base)).toString()
+                        )
+                      : rewardSummary
+                        ? formatRewardAmountBase(rewardSummary.withdrawable_reward_amount_base)
+                        : "...",
                     accent: "text-violet-200",
                   },
                   {
@@ -176,7 +186,16 @@ export default function DashboardPage() {
             icon={<Gift className="h-5 w-5" />}
             href="/rewards"
           />
-          <ActionCard title="출금 준비 중" description="출금 신청과 이력은 현재 범위에 포함하지 않았습니다." icon={<Wallet className="h-5 w-5" />} disabled />
+          <ActionCard
+            title="출금 관리"
+            description={
+              withdrawalBalance
+                ? `DAILY ${formatWithdrawalAmountBase(withdrawalBalance.daily_reward.available_amount_base)} / BONUS ${formatWithdrawalAmountBase(withdrawalBalance.bonus.available_amount_base)}`
+                : "출금 가능 잔액과 출금 이력으로 이동합니다."
+            }
+            icon={<Wallet className="h-5 w-5" />}
+            href="/withdrawals"
+          />
         </div>
 
         {loading ? <FeedbackState title="데이터 로딩 중" description="계정, 바이너리 레그, 스테이킹/보상 summary를 불러오고 있습니다." /> : null}

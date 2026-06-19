@@ -130,6 +130,9 @@ export default function RewardsPage() {
       actions={
         <div className="flex items-center gap-2">
           <Badge tone="blue">Rewards API 연결</Badge>
+          <Link to="/withdrawals">
+            <Button variant="secondary">출금 화면 이동</Button>
+          </Link>
           <Button
             variant="secondary"
             onClick={() => setRefreshNonce((current) => current + 1)}
@@ -149,10 +152,16 @@ export default function RewardsPage() {
           <SectionTitle
             eyebrow="Rewards Overview"
             title="내 보상 요약"
-            description="출금 도메인은 아직 구현되지 않아 출금 완료 금액은 현재 0으로 표시하며, 관련 기능은 준비 중입니다."
+            description="출금 가능 보상과 출금 완료 보상은 실제 withdrawal allocation 집계와 연결됩니다."
           />
           <div className="mt-6">
-            <RewardSummaryCards summary={summary} loading={summaryLoading} />
+            <RewardSummaryCards summary={summary} loading={summaryLoading} withdrawalsHref="/withdrawals" />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-400">
+            <Link to="/withdrawals" className="font-semibold text-blue-200 hover:text-blue-100">
+              DAILY_REWARD / BONUS 출금 안내 보기
+            </Link>
+            <span>출금 신청 전 미리보기에서 예상 수수료와 실수령액을 확인할 수 있습니다.</span>
           </div>
         </Card>
 

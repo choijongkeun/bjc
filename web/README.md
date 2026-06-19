@@ -76,6 +76,8 @@ npm run preview -- --host 0.0.0.0 --port 4175
 - `ADMIN`: staking 조회 + 활성화/거절/관리자 취소 가능
 - `READER`: rewards 조회 가능, `DAILY_REWARD` 실행/`Reward reversal` 버튼 비노출
 - `ADMIN`: rewards 조회 + 수동 `DAILY_REWARD` 실행 + `Reward reversal` 가능
+- `READER`: withdrawals 조회 가능, 승인/거절/처리/완료/실패 버튼 비노출
+- `ADMIN`: withdrawals 조회 + 승인/거절/처리 시작/완료/실패 가능
 
 ## Verify
 
@@ -145,6 +147,17 @@ npm run build
 - `ADMIN` 전용 수동 `DAILY_REWARD` 실행 모달
 - `ADMIN` 전용 `CONFIRMED` 일반 보상 reversal
 - `READER`는 조회 전용이며 실행/reversal 버튼이 노출되지 않음
-- 현재 출금 기능은 미구현이며, rewards 화면은 조회/운영 액션에 한정
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 조정 가능
+
+## Withdrawals UI 범위
+
+- `withdrawals` 탭에서 전체 출금 목록/필터/상세 패널/통계 카드를 조회
+- `Accounts` 탭에서 회원별 최근 출금 5건 표시 및 `/admin?tab=withdrawals&accountId=<id>` 이동
+- 상태 전이는 `REQUESTED -> APPROVED -> PROCESSING -> COMPLETED`와 `REQUESTED -> REJECTED`, `PROCESSING -> FAILED`를 지원
+- `ADMIN`만 승인, 거절, 처리 시작, 완료, 실패 액션 버튼이 노출됩니다.
+- `READER`는 조회 전용이며 mutate API를 호출하지 않습니다.
+- 완료 처리 시 `tx_hash`, `network` 입력이 필수입니다.
+- 거절/실패 처리 시 `reason` 입력이 필수입니다.
+- wallet address는 목록에서 마스킹하고 상세 패널에서만 전체 값을 표시합니다.
+- 이번 시스템은 실제 블록체인 송금이나 wallet RPC 호출을 수행하지 않으며, 운영자가 외부 송금 완료 후 수동으로 `COMPLETED` 처리해야 합니다.

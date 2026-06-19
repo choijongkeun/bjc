@@ -8,13 +8,14 @@ import { NetworkTab } from "@/components/tabs/NetworkTab";
 import { LedgerEventsTab } from "@/components/tabs/LedgerEventsTab";
 import { CalcSettlementTab } from "@/components/tabs/CalcSettlementTab";
 import { RewardsTab } from "@/components/tabs/RewardsTab";
+import { WithdrawalsTab } from "@/components/tabs/WithdrawalsTab";
 import { ReportsTab } from "@/components/tabs/ReportsTab";
 import { AuditLogsTab } from "@/components/tabs/AuditLogsTab";
 import { useSessionStore } from "@/store/sessionStore";
 
-type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "rewards" | "reports" | "audit";
+type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "rewards" | "withdrawals" | "reports" | "audit";
 
-const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "rewards", "reports", "audit"]);
+const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "rewards", "withdrawals", "reports", "audit"]);
 
 export default function AdminPage() {
   const actorId = useSessionStore((state) => state.actorId)!;
@@ -74,6 +75,14 @@ export default function AdminPage() {
     });
   }
 
+  function openWithdrawals(accountId: string) {
+    updateParams({
+      tab: "withdrawals",
+      accountId,
+      calcRunId: null,
+    });
+  }
+
   return (
     <AdminShell activeTab={safeTab} onTabChange={changeTab}>
       {safeTab === "policies" ? <PoliciesTab actorId={actorId} role={role} /> : null}
@@ -89,6 +98,7 @@ export default function AdminPage() {
           onOpenNetwork={openNetwork}
           onOpenStakings={openStakings}
           onOpenRewards={(accountId) => openRewards({ accountId })}
+          onOpenWithdrawals={openWithdrawals}
         />
       ) : null}
       {safeTab === "network" ? (
@@ -109,6 +119,14 @@ export default function AdminPage() {
           selectedCalcRunId={selectedCalcRunId}
           onSelectAccountId={(accountId) => updateParams({ accountId })}
           onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
+        />
+      ) : null}
+      {safeTab === "withdrawals" ? (
+        <WithdrawalsTab
+          actorId={actorId}
+          role={role}
+          selectedAccountId={selectedAccountId}
+          onSelectAccountId={(accountId) => updateParams({ accountId })}
         />
       ) : null}
       {safeTab === "reports" ? <ReportsTab actorId={actorId} role={role} /> : null}

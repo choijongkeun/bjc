@@ -6,16 +6,20 @@ import {
   type AdminAccountListItem,
   type AdminRewardListItem,
   type AdminStakingListItem,
+  type AdminWithdrawalListItem,
   type AdminAccountSort,
   type BinaryPosition,
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { formatRewardAmountBase, formatRewardDate } from "@/lib/rewards";
+import { formatWithdrawalAmountBase, formatWithdrawalDateTime, shortenTxHash } from "@/lib/withdrawals";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
+import { WithdrawalStatusBadge } from "@/components/WithdrawalStatusBadge";
+import { WithdrawalTypeBadge } from "@/components/WithdrawalTypeBadge";
 
 type AccountFilters = {
   q: string;
@@ -53,6 +57,7 @@ export function AccountsTab({
   onOpenNetwork,
   onOpenStakings,
   onOpenRewards,
+  onOpenWithdrawals,
 }: {
   actorId: string;
   role: SessionRole;
@@ -61,6 +66,7 @@ export function AccountsTab({
   onOpenNetwork: (accountId: string) => void;
   onOpenStakings: (accountId: string) => void;
   onOpenRewards: (accountId: string) => void;
+  onOpenWithdrawals: (accountId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -79,8 +85,10 @@ export function AccountsTab({
   const [statusBusy, setStatusBusy] = useState(false);
   const [recentStakings, setRecentStakings] = useState<AdminStakingListItem[]>([]);
   const [recentRewards, setRecentRewards] = useState<AdminRewardListItem[]>([]);
+  const [recentWithdrawals, setRecentWithdrawals] = useState<AdminWithdrawalListItem[]>([]);
   const [stakingError, setStakingError] = useState<string | null>(null);
   const [rewardError, setRewardError] = useState<string | null>(null);
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
 
   const activeAccountId = useMemo(() => selectedAccountId ?? selected?.id ?? null, [selectedAccountId, selected?.id]);
 
@@ -108,23 +116,28 @@ export function AccountsTab({
 
   async function loadAccountDetail(accountId: string) {
     try {
-      const [result, stakingResult, rewardResult] = await Promise.all([
+      const [result, stakingResult, rewardResult, withdrawalResult] = await Promise.all([
         api.getAdminAccount(actorId, accountId),
         api.listAdminAccountStakings(actorId, accountId, { page: 1, limit: 5, sort: "created_at_desc" }),
         api.listAdminAccountRewards(actorId, accountId, { page: 1, limit: 5, sort: "reward_date_desc" }),
+        api.listAdminAccountWithdrawals(actorId, accountId, { page: 1, limit: 5, sort: "requested_at_desc" }),
       ]);
       setSelected(result.account);
       setRecentStakings(stakingResult.items);
       setRecentRewards(rewardResult.items);
+      setRecentWithdrawals(withdrawalResult.items);
       setStakingError(null);
       setRewardError(null);
+      setWithdrawalError(null);
       setDetailError(null);
     } catch (loadError: any) {
       setSelected(null);
       setRecentStakings([]);
       setRecentRewards([]);
+      setRecentWithdrawals([]);
       setStakingError(loadError.message ?? "회원 스테이킹 내역을 불러오지 못했습니다.");
       setRewardError(loadError.message ?? "회원 보상 내역을 불러오지 못했습니다.");
+      setWithdrawalError(loadError.message ?? "회원 출금 내역을 불러오지 못했습니다.");
       setDetailError(loadError.message ?? "회원 상세를 불러오지 못했습니다.");
     }
   }
@@ -351,6 +364,9 @@ export function AccountsTab({
                 <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
                   보상 내역 보기
                 </Button>
+                <Button variant="secondary" onClick={() => onOpenWithdrawals(selected.id)}>
+                  출금 내역 보기
+                </Button>
                 <Button variant="secondary" onClick={() => onOpenNetwork(selected.id)}>
                   네트워크 보기
                   <ArrowRightCircle className="ml-2 h-4 w-4" />
@@ -460,6 +476,51 @@ export function AccountsTab({
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 출금 내역</div>
+                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며 전체 내역은 Withdrawals 탭으로 이동합니다.</p>
+                    </div>
+                    <Button variant="secondary" onClick={() => onOpenWithdrawals(selected.id)}>
+                      전체 출금 보기
+                    </Button>
+                  </div>
+                  <div className="mt-4">
+                    {withdrawalError ? <FeedbackState title="출금 조회 실패" description={withdrawalError} tone="error" /> : null}
+                    {!withdrawalError && recentWithdrawals.length === 0 ? (
+                      <FeedbackState title="출금 내역 없음" description="해당 회원의 최근 출금 내역이 없습니다." />
+                    ) : null}
+                    {recentWithdrawals.length > 0 ? (
+                      <div className="overflow-auto rounded-2xl border border-slate-800">
+                        <table className="data-table min-w-full">
+                          <thead>
+                            <tr>
+                              <th>신청일</th>
+                              <th>타입</th>
+                              <th>신청 금액</th>
+                              <th>상태</th>
+                              <th>network</th>
+                              <th>tx_hash</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recentWithdrawals.map((withdrawal) => (
+                              <tr key={withdrawal.id}>
+                                <td className="text-slate-400">{formatWithdrawalDateTime(withdrawal.requested_at ?? withdrawal.created_at)}</td>
+                                <td><WithdrawalTypeBadge type={withdrawal.withdrawal_type} /></td>
+                                <td className="tabular text-right">{formatWithdrawalAmountBase(withdrawal.requested_amount_base)}</td>
+                                <td><WithdrawalStatusBadge status={withdrawal.status} /></td>
+                                <td>{withdrawal.network ?? "-"}</td>
+                                <td className="font-mono text-xs text-slate-400">{shortenTxHash(withdrawal.tx_hash)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">

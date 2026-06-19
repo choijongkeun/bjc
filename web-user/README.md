@@ -1,6 +1,6 @@
 # BJC User Front
 
-일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증, 네트워크 조회, 스테이킹, Rewards 조회 흐름을 구현합니다.
+일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증, 네트워크 조회, 스테이킹, Rewards 조회, Withdrawals 흐름을 구현합니다.
 
 ## 설치
 
@@ -70,6 +70,8 @@ npm run dev
 - `/staking/:stakingId`
 - `/rewards`
 - `/rewards/:rewardId`
+- `/withdrawals`
+- `/withdrawals/:withdrawalId`
 - `/network`
 
 ## 현재 구현 범위
@@ -84,20 +86,17 @@ npm run dev
 - 내 스테이킹 목록
 - 내 스테이킹 상세
 - 내 Rewards 요약/목록/상세
+- 내 Withdrawals 잔액/미리보기/신청/목록/상세
+- `REQUESTED` 출금 취소
 - 스테이킹 상세의 rewards 섹션
 - Dashboard rewards/stakings summary
+- Dashboard withdrawals summary/action
 - PENDING 취소 / ACTIVE 취소 요청
 - 추천 조직도
 - 바이너리 조직도
 - 바이너리 레그 요약
 - 하위 회원 목록
 - 로그아웃
-
-## 현재 placeholder 기능
-
-- `Withdrawals`
-
-위 메뉴는 `Coming Soon` 상태로 표시되며 클릭 시 빈 화면이나 오류 페이지로 이동하지 않습니다.
 
 ## 스테이킹 참고
 
@@ -110,6 +109,16 @@ npm run dev
 - Dashboard는 `GET /api/me/rewards/summary`, `GET /api/me/stakings/summary` 값을 그대로 사용합니다.
 - Rewards 화면은 `GET /api/me/rewards`, `GET /api/me/rewards/:rewardId`, `GET /api/me/stakings/:stakingId/rewards`를 사용합니다.
 - 금액은 모두 string/base amount로 유지하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
-- 출금 기능은 아직 미구현이므로 출금 완료 금액은 현재 `0` 기준으로 안내합니다.
+- Rewards 요약 카드의 `출금 가능 보상`, `출금 완료 보상`은 `/withdrawals` 화면으로 연결됩니다.
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급합니다.
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 변경될 수 있습니다.
+
+## Withdrawals 참고
+
+- 화면은 `GET /api/me/withdrawal-balance`, `POST /api/me/withdrawal-preview`, `POST /api/me/withdrawals`, `GET /api/me/withdrawals`, `GET /api/me/withdrawals/:withdrawalId`, `POST /api/me/withdrawals/:withdrawalId/cancel`을 사용합니다.
+- 상단 카드에서 `DAILY_REWARD`, `BONUS`, 예약 금액, 완료 출금액을 조회합니다.
+- 미리보기는 참고용이며 실제 신청 시 후보 reward, 수수료, 실수령액을 서버에서 다시 계산합니다.
+- 한 번의 요청에는 `DAILY_REWARD`와 `BONUS`를 혼합하지 않습니다.
+- `REQUESTED` 상태에서만 사용자가 직접 취소할 수 있습니다.
+- 상태는 `REQUESTED`, `APPROVED`, `PROCESSING`, `COMPLETED`, `REJECTED`, `FAILED`, `CANCELLED`를 표시합니다.
+- 실제 블록체인 송금, wallet RPC 호출, 자동 재처리, PREPAY_BJC 결제는 이번 UI 범위에 포함되지 않습니다.

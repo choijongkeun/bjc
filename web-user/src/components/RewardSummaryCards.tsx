@@ -1,13 +1,16 @@
 import type { RewardSummary } from "@/lib/api";
+import { Link } from "react-router-dom";
 import { formatRewardAmountBase } from "@/lib/rewards";
 import { Card } from "@/components/ui";
 
 export function RewardSummaryCards({
   summary,
   loading,
+  withdrawalsHref,
 }: {
   summary: RewardSummary | null;
   loading?: boolean;
+  withdrawalsHref?: string;
 }) {
   const items = [
     {
@@ -24,11 +27,13 @@ export function RewardSummaryCards({
       label: "출금 가능 보상",
       value: summary ? formatRewardAmountBase(summary.withdrawable_reward_amount_base) : "...",
       note: "현재 출금 가능 금액",
+      href: withdrawalsHref,
     },
     {
       label: "출금 완료 보상",
       value: summary ? formatRewardAmountBase(summary.withdrawn_reward_amount_base) : "...",
-      note: "출금 기능 준비 중",
+      note: "실제 완료된 출금 합계",
+      href: withdrawalsHref,
     },
     {
       label: "DAILY_REWARD 누적",
@@ -44,13 +49,23 @@ export function RewardSummaryCards({
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
-        <Card key={item.label} className="p-5">
-          <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
-          <div className="mt-3 tabular text-3xl font-bold text-slate-50">{item.value}</div>
-          <div className="mt-2 text-sm text-slate-400">{loading && !summary ? "요약 데이터를 불러오는 중입니다." : item.note}</div>
-        </Card>
-      ))}
+      {items.map((item) => {
+        const content = (
+          <Card key={item.label} className="p-5">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
+            <div className="mt-3 tabular text-3xl font-bold text-slate-50">{item.value}</div>
+            <div className="mt-2 text-sm text-slate-400">{loading && !summary ? "요약 데이터를 불러오는 중입니다." : item.note}</div>
+          </Card>
+        );
+
+        return item.href ? (
+          <Link key={item.label} to={item.href} className="block transition hover:-translate-y-0.5">
+            {content}
+          </Link>
+        ) : (
+          content
+        );
+      })}
     </div>
   );
 }

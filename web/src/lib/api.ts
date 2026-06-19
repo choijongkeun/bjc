@@ -18,6 +18,15 @@ export type RewardSort =
   | "created_at_asc"
   | "available_at_desc"
   | "available_at_asc";
+export type WithdrawalType = "DAILY_REWARD" | "BONUS";
+export type WithdrawalStatus = "REQUESTED" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED" | "FAILED" | "CANCELLED";
+export type WithdrawalSort =
+  | "requested_at_desc"
+  | "requested_at_asc"
+  | "created_at_desc"
+  | "created_at_asc"
+  | "completed_at_desc"
+  | "completed_at_asc";
 
 export type PolicyVersion = {
   id: string;
@@ -152,6 +161,119 @@ export type RewardSummary = {
   withdrawn_reward_amount_base: string;
   daily_reward_amount_base: string;
   reward_count: number;
+};
+
+export type WithdrawalAccountSummary = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  status: AccountStatus;
+};
+
+export type WithdrawalRewardSummary = {
+  id: string;
+  account_id: string;
+  account_staking_id: string | null;
+  policy_version_id: string;
+  reward_type: RewardType;
+  reward_date: string | null;
+  amount_base: string;
+  status: RewardStatus;
+  source_reference: string;
+  available_at: string | null;
+  confirmed_at: string | null;
+  reversed_at: string | null;
+};
+
+export type AdminWithdrawalAllocation = {
+  id: number;
+  withdrawal_id: string;
+  reward_id: string;
+  allocated_amount_base: string;
+  fee_policy_version_id: string;
+  fee_schedule_days_snapshot: number;
+  fee_rate_snapshot: string;
+  fee_mode_snapshot: "DEDUCT_FROM_WITHDRAWAL";
+  holding_days_snapshot: number;
+  fee_amount_base: string;
+  net_amount_base: string;
+  status: "RESERVED" | "CONSUMED" | "RELEASED";
+  reserved_at: string | null;
+  consumed_at: string | null;
+  released_at: string | null;
+  created_at: string | null;
+  reward: WithdrawalRewardSummary;
+};
+
+export type WithdrawalAllocationSummary = {
+  allocation_count: number;
+  reserved_amount_base: string;
+  consumed_amount_base: string;
+  released_amount_base: string;
+};
+
+export type AdminWithdrawalListItem = {
+  id: string;
+  account_id: string;
+  fee_policy_version_id: string;
+  withdrawal_type: WithdrawalType;
+  requested_amount_base: string;
+  fee_amount_base: string;
+  net_amount_base: string;
+  fee_mode_snapshot: "DEDUCT_FROM_WITHDRAWAL";
+  status: WithdrawalStatus;
+  idempotency_key: string;
+  wallet_address: string | null;
+  network: string | null;
+  tx_hash: string | null;
+  requested_kst_date: string | null;
+  requested_at: string | null;
+  approved_at: string | null;
+  processing_at: string | null;
+  completed_at: string | null;
+  rejected_at: string | null;
+  failed_at: string | null;
+  cancelled_at: string | null;
+  reject_reason: string | null;
+  failure_reason: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  account?: WithdrawalAccountSummary;
+};
+
+export type AdminWithdrawalDetail = AdminWithdrawalListItem & {
+  allocation_summary: WithdrawalAllocationSummary;
+  allocations: AdminWithdrawalAllocation[];
+  ledger_events?: Array<{
+    id: string;
+    event_type: string;
+    amount_base: string;
+    reference_id: string;
+    event_time: string | null;
+    created_at: string | null;
+  }>;
+  audit_logs?: Array<{
+    id: string;
+    actor_account_id: string | null;
+    action: string;
+    target_table: string | null;
+    target_id: string | null;
+    created_at: string | null;
+  }>;
+};
+
+export type AdminWithdrawalSummary = {
+  requested_amount_base: string;
+  approved_amount_base: string;
+  processing_amount_base: string;
+  completed_amount_base: string;
+  rejected_amount_base: string;
+  failed_amount_base: string;
+  cancelled_amount_base: string;
+  fee_amount_base: string;
+  net_completed_amount_base: string;
+  requested_count: number;
+  completed_count: number;
 };
 
 export type RewardMetadata = Partial<{
@@ -588,6 +710,84 @@ export const api = {
     accountId: string,
     query: { status?: AccountStakingStatus; product_id?: string; page?: number; limit?: number; sort?: AccountStakingSort }
   ) => request<AdminStakingListResponse>(`/api/admin/accounts/${accountId}/stakings${params(query as any)}`, { method: "GET", actorId }),
+  listAdminWithdrawals: (
+    actorId: string,
+    query: {
+      q?: string;
+      account_id?: string;
+      withdrawal_type?: WithdrawalType;
+      status?: WithdrawalStatus;
+      network?: string;
+      requested_from?: string;
+      requested_to?: string;
+      completed_from?: string;
+      completed_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: WithdrawalSort;
+    }
+  ) => request<ItemsPageResponse<AdminWithdrawalListItem>>(`/api/admin/withdrawals${params(query as any)}`, { method: "GET", actorId }),
+  getAdminWithdrawal: (actorId: string, withdrawalId: string) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}`, { method: "GET", actorId }),
+  approveAdminWithdrawal: (actorId: string, withdrawalId: string) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}/approve`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify({}),
+    }),
+  rejectAdminWithdrawal: (actorId: string, withdrawalId: string, reason: string) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}/reject`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify({ reason }),
+    }),
+  markAdminWithdrawalProcessing: (actorId: string, withdrawalId: string, network: string) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}/processing`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify({ network }),
+    }),
+  completeAdminWithdrawal: (actorId: string, withdrawalId: string, body: { tx_hash: string; network: string }) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}/complete`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  failAdminWithdrawal: (actorId: string, withdrawalId: string, reason: string) =>
+    request<{ withdrawal: AdminWithdrawalDetail }>(`/api/admin/withdrawals/${withdrawalId}/fail`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify({ reason }),
+    }),
+  listAdminAccountWithdrawals: (
+    actorId: string,
+    accountId: string,
+    query: {
+      withdrawal_type?: WithdrawalType;
+      status?: WithdrawalStatus;
+      network?: string;
+      requested_from?: string;
+      requested_to?: string;
+      completed_from?: string;
+      completed_to?: string;
+      page?: number;
+      limit?: number;
+      sort?: WithdrawalSort;
+    }
+  ) =>
+    request<{ account: WithdrawalAccountSummary; items: AdminWithdrawalListItem[]; page: number; limit: number; total: number }>(
+      `/api/admin/accounts/${accountId}/withdrawals${params(query as any)}`,
+      { method: "GET", actorId }
+    ),
+  getAdminWithdrawalSummary: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      withdrawal_type?: WithdrawalType;
+      network?: string;
+    }
+  ) => request<AdminWithdrawalSummary>(`/api/admin/reports/withdrawal-summary${params(query as any)}`, { method: "GET", actorId }),
   listAdminRewards: (
     actorId: string,
     query: {
