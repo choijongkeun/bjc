@@ -739,7 +739,7 @@ export class PolicyEngine {
   }) {
     return this.withConnection(async (conn) => {
       const actor = await requireActor(conn, input.actor_account_id);
-      assertRoleAtLeast(actor, "READER");
+      assertRoleAtLeast(actor, "ADMIN");
       return listRewardsForCsv(conn, input);
     });
   }
@@ -754,7 +754,7 @@ export class PolicyEngine {
   }) {
     return this.withConnection(async (conn) => {
       const actor = await requireActor(conn, input.actor_account_id);
-      assertRoleAtLeast(actor, "READER");
+      assertRoleAtLeast(actor, "ADMIN");
       return listCalcRunsForCsv(conn, input);
     });
   }

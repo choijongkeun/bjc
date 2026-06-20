@@ -42,8 +42,11 @@ export default function LoginPage() {
           </div>
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">Actor Account ID</label>
+              <label className="mb-2 block text-sm font-semibold text-slate-300" htmlFor="actor-account-id">
+                Actor Account ID
+              </label>
               <input
+                id="actor-account-id"
                 className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 font-mono text-sm text-slate-100"
                 placeholder="UUID"
                 value={actorId}

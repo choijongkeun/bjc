@@ -20,9 +20,11 @@ import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { SidecarRewardService } from "./services/sidecarRewardService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
+import { checkReadiness } from "./http/readiness.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
 import { notFound, unauthorized, validationError } from "./domain/errors.js";
 import { getCalcRunById } from "./repos/calcRunsRepo.js";
+import { buildCsv } from "./util/csv.js";
 
 const app = express();
 const allowedOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -151,43 +153,6 @@ function requireActorId(req: express.Request): string {
   return actorId;
 }
 
-function toCsvScalar(value: unknown): string {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
-    return String(value);
-  }
-  return JSON.stringify(value);
-}
-
-function escapeCsvCell(value: unknown): string {
-  const text = toCsvScalar(value);
-  if (text.includes('"') || text.includes(",") || text.includes("\n") || text.includes("\r")) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-
-function buildCsv(rows: Array<Record<string, unknown>>): string {
-  if (!rows.length) {
-    return "";
-  }
-  const firstRow = rows[0];
-  if (!firstRow) {
-    return "";
-  }
-  const headers = Object.keys(firstRow);
-  const lines = [
-    headers.map((header) => escapeCsvCell(header)).join(","),
-    ...rows.map((row) => headers.map((header) => escapeCsvCell(row[header])).join(","))
-  ];
-  return lines.join("\n");
-}
-
 function sendCsv(res: express.Response, filename: string, rows: Array<Record<string, unknown>>) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -201,6 +166,25 @@ app.get("/health", (_req, res) => {
     environment: process.env.NODE_ENV ?? "development",
     ...(process.env.BJC_BUILD_COMMIT ? { build_commit: process.env.BJC_BUILD_COMMIT } : {}),
   });
+});
+
+app.get("/ready", async (_req, res) => {
+  try {
+    const payload = await checkReadiness(pool, {
+      service: "bjc-api",
+      environment: process.env.NODE_ENV ?? "development",
+      build_commit: process.env.BJC_BUILD_COMMIT,
+    });
+    res.json(payload);
+  } catch {
+    res.status(503).json({
+      ok: false,
+      service: "bjc-api",
+      environment: process.env.NODE_ENV ?? "development",
+      database: "unavailable",
+      ...(process.env.BJC_BUILD_COMMIT ? { build_commit: process.env.BJC_BUILD_COMMIT } : {}),
+    });
+  }
 });
 
 app.get("/api/referrals/resolve", async (req, res, next) => {

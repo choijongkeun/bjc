@@ -14,7 +14,7 @@ const blank: ReportSummary = {
   finalized_calc_runs: "0",
 };
 
-export function ReportsTab({ actorId }: { actorId: string; role: SessionRole }) {
+export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRole }) {
   const [summary, setSummary] = useState<ReportSummary>(blank);
   const [rewardSummary, setRewardSummary] = useState<RewardSummaryReport | null>(null);
   const [rewardByType, setRewardByType] = useState<RewardByTypeReportRow[]>([]);
@@ -161,14 +161,18 @@ export function ReportsTab({ actorId }: { actorId: string; role: SessionRole }) 
           </div>
           <div className="flex gap-2">
             <Button onClick={() => void load()}>리포트 갱신</Button>
-            <Button variant="secondary" onClick={() => void download("rewards")} disabled={downloading !== ""}>
-              <Download className="mr-2 h-4 w-4" />
-              rewards.csv
-            </Button>
-            <Button variant="secondary" onClick={() => void download("calc-runs")} disabled={downloading !== ""}>
-              <Download className="mr-2 h-4 w-4" />
-              calc-runs.csv
-            </Button>
+            {role === "ADMIN" ? (
+              <Button variant="secondary" onClick={() => void download("rewards")} disabled={downloading !== ""}>
+                <Download className="mr-2 h-4 w-4" />
+                rewards.csv
+              </Button>
+            ) : null}
+            {role === "ADMIN" ? (
+              <Button variant="secondary" onClick={() => void download("calc-runs")} disabled={downloading !== ""}>
+                <Download className="mr-2 h-4 w-4" />
+                calc-runs.csv
+              </Button>
+            ) : null}
           </div>
         </div>
         {error ? <div className="mt-4"><FeedbackState title="오류" description={error} tone="error" /></div> : null}
