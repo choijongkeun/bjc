@@ -28,6 +28,7 @@ type Fixture = {
   policyId: string;
   productId: string;
   dailyStakingId: string;
+  directReferralSourceStakingId: string;
   userLoginId: string;
   otherUserLoginId: string;
   password: string;
@@ -189,6 +190,7 @@ async function createFixture(): Promise<Fixture> {
     policyId: randomUUID(),
     productId: randomUUID(),
     dailyStakingId: randomUUID(),
+    directReferralSourceStakingId: randomUUID(),
     userLoginId: `smoke_withdrawal_user_${suffix}`,
     otherUserLoginId: `smoke_withdrawal_other_${suffix}`,
     password: "SmokeWithdraw!123"
@@ -341,10 +343,40 @@ async function createFixture(): Promise<Fixture> {
     );
 
     await conn.query(
+      `insert into account_stakings (
+          id,
+          account_id,
+          staking_product_id,
+          policy_version_id,
+          principal_amount_base,
+          daily_interest_bps_snapshot,
+          duration_days_snapshot,
+          status,
+          idempotency_key,
+          started_at,
+          matures_at,
+          activated_at,
+          created_at,
+          updated_at
+        ) values (?, ?, ?, ?, '1000000000000000000', '50', 30, 'ACTIVE', ?, '2026-05-10 00:00:00.000000', '2026-06-09 00:00:00.000000', '2026-05-10 00:00:00.000000', ?, ?)`,
+      [
+        fixture.directReferralSourceStakingId,
+        fixture.otherUserId,
+        fixture.productId,
+        fixture.policyId,
+        `withdrawal-direct-referral-source-${suffix}`,
+        createdAt,
+        createdAt
+      ]
+    );
+
+    await conn.query(
       `insert into account_rewards (
           id,
           account_id,
           account_staking_id,
+          source_account_id,
+          source_account_staking_id,
           policy_version_id,
           calc_run_id,
           reward_type,
@@ -361,11 +393,11 @@ async function createFixture(): Promise<Fixture> {
           created_at,
           updated_at
         ) values
-        (?, ?, ?, ?, null, 'DAILY_REWARD',    '2026-05-20', '700000',  'CONFIRMED', ?, null, null, '2026-05-20 00:00:00.000000', '2026-05-20 00:00:00.000000', null, cast(? as json), ?, ?),
-        (?, ?, ?, ?, null, 'DAILY_REWARD',    '2026-06-12', '800000',  'CONFIRMED', ?, null, null, '2026-06-12 00:00:00.000000', '2026-06-12 00:00:00.000000', null, cast(? as json), ?, ?),
-        (?, ?, ?, ?, null, 'DAILY_REWARD',    '2026-06-18', '1000000', 'CONFIRMED', ?, null, null, '2026-06-18 00:00:00.000000', '2026-06-18 00:00:00.000000', null, cast(? as json), ?, ?),
-        (?, ?, null, ?, null, 'RANK_BONUS',   '2026-04-10', '400000',  'CONFIRMED', ?, null, null, '2026-04-10 00:00:00.000000', '2026-04-10 00:00:00.000000', null, cast(? as json), ?, ?),
-        (?, ?, null, ?, null, 'DIRECT_REFERRAL','2026-05-10','600000', 'CONFIRMED', ?, null, null, '2026-05-10 00:00:00.000000', '2026-05-10 00:00:00.000000', null, cast(? as json), ?, ?)`,
+        (?, ?, ?, null, null, ?, null, 'DAILY_REWARD',      '2026-05-20', '700000',  'CONFIRMED', ?, null, null, '2026-05-20 00:00:00.000000', '2026-05-20 00:00:00.000000', null, cast(? as json), ?, ?),
+        (?, ?, ?, null, null, ?, null, 'DAILY_REWARD',      '2026-06-12', '800000',  'CONFIRMED', ?, null, null, '2026-06-12 00:00:00.000000', '2026-06-12 00:00:00.000000', null, cast(? as json), ?, ?),
+        (?, ?, ?, null, null, ?, null, 'DAILY_REWARD',      '2026-06-18', '1000000', 'CONFIRMED', ?, null, null, '2026-06-18 00:00:00.000000', '2026-06-18 00:00:00.000000', null, cast(? as json), ?, ?),
+        (?, ?, null, null, null, ?, null, 'RANK_BONUS',     '2026-04-10', '400000',  'CONFIRMED', ?, null, null, '2026-04-10 00:00:00.000000', '2026-04-10 00:00:00.000000', null, cast(? as json), ?, ?),
+        (?, ?, null, ?, ?, ?, null, 'DIRECT_REFERRAL',      '2026-05-10', '600000',  'CONFIRMED', ?, null, null, '2026-05-10 00:00:00.000000', '2026-05-10 00:00:00.000000', null, cast(? as json), ?, ?)`,
       [
         randomUUID(),
         fixture.userId,
@@ -400,9 +432,15 @@ async function createFixture(): Promise<Fixture> {
         createdAt,
         randomUUID(),
         fixture.userId,
+        fixture.otherUserId,
+        fixture.directReferralSourceStakingId,
         fixture.policyId,
         `withdrawal.smoke.bonus.direct:${suffix}`,
-        JSON.stringify({ reason: "direct referral smoke" }),
+        JSON.stringify({
+          reason: "direct referral smoke",
+          source_account_id: fixture.otherUserId,
+          source_staking_id: fixture.directReferralSourceStakingId
+        }),
         createdAt,
         createdAt
       ]
@@ -449,7 +487,10 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
 
     await conn.query(`delete from admin_audit_log where actor_account_id in (?, ?, ?, ?)`, accountIds);
     await conn.query(`delete from auth_sessions where account_id in (?, ?, ?, ?)`, accountIds);
-    await conn.query(`delete from account_stakings where id = ?`, [fixture.dailyStakingId]);
+    await conn.query(`delete from account_stakings where id in (?, ?)`, [
+      fixture.dailyStakingId,
+      fixture.directReferralSourceStakingId
+    ]);
     await conn.query(`delete from withdrawal_fee_rules where policy_version_id = ?`, [fixture.policyId]);
     await conn.query(`delete from staking_products where id = ?`, [fixture.productId]);
     await conn.query(`delete from policy_versions where id = ?`, [fixture.policyId]);
