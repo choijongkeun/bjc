@@ -159,6 +159,54 @@ export async function getLatestAccountRankQualificationResult(
   return arr[0] ?? null;
 }
 
+export async function getAccountRankQualificationResultByDate(
+  conn: DbConn,
+  input: {
+    account_id: string;
+    policy_version_id: string;
+    calculation_date: string;
+  }
+): Promise<AccountRankQualificationResultRow | null> {
+  const [rows] = await conn.query(
+    `${qualificationResultSelectSql()}
+       from account_rank_qualification_results r
+       inner join calc_runs cr
+         on cr.id = r.calc_run_id
+      where r.account_id = ?
+        and r.policy_version_id = ?
+        and r.calculation_date = ?
+        and cr.run_type = 'RANK_QUALIFICATION'
+        and cr.status in ('SUCCEEDED', 'FINALIZED')
+      order by r.created_at desc, r.id desc
+      limit 1`,
+    [input.account_id, input.policy_version_id, input.calculation_date]
+  );
+  const arr = rows as AccountRankQualificationResultRow[];
+  return arr[0] ?? null;
+}
+
+export async function listRankQualificationResultsByDate(
+  conn: DbConn,
+  input: {
+    policy_version_id: string;
+    calculation_date: string;
+  }
+): Promise<AccountRankQualificationResultRow[]> {
+  const [rows] = await conn.query(
+    `${qualificationResultSelectSql()}
+       from account_rank_qualification_results r
+       inner join calc_runs cr
+         on cr.id = r.calc_run_id
+      where r.policy_version_id = ?
+        and r.calculation_date = ?
+        and cr.run_type = 'RANK_QUALIFICATION'
+        and cr.status in ('SUCCEEDED', 'FINALIZED')
+      order by r.created_at asc, r.id asc`,
+    [input.policy_version_id, input.calculation_date]
+  );
+  return rows as AccountRankQualificationResultRow[];
+}
+
 export async function listRankQualificationResultsByCalcRun(
   conn: DbConn,
   input: {

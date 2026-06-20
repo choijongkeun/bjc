@@ -41,6 +41,12 @@ export function RewardSummaryCards({
       note: "일일 보상 누적 합계",
     },
     {
+      label: "BONUS 누적",
+      value: summary ? formatRewardAmountBase(summary.bonus_reward_amount_base ?? "0") : "...",
+      note: "직추천 및 직급 보상 누적 합계",
+      href: withdrawalsHref,
+    },
+    {
       label: "총 보상 건수",
       value: summary ? String(summary.reward_count) : "...",
       note: "전체 reward row 수",

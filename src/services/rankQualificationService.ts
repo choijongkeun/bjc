@@ -762,6 +762,28 @@ export class RankQualificationService {
     });
   }
 
+  async getCalcRunSummary(input: { actor_account_id: string; calc_run_id: string }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      if (actor.role === "USER") {
+        throw forbidden("reader permission required", { actorRole: actor.role });
+      }
+
+      const calcRun = await getCalcRunById(conn, input.calc_run_id);
+      if (!calcRun) {
+        throw notFound("calc_run not found", { calc_run_id: input.calc_run_id });
+      }
+      if (calcRun.run_type !== RANK_QUALIFICATION_RUN_TYPE) {
+        throw validationError("calc_run is not a rank qualification run", {
+          calc_run_id: input.calc_run_id,
+          run_type: calcRun.run_type
+        });
+      }
+
+      return this.buildSummaryByCalcRun(conn, input.calc_run_id, calcRun.status);
+    });
+  }
+
   private async buildRankReadModel(input: { account_id: string }) {
     return this.withConnection(async (conn) => {
       const account = await getAccountAuthById(conn, input.account_id);

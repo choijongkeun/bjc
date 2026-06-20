@@ -65,6 +65,16 @@ npm run preview -- --host 0.0.0.0 --port 4175
 - preview 기본 검증 포트 예시는 `:4175`
 - preview에서는 `server.proxy`가 아니라 `VITE_API_BASE_URL` 기준으로 API를 호출합니다.
 
+프로젝트 기본 smoke 포트:
+
+```bash
+cd web
+npm run preview:bjc
+```
+
+- 기본 관리자 preview 포트는 `:4187`
+- 기본 API 연결은 `http://127.0.0.1:3001`
+
 ## Actor Id Guide
 
 실제 UUID는 문서에 고정하지 않고 아래 기준으로 사용합니다.
@@ -159,6 +169,16 @@ npm run build
   - 동일 source staking 보상은 duplicate로 처리
   - `no_sponsor`, `inactive_sponsor`, `zero_reward`, `duplicate`, `conflict`, `failed` 결과를 구분
   - 자동 reversal은 미구현이며 기존 수동 reward reversal 흐름만 유지
+
+## Rank UI 범위
+
+- 좌측 내비게이션에 `직급` 탭이 추가되었습니다.
+- `Ranks` 탭에서 `Qualification 실행`, `Rank Bonus 실행`, run summary, qualification results, account detail drill-down을 제공합니다.
+- `ADMIN`은 qualification/rank bonus 배치 실행과 account detail의 단건 실행이 가능합니다.
+- `READER`는 조회 전용이며 rank 실행 버튼이 노출되지 않습니다.
+- `Calc` 탭에서는 `RANK_QUALIFICATION`, `RANK_BONUS` run summary를 직접 표시하고 rank/rewards drill-down으로 연결합니다.
+- `Accounts` 탭에서는 `직급 보기` 액션으로 `Ranks` 탭 상세 패널로 이동할 수 있습니다.
+- `Reward` 상세 패널은 `RANK_BONUS` metadata를 sanitize된 allowlist 기준으로 표시합니다.
 
 ## Direct Referral Admin Guide
 

@@ -14,6 +14,7 @@ const apiMock = vi.hoisted(() => ({
   getMyBinaryLegs: vi.fn(),
   getMyStakingSummary: vi.fn(),
   getMyRewardsSummary: vi.fn(),
+  getMyRank: vi.fn(),
   getMyWithdrawalBalance: vi.fn(),
 }));
 
@@ -82,7 +83,32 @@ describe("DashboardPage", () => {
       withdrawable_reward_amount_base: "180",
       withdrawn_reward_amount_base: "0",
       daily_reward_amount_base: "350",
+      bonus_reward_amount_base: "30",
       reward_count: 7,
+    });
+    apiMock.getMyRank.mockResolvedValue({
+      account: {
+        id: "account-1",
+        login_id: "member01",
+        display_name: "회원",
+        role: "USER",
+        status: "ACTIVE",
+      },
+      rank_status: {
+        account_id: "account-1",
+        policy_version_id: "policy-1",
+        current_rank_level: 3,
+        qualified_at: "2026-06-30T00:00:00.000Z",
+        maintained_until: null,
+        last_qualification_calc_run_id: "calc-1",
+        last_bonus_calc_run_id: "calc-bonus-1",
+        last_change_type: "PROMOTED",
+        created_at: "2026-06-30T00:00:00.000Z",
+        updated_at: "2026-06-30T00:00:00.000Z",
+      },
+      latest_qualification_result: null,
+      next_rank: { rank_level: 4 },
+      next_rank_progress: [],
     });
     apiMock.getMyWithdrawalBalance.mockResolvedValue({
       daily_reward: {
@@ -116,6 +142,8 @@ describe("DashboardPage", () => {
       expect(screen.getByText("200")).toBeInTheDocument();
       expect(screen.getByText("출금 가능 보상")).toBeInTheDocument();
       expect(screen.getByText("180")).toBeInTheDocument();
+      expect(screen.getByText("현재 직급")).toBeInTheDocument();
+      expect(screen.getByText("3")).toBeInTheDocument();
       expect(screen.getByText("활성 / 대기 건수")).toBeInTheDocument();
       expect(screen.getByText("3 / 2")).toBeInTheDocument();
       expect(screen.getByText(/DAILY 150 \/ BONUS 30/)).toBeInTheDocument();

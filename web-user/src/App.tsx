@@ -5,6 +5,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import NetworkPage from "@/pages/NetworkPage";
 import StakingPage from "@/pages/StakingPage";
 import StakingDetailPage from "@/pages/StakingDetailPage";
+import RankPage from "@/pages/RankPage";
 import RewardsPage from "@/pages/RewardsPage";
 import RewardDetailPage from "@/pages/RewardDetailPage";
 import WithdrawalsPage from "@/pages/WithdrawalsPage";
@@ -55,6 +56,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <StakingDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/rank"
+          element={
+            <PrivateRoute>
+              <RankPage />
             </PrivateRoute>
           }
         />

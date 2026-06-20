@@ -28,12 +28,13 @@ export type WithdrawalSort =
   | "created_at_asc"
   | "completed_at_desc"
   | "completed_at_asc";
+export type SessionRole = "ADMIN" | "READER" | "USER";
 
 export type SessionAccount = {
   id: string;
   login_id: string | null;
   display_name: string | null;
-  role: "USER" | "READER" | "ADMIN";
+  role: SessionRole;
   status: AccountStatus;
   referral_code: string | null;
   sponsor_account_id: string | null;
@@ -196,6 +197,13 @@ export type RewardMetadata = Partial<{
   daily_interest_bps_snapshot: string;
   duration_days_snapshot: number;
   denominator: string;
+  formula_version: string;
+  organization_scope: string;
+  rank_level: number;
+  effective_bonus_bps: string;
+  base_daily_reward_amount_base: string;
+  qualification_calc_run_id: string;
+  qualification_result_id: string;
   original_reward_id: string;
   original_source_reference: string;
   reason: string;
@@ -270,7 +278,91 @@ export type RewardSummary = {
   withdrawable_reward_amount_base: string;
   withdrawn_reward_amount_base: string;
   daily_reward_amount_base: string;
+  bonus_reward_amount_base?: string;
   reward_count: number;
+};
+
+export type RankProgressItem = {
+  metric: "direct_active_referral_count" | "weak_leg_volume_base";
+  current: number | string;
+  required: number | string;
+  met: boolean;
+};
+
+export type RankStatusSummary = {
+  account_id: string;
+  policy_version_id: string;
+  current_rank_level: number | null;
+  qualified_at: string | null;
+  maintained_until: string | null;
+  last_qualification_calc_run_id: string | null;
+  last_bonus_calc_run_id: string | null;
+  last_change_type: "INITIAL" | "PROMOTED" | "MAINTAINED" | "DEMOTED" | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type RankQualificationResult = {
+  id: string;
+  calc_run_id: string;
+  account_id: string;
+  policy_version_id: string;
+  calculation_date: string;
+  period_from: string;
+  period_to: string;
+  previous_rank_level: number | null;
+  qualified_rank_level: number | null;
+  applied_rank_level: number | null;
+  result_status: "QUALIFIED" | "UNQUALIFIED" | "DEMOTION_CANDIDATE" | "NO_CHANGE";
+  personal_active_stake_amount_base: string;
+  personal_cumulative_stake_amount_base: string;
+  direct_referral_count: number;
+  direct_active_referral_count: number;
+  left_leg_volume_base: string;
+  right_leg_volume_base: string;
+  weak_leg_volume_base: string;
+  strong_leg_volume_base: string;
+  downline_daily_reward_amount_base: string;
+  qualification_snapshot?: Record<string, unknown>;
+  created_at: string | null;
+};
+
+export type RankHistoryItem = {
+  id: string;
+  account_id: string;
+  policy_version_id: string;
+  calc_run_id: string;
+  qualification_result_id: string | null;
+  effective_date: string;
+  previous_rank_level: number | null;
+  calculated_rank_level: number | null;
+  final_rank_level: number | null;
+  change_type: "INITIAL" | "PROMOTED" | "MAINTAINED" | "DEMOTED";
+  personal_active_stake_amount_base: string;
+  personal_cumulative_stake_amount_base: string;
+  direct_referral_count: number;
+  direct_active_referral_count: number;
+  left_leg_volume_base: string;
+  right_leg_volume_base: string;
+  weak_leg_volume_base: string;
+  strong_leg_volume_base: string;
+  downline_daily_reward_amount_base: string;
+  qualification_snapshot?: Record<string, unknown>;
+  created_at: string | null;
+};
+
+export type MyRankResponse = {
+  account: {
+    id: string;
+    login_id: string | null;
+    display_name: string | null;
+    role: SessionRole;
+    status: AccountStatus;
+  };
+  rank_status: RankStatusSummary | null;
+  latest_qualification_result: RankQualificationResult | null;
+  next_rank: { rank_level: number } | null;
+  next_rank_progress: RankProgressItem[];
 };
 
 export type WithdrawalBalanceBucket = {
@@ -659,6 +751,35 @@ export const api = {
       method: "GET",
       accessToken,
     });
+  },
+  getMyRank(accessToken?: string | null) {
+    return request<MyRankResponse>("/api/me/rank", {
+      method: "GET",
+      accessToken,
+    });
+  },
+  getMyRankHistory(query: { page?: number; limit?: number } = {}, accessToken?: string | null) {
+    return request<{ items: RankHistoryItem[]; page: number; limit: number; total: number }>(
+      `/api/me/rank-history${params(query as Record<string, string | number | undefined>)}`,
+      {
+        method: "GET",
+        accessToken,
+      }
+    );
+  },
+  getMyRankBonusRewards(query: { page?: number; limit?: number; sort?: RewardSort } = {}, accessToken?: string | null) {
+    return request<RewardListResponse>(
+      `/api/me/rewards${params({
+        reward_type: "RANK_BONUS",
+        page: query.page ?? 1,
+        limit: query.limit ?? 20,
+        sort: query.sort ?? "reward_date_desc",
+      })}`,
+      {
+        method: "GET",
+        accessToken,
+      }
+    );
   },
   getMyWithdrawalBalance(accessToken?: string | null) {
     return request<WithdrawalBalance>("/api/me/withdrawal-balance", {

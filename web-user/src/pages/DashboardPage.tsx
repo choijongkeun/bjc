@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Copy, FolderClock, Gift, GitBranch, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api, getErrorMessage, type BinaryLegsResponse, type RewardSummary, type StakingSummary, type WithdrawalBalance } from "@/lib/api";
+import { api, getErrorMessage, type BinaryLegsResponse, type MyRankResponse, type RewardSummary, type StakingSummary, type WithdrawalBalance } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { formatRewardAmountBase } from "@/lib/rewards";
 import { formatWithdrawalAmountBase } from "@/lib/withdrawals";
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [legs, setLegs] = useState<BinaryLegsResponse | null>(null);
   const [stakingSummary, setStakingSummary] = useState<StakingSummary | null>(null);
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
+  const [rank, setRank] = useState<MyRankResponse | null>(null);
   const [withdrawalBalance, setWithdrawalBalance] = useState<WithdrawalBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
@@ -30,11 +31,12 @@ export default function DashboardPage() {
     async function load() {
       try {
         setLoading(true);
-        const [meResult, legsResult, stakingSummaryResult, rewardSummaryResult, withdrawalBalanceResult] = await Promise.all([
+        const [meResult, legsResult, stakingSummaryResult, rewardSummaryResult, rankResult, withdrawalBalanceResult] = await Promise.all([
           api.me(accessToken),
           api.getMyBinaryLegs(accessToken),
           api.getMyStakingSummary(accessToken),
           api.getMyRewardsSummary(accessToken),
+          api.getMyRank(accessToken),
           api.getMyWithdrawalBalance(accessToken),
         ]);
         if (cancelled) return;
@@ -42,6 +44,7 @@ export default function DashboardPage() {
         setLegs(legsResult);
         setStakingSummary(stakingSummaryResult);
         setRewardSummary(rewardSummaryResult);
+        setRank(rankResult);
         setWithdrawalBalance(withdrawalBalanceResult);
         setError(null);
       } catch (loadError) {
@@ -125,6 +128,14 @@ export default function DashboardPage() {
                     accent: "text-amber-200",
                   },
                   {
+                    label: "현재 직급",
+                    value:
+                      rank?.rank_status?.current_rank_level === null || rank?.rank_status?.current_rank_level === undefined
+                        ? "-"
+                        : String(rank.rank_status.current_rank_level),
+                    accent: "text-fuchsia-200",
+                  },
+                  {
                     label: "활성 / 대기 건수",
                     value: stakingSummary ? `${stakingSummary.active_count} / ${stakingSummary.pending_count}` : "...",
                     accent: "text-slate-100",
@@ -179,6 +190,16 @@ export default function DashboardPage() {
             description="상품 목록, 내 스테이킹 목록, 상세 상태 확인 화면으로 이동합니다."
             icon={<FolderClock className="h-5 w-5" />}
             href="/staking"
+          />
+          <ActionCard
+            title="직급 보기"
+            description={
+              rank?.next_rank?.rank_level !== null && rank?.next_rank?.rank_level !== undefined
+                ? `현재 ${rank?.rank_status?.current_rank_level ?? "-"} / 다음 ${rank.next_rank.rank_level}`
+                : "현재 직급, 다음 직급 조건, 직급 보상 내역으로 이동합니다."
+            }
+            icon={<FolderClock className="h-5 w-5" />}
+            href="/rank"
           />
           <ActionCard
             title="보상 보기"

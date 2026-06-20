@@ -125,6 +125,13 @@ export function getVisibleRewardMetadataEntries(metadata?: RewardMetadata | null
     { label: "bps snapshot", value: metadata.daily_interest_bps_snapshot },
     { label: "기간 snapshot", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
     { label: "denominator", value: metadata.denominator },
+    { label: "formula version", value: metadata.formula_version },
+    { label: "organization scope", value: metadata.organization_scope },
+    { label: "rank level", value: metadata.rank_level },
+    { label: "effective bonus bps", value: metadata.effective_bonus_bps },
+    { label: "base daily reward", value: metadata.base_daily_reward_amount_base },
+    { label: "qualification calc run", value: metadata.qualification_calc_run_id },
+    { label: "qualification result", value: metadata.qualification_result_id },
   ];
 
   return items

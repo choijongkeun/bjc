@@ -94,7 +94,7 @@ export type AdminStakingListResponse = {
 export type LedgerEvent = {
   id: string;
   account_id: string;
-  product_id: string;
+  product_id: string | null;
   policy_version_id: string;
   calc_run_id: string | null;
   event_time: string;
@@ -283,9 +283,15 @@ export type RewardMetadata = Partial<{
   duration_days_snapshot: number;
   denominator: string;
   formula_version: string;
+  organization_scope: string;
   source_principal_amount_base: string;
   direct_referral_rate_bps: string;
   referral_depth: number;
+  rank_level: number;
+  effective_bonus_bps: string;
+  base_daily_reward_amount_base: string;
+  qualification_calc_run_id: string;
+  qualification_result_id: string;
   original_reward_id: string;
   original_source_reference: string;
   reason: string;
@@ -431,6 +437,124 @@ export type DirectReferralSingleRunResponse = {
   result_type: "created" | "duplicate" | "no_sponsor" | "inactive_sponsor" | "zero_reward" | "conflict";
   reward_id: string | null;
   existing_reward_id: string | null;
+};
+
+export type RankProgressItem = {
+  metric: "direct_active_referral_count" | "weak_leg_volume_base";
+  current: number | string;
+  required: number | string;
+  met: boolean;
+};
+
+export type RankStatusSummary = {
+  account_id: string;
+  policy_version_id: string;
+  current_rank_level: number | null;
+  qualified_at: string | null;
+  maintained_until: string | null;
+  last_qualification_calc_run_id: string | null;
+  last_bonus_calc_run_id: string | null;
+  last_change_type: "INITIAL" | "PROMOTED" | "MAINTAINED" | "DEMOTED" | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type RankQualificationResult = {
+  id: string;
+  calc_run_id: string;
+  account_id: string;
+  policy_version_id: string;
+  calculation_date: string;
+  period_from: string;
+  period_to: string;
+  previous_rank_level: number | null;
+  qualified_rank_level: number | null;
+  applied_rank_level: number | null;
+  result_status: "QUALIFIED" | "UNQUALIFIED" | "DEMOTION_CANDIDATE" | "NO_CHANGE";
+  personal_active_stake_amount_base: string;
+  personal_cumulative_stake_amount_base: string;
+  direct_referral_count: number;
+  direct_active_referral_count: number;
+  left_leg_volume_base: string;
+  right_leg_volume_base: string;
+  weak_leg_volume_base: string;
+  strong_leg_volume_base: string;
+  downline_daily_reward_amount_base: string;
+  qualification_snapshot?: Record<string, unknown>;
+  created_at: string | null;
+};
+
+export type RankHistoryItem = {
+  id: string;
+  account_id: string;
+  policy_version_id: string;
+  calc_run_id: string;
+  qualification_result_id: string | null;
+  effective_date: string;
+  previous_rank_level: number | null;
+  calculated_rank_level: number | null;
+  final_rank_level: number | null;
+  change_type: "INITIAL" | "PROMOTED" | "MAINTAINED" | "DEMOTED";
+  personal_active_stake_amount_base: string;
+  personal_cumulative_stake_amount_base: string;
+  direct_referral_count: number;
+  direct_active_referral_count: number;
+  left_leg_volume_base: string;
+  right_leg_volume_base: string;
+  weak_leg_volume_base: string;
+  strong_leg_volume_base: string;
+  downline_daily_reward_amount_base: string;
+  qualification_snapshot?: Record<string, unknown>;
+  created_at: string | null;
+};
+
+export type RankReadModel = {
+  account: RewardAccountSummary & {
+    role: SessionRole;
+    status: AccountStatus;
+  };
+  rank_status: RankStatusSummary | null;
+  latest_qualification_result: RankQualificationResult | null;
+  next_rank: { rank_level: number } | null;
+  next_rank_progress: RankProgressItem[];
+};
+
+export type RankQualificationRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  initial_count: number;
+  promoted_count: number;
+  maintained_count: number;
+  demotion_deferred_count: number;
+  unqualified_count: number;
+  failed_count: number;
+  status: string;
+};
+
+export type RankBonusRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  no_rank_skip_count: number;
+  no_qualification_skip_count: number;
+  zero_base_skip_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_base_daily_reward_amount_base: string;
+  total_rank_bonus_amount_base: string;
+  status: string;
+};
+
+export type RankBonusSingleRunResponse = {
+  calc_run_id: string;
+  status: string;
+  result_type: "created" | "duplicate" | "no_rank" | "no_qualification" | "zero_base" | "zero_reward" | "conflict";
+  reward_id: string | null;
+  existing_reward_id: string | null;
+  base_daily_reward_amount_base: string;
+  rank_bonus_amount_base: string;
 };
 
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
@@ -898,11 +1022,59 @@ export const api = {
       actorId,
       body: JSON.stringify(body),
     }),
+  runRankQualification: (actorId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<RankQualificationRunSummary>(`/api/admin/rewards/rank-qualification/run`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runRankQualificationForAccount: (
+    actorId: string,
+    accountId: string,
+    body: { policy_version_id: string; calculation_date: string }
+  ) =>
+    request<{ calc_run: RewardCalcRunSummary | null; qualification_result: RankQualificationResult }>(
+      `/api/admin/accounts/${accountId}/rank-qualification`,
+      {
+        method: "POST",
+        actorId,
+        body: JSON.stringify(body),
+      }
+    ),
+  runRankBonus: (actorId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<RankBonusRunSummary>(`/api/admin/rewards/rank-bonus/run`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runRankBonusForAccount: (actorId: string, accountId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<RankBonusSingleRunResponse>(`/api/admin/accounts/${accountId}/rank-bonus`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
   runDirectReferralForStaking: (actorId: string, stakingId: string, body?: DirectReferralSingleRunRequest) =>
     request<DirectReferralSingleRunResponse>(`/api/admin/stakings/${stakingId}/direct-referral-calculate`, {
       method: "POST",
       actorId,
       body: JSON.stringify(body ?? {}),
+    }),
+  getAccountRank: (actorId: string, accountId: string) =>
+    request<RankReadModel>(`/api/admin/accounts/${accountId}/rank`, { method: "GET", actorId }),
+  getAccountRankHistory: (actorId: string, accountId: string, query: { page?: number; limit?: number }) =>
+    request<{ account: RewardAccountSummary; items: RankHistoryItem[]; page: number; limit: number; total: number }>(
+      `/api/admin/accounts/${accountId}/rank-history${params(query as any)}`,
+      { method: "GET", actorId }
+    ),
+  getRankCalcRunResults: (actorId: string, calcRunId: string, query: { page?: number; limit?: number }) =>
+    request<{ calc_run: RewardCalcRunSummary; items: RankQualificationResult[]; page: number; limit: number; total: number }>(
+      `/api/admin/calc-runs/${calcRunId}/rank-results${params(query as any)}`,
+      { method: "GET", actorId }
+    ),
+  getRankCalcRunSummary: (actorId: string, calcRunId: string) =>
+    request<RankQualificationRunSummary | RankBonusRunSummary>(`/api/admin/calc-runs/${calcRunId}/summary`, {
+      method: "GET",
+      actorId,
     }),
   reverseAdminReward: (actorId: string, rewardId: string, body: { reason: string }) =>
     request<{ reward: AdminRewardDetail }>(`/api/admin/rewards/${rewardId}/reverse`, {

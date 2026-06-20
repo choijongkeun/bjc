@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, PauseCircle, Play, ShieldAlert } from "lucide-react";
-import { api, type AuditLog, type CalcRun, type SessionRole, type SettlementItem } from "@/lib/api";
+import {
+  api,
+  type AuditLog,
+  type CalcRun,
+  type RankBonusRunSummary,
+  type RankQualificationRunSummary,
+  type SessionRole,
+  type SettlementItem,
+} from "@/lib/api";
 import { formatTokenAmount } from "@/lib/amount";
+import { RankRunSummary } from "@/components/ranks/RankRunSummary";
 import { Button, Card, FeedbackState, JsonPanel, Pagination, StatusBadge, TableShell } from "@/components/ui";
 
 export function CalcSettlementTab({
@@ -10,12 +19,14 @@ export function CalcSettlementTab({
   selectedCalcRunId,
   onSelectCalcRunId,
   onOpenRewards,
+  onOpenRanks,
 }: {
   actorId: string;
   role: SessionRole;
   selectedCalcRunId: string | null;
   onSelectCalcRunId: (calcRunId: string | null) => void;
   onOpenRewards: (calcRunId: string) => void;
+  onOpenRanks: (target: { calcRunId?: string | null; accountId?: string | null }) => void;
 }) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -25,6 +36,8 @@ export function CalcSettlementTab({
   const [settlements, setSettlements] = useState<SettlementItem[]>([]);
   const [settlementTotal, setSettlementTotal] = useState(0);
   const [runMetrics, setRunMetrics] = useState<Record<string, DirectRunAuditSummary>>({});
+  const [rankSummary, setRankSummary] = useState<RankQualificationRunSummary | RankBonusRunSummary | null>(null);
+  const [rankSummaryError, setRankSummaryError] = useState<string | null>(null);
   const [form, setForm] = useState({ policy_id: "", run_type: "DAILY_REWARD", run_date: new Date().toISOString().slice(0, 10) });
   const [failReason, setFailReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +78,39 @@ export function CalcSettlementTab({
   useEffect(() => {
     if (selected) void loadSettlements(selected.id);
   }, [selected?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRankSummary() {
+      if (!selected || (selected.run_type !== "RANK_QUALIFICATION" && selected.run_type !== "RANK_BONUS")) {
+        setRankSummary(null);
+        setRankSummaryError(null);
+        return;
+      }
+
+      try {
+        const result = await api.getRankCalcRunSummary(actorId, selected.id);
+        if (cancelled) {
+          return;
+        }
+        setRankSummary(result);
+        setRankSummaryError(null);
+      } catch (error: any) {
+        if (cancelled) {
+          return;
+        }
+        setRankSummary(null);
+        setRankSummaryError(error.message ?? "rank run summary를 불러오지 못했습니다.");
+      }
+    }
+
+    void loadRankSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorId, selected]);
 
   useEffect(() => {
     if (!selectedCalcRunId) {
@@ -190,12 +236,31 @@ export function CalcSettlementTab({
                       <td className="tabular text-right">{metrics?.total_reward_amount_base ?? "-"}</td>
                       <td className="text-slate-500">{run.error_message ?? "-"}</td>
                       <td>
-                        <Button variant="ghost" onClick={(event) => {
-                          event.stopPropagation();
-                          onOpenRewards(run.id);
-                        }}>
-                          보상 보기
-                        </Button>
+                        {run.run_type === "RANK_BONUS" ? (
+                          <Button variant="ghost" onClick={(event) => {
+                            event.stopPropagation();
+                            onOpenRewards(run.id);
+                          }}>
+                            보상 보기
+                          </Button>
+                        ) : run.run_type === "RANK_QUALIFICATION" ? (
+                          <Button
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onOpenRanks({ calcRunId: run.id });
+                            }}
+                          >
+                            결과 보기
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" onClick={(event) => {
+                            event.stopPropagation();
+                            onOpenRewards(run.id);
+                          }}>
+                            보상 보기
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -234,6 +299,13 @@ export function CalcSettlementTab({
               <div className="font-mono text-xs text-slate-400">{selected.id}</div>
               <div>run_type: {selected.run_type}</div>
               <div>policy_id: <span className="font-mono text-xs text-slate-400">{selected.policy_version_id}</span></div>
+              {rankSummary ? (
+                <RankRunSummary
+                  summary={rankSummary}
+                  onOpenRewards={selected.run_type === "RANK_BONUS" ? onOpenRewards : undefined}
+                />
+              ) : null}
+              {rankSummaryError ? <FeedbackState title="rank summary 조회 실패" description={rankSummaryError} tone="error" /> : null}
               {runMetrics[selected.id] ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>created_count: {runMetrics[selected.id].created_count}</div>
@@ -245,9 +317,19 @@ export function CalcSettlementTab({
               {selected.status === "FINALIZED" ? <FeedbackState title="FINALIZED 잠금" description="정산이 확정된 calc_run은 settlement_items 수정이 불가합니다." /> : null}
             </div>
             <div className="mt-4">
-              <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
-                rewards 탭 이동
-              </Button>
+              {selected.run_type === "RANK_BONUS" ? (
+                <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                  rewards 탭 이동
+                </Button>
+              ) : selected.run_type === "RANK_QUALIFICATION" ? (
+                <Button variant="secondary" onClick={() => onOpenRanks({ calcRunId: selected.id })}>
+                  ranks 탭 이동
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                  rewards 탭 이동
+                </Button>
+              )}
             </div>
             {role === "ADMIN" ? (
               <div className="mt-4 space-y-3">

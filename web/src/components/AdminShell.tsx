@@ -1,15 +1,27 @@
 import { Link } from "react-router-dom";
-import { Activity, ClipboardList, Coins, FileClock, Gift, GitBranch, Layers3, LogOut, Package2, ShieldCheck, Users2, Wallet } from "lucide-react";
+import { Activity, ClipboardList, Coins, FileClock, Gift, GitBranch, Layers3, LogOut, Package2, ShieldCheck, TrendingUp, Users2, Wallet } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button, cn } from "@/components/ui";
 
-type AdminTab = "policies" | "stakings" | "ledger" | "calc" | "rewards" | "withdrawals" | "reports" | "audit" | "accounts" | "network";
+type AdminTab =
+  | "policies"
+  | "stakings"
+  | "ledger"
+  | "calc"
+  | "rewards"
+  | "withdrawals"
+  | "reports"
+  | "audit"
+  | "accounts"
+  | "network"
+  | "ranks";
 
 const navItems = [
   { key: "policies", label: "정책/상품", icon: Layers3 },
   { key: "stakings", label: "스테이킹 관리", icon: Coins },
   { key: "accounts", label: "회원", icon: Users2 },
   { key: "network", label: "추천/바이너리", icon: GitBranch },
+  { key: "ranks", label: "직급", icon: TrendingUp },
   { key: "ledger", label: "원장 이벤트", icon: Activity },
   { key: "calc", label: "계산/정산", icon: Package2 },
   { key: "rewards", label: "Rewards", icon: Gift },

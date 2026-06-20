@@ -58,6 +58,7 @@ export function AccountsTab({
   onOpenStakings,
   onOpenRewards,
   onOpenWithdrawals,
+  onOpenRanks,
 }: {
   actorId: string;
   role: SessionRole;
@@ -67,6 +68,7 @@ export function AccountsTab({
   onOpenStakings: (accountId: string) => void;
   onOpenRewards: (accountId: string) => void;
   onOpenWithdrawals: (accountId: string) => void;
+  onOpenRanks: (accountId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -363,6 +365,9 @@ export function AccountsTab({
                 </Button>
                 <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
                   보상 내역 보기
+                </Button>
+                <Button variant="secondary" onClick={() => onOpenRanks(selected.id)}>
+                  직급 보기
                 </Button>
                 <Button variant="secondary" onClick={() => onOpenWithdrawals(selected.id)}>
                   출금 내역 보기

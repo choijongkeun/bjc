@@ -13,12 +13,14 @@ import { AccountStakingService } from "./services/accountStakingService.js";
 import { AccountRewardService } from "./services/accountRewardService.js";
 import { DailyRewardService } from "./services/dailyRewardService.js";
 import { DirectReferralRewardService } from "./services/directReferralRewardService.js";
+import { RankBonusService } from "./services/rankBonusService.js";
 import { RankQualificationService } from "./services/rankQualificationService.js";
 import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
-import { unauthorized, validationError } from "./domain/errors.js";
+import { notFound, unauthorized, validationError } from "./domain/errors.js";
+import { getCalcRunById } from "./repos/calcRunsRepo.js";
 
 const app = express();
 const allowedOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -52,6 +54,7 @@ const accountStakingService = new AccountStakingService(pool);
 const accountRewardService = new AccountRewardService(pool);
 const dailyRewardService = new DailyRewardService(pool);
 const directReferralRewardService = new DirectReferralRewardService(pool);
+const rankBonusService = new RankBonusService(pool);
 const rankQualificationService = new RankQualificationService(pool);
 const rewardWithdrawalService = new RewardWithdrawalService(pool);
 const requireSession = sessionAuthMiddleware(authService);
@@ -1395,6 +1398,50 @@ app.post("/api/admin/accounts/:accountId/rank-qualification", async (req, res, n
   }
 });
 
+app.post("/api/admin/rewards/rank-bonus/run", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await rankBonusService.runBatch({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/accounts/:accountId/rank-bonus", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await rankBonusService.runForAccount({
+      actor_account_id,
+      account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/api/admin/stakings/:stakingId/direct-referral-calculate", async (req, res, next) => {
   try {
     const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
@@ -1467,6 +1514,46 @@ app.get("/api/admin/calc-runs/:calcRunId/rank-results", async (req, res, next) =
       limit: query.limit,
       total: result.total
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/calc-runs/:calcRunId/summary", async (req, res, next) => {
+  try {
+    const calc_run_id = z.string().trim().min(1).parse(req.params.calcRunId);
+    const actor_account_id = requireActorId(req);
+    const conn = await pool.getConnection();
+    let runType: string | null = null;
+    try {
+      const calcRun = await getCalcRunById(conn, calc_run_id);
+      runType = calcRun?.run_type ?? null;
+    } finally {
+      conn.release();
+    }
+
+    if (!runType) {
+      throw notFound("calc_run not found", { calc_run_id });
+    }
+
+    const summary =
+      runType === "RANK_QUALIFICATION"
+        ? await rankQualificationService.getCalcRunSummary({
+            actor_account_id,
+            calc_run_id
+          })
+        : runType === "RANK_BONUS"
+          ? await rankBonusService.getCalcRunSummary({
+              actor_account_id,
+              calc_run_id
+            })
+          : (() => {
+              throw validationError("calc_run summary is only supported for rank runs", {
+                calc_run_id,
+                run_type: runType
+              });
+            })();
+    res.json(summary);
   } catch (err) {
     next(err);
   }

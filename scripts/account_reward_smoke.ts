@@ -812,6 +812,7 @@ async function main() {
           summaryAfterReversal.withdrawable_reward_amount_base === "9000" &&
           summaryAfterReversal.daily_reward_amount_base === "9000" &&
           summaryAfterReversal.reward_count === 3,
+        message: JSON.stringify(summaryAfterReversal),
       });
 
       currentStep = "post reversal calc run";

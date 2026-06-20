@@ -3,8 +3,8 @@
 ## 1. Goal
 
 - 현재 BJC 저장소에 이미 존재하는 `rank_rules`, `RANK_BONUS` enum, 추천/바이너리 구조를 기반으로 직급 산정과 직급 보상 구조를 고정한다.
-- 현재 단계에는 `RANK_QUALIFICATION` runtime repository/service/API, unit test, smoke, 회귀 검증까지 포함한다.
-- `RANK_BONUS` runtime service, User/Admin UI, 스케줄러는 이번 단계 범위에서 제외한다.
+- 현재 단계에는 `RANK_QUALIFICATION`, `RANK_BONUS` runtime repository/service/API, User/Admin rank UI, unit test, smoke, 회귀 검증까지 포함한다.
+- 자동 스케줄러와 미확정 정책은 이번 단계 범위에서 제외한다.
 
 ## 2. Scope
 
@@ -21,8 +21,6 @@
 
 제외:
 
-- `RANK_BONUS` runtime service
-- 신규 User/Admin 화면
 - 자동 배치 스케줄러
 - `CONTRIBUTION`
 - `SIDECAR`
@@ -42,15 +40,25 @@
 - `src/services/rankQualificationService.ts`
 - `src/services/rankQualificationService.test.ts`
 - `scripts/rank_qualification_smoke.ts`
+- `src/domain/rankBonus.ts`
+- `src/repos/rankBonusMetricsRepo.ts`
+- `src/services/rankBonusService.ts`
+- `src/services/rankBonusService.test.ts`
+- `scripts/rank_bonus_smoke.ts`
 - `src/server.ts` rank routes
 - `shared/bjc-types.ts`, `src/repos/ledgerEventsRepo.ts`, `src/services/ledgerEventsCsv.ts`
+- `web/src/components/tabs/RanksTab.tsx`
+- `web/src/components/ranks/`
+- `web-user/src/pages/RankPage.tsx`
+- `web-user/src/components/RankProgressCards.tsx`
+- `web-user/src/components/RankHistoryTable.tsx`
 
 미구현 유지:
 
-- `RANK_BONUS` reward 생성
-- `RANK_BONUS` ledger event 생성
 - 자동 demotion
-- 신규 rank UI
+- strong leg cap / carry-over / volume depletion
+- repeated weekly/monthly payout cadence
+- 실제 블록체인 송금
 
 ## 3. Source Analysis
 
@@ -510,10 +518,20 @@ week/month 지급 정책은 미확정이다.
 - `GET /api/admin/accounts/:accountId/rank-history`
 - `GET /api/admin/calc-runs/:calcRunId/rank-results`
 
-미구현 유지:
+구현 완료:
 
 - `POST /api/admin/rewards/rank-bonus/run`
+- `POST /api/admin/accounts/:accountId/rank-bonus`
+- `GET /api/admin/calc-runs/:calcRunId/summary`
 - `GET /api/me/rewards?reward_type=RANK_BONUS`
+
+UI 연결:
+
+- Admin:
+  - `Ranks` 탭에서 qualification 실행 / rank bonus 실행 / run summary / qualification results / account detail drill-down
+- User:
+  - `/rank`에서 현재 직급, 다음 직급 조건, 최근 rank history, 최근 `RANK_BONUS` rewards 표시
+  - `UserShell`과 Dashboard에서 rank 이동 경로 제공
 
 ## 20. Risks
 
@@ -564,7 +582,9 @@ week/month 지급 정책은 미확정이다.
 - `npm test` PASS
 - `npm run build` PASS
 - `BJC_SMOKE_BASE_URL=http://127.0.0.1:3001 npm run smoke:rank-qualification` PASS
+- `BJC_SMOKE_BASE_URL=<latest-server> npm run smoke:rank-bonus` PASS
 - qualification은 reward / ledger 미생성 확인
+- rank bonus는 reward / ledger 생성, duplicate/conflict, summary/BONUS bucket 반영 확인
 - cleanup 후 fixture row 0 확인
 - `ledger_events.product_id` nullable read-model 회귀 테스트 PASS
 

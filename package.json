@@ -9,7 +9,7 @@
     "start:api": "npm start",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "preflight:smoke": "node scripts/run_with_env.mjs BJC_SMOKE_BASE_URL=http://127.0.0.1:3001 -- tsx scripts/smoke_preflight.ts",
+    "preflight:smoke": "node scripts/run_with_env.mjs -- tsx scripts/smoke_preflight.ts",
     "smoke:mysql": "tsx scripts/mysql_smoke.ts",
     "smoke:member": "tsx scripts/member_referral_binary_smoke.ts",
     "smoke:staking": "tsx scripts/account_staking_smoke.ts",
@@ -17,7 +17,8 @@
     "smoke:withdrawal": "tsx scripts/reward_withdrawal_smoke.ts",
     "smoke:direct-referral": "tsx scripts/direct_referral_reward_smoke.ts",
     "smoke:rank-qualification": "tsx scripts/rank_qualification_smoke.ts",
-    "smoke:all": "npm run preflight:smoke && npm run smoke:member && npm run smoke:staking && npm run smoke:reward && npm run smoke:withdrawal && npm run smoke:direct-referral && npm run smoke:rank-qualification"
+    "smoke:rank-bonus": "tsx scripts/rank_bonus_smoke.ts",
+    "smoke:all": "npm run preflight:smoke && npm run smoke:member && npm run smoke:staking && npm run smoke:reward && npm run smoke:withdrawal && npm run smoke:direct-referral && npm run smoke:rank-qualification && npm run smoke:rank-bonus"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",

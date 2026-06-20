@@ -27,6 +27,16 @@ cd web-user
 npm run build
 ```
 
+production-like preview:
+
+```bash
+cd web-user
+npm run preview:bjc
+```
+
+- 기본 사용자 preview 포트는 `:4188`
+- 기본 API 연결은 `http://127.0.0.1:3001`
+
 ## 테스트
 
 ```bash
@@ -66,6 +76,7 @@ npm run dev
 - `/login`
 - `/register`
 - `/dashboard`
+- `/rank`
 - `/staking`
 - `/staking/:stakingId`
 - `/rewards`
@@ -86,6 +97,7 @@ npm run dev
 - 내 스테이킹 목록
 - 내 스테이킹 상세
 - 내 Rewards 요약/목록/상세
+- 내 Rank 현재 상태/다음 직급 조건/직급 이력/최근 `RANK_BONUS`
 - 내 Withdrawals 잔액/미리보기/신청/목록/상세
 - `REQUESTED` 출금 취소
 - 스테이킹 상세의 rewards 섹션
@@ -110,8 +122,17 @@ npm run dev
 - Rewards 화면은 `GET /api/me/rewards`, `GET /api/me/rewards/:rewardId`, `GET /api/me/stakings/:stakingId/rewards`를 사용합니다.
 - 금액은 모두 string/base amount로 유지하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
 - Rewards 요약 카드의 `출금 가능 보상`, `출금 완료 보상`은 `/withdrawals` 화면으로 연결됩니다.
+- Rewards 요약 카드의 `BONUS 누적`에는 `DIRECT_REFERRAL`과 `RANK_BONUS`가 함께 반영됩니다.
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급합니다.
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 변경될 수 있습니다.
+
+## Rank 참고
+
+- `/rank` 화면은 `GET /api/me/rank`, `GET /api/me/rank-history`, `GET /api/me/rewards?reward_type=RANK_BONUS`를 함께 사용합니다.
+- 현재 직급, 승급일, 마지막 계산일, 다음 직급, 조건별 current/required/met, 최근 rank history, 최근 `RANK_BONUS`를 표시합니다.
+- 금액은 모두 string/base amount formatter를 사용하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
+- reward 상세는 기존 `/rewards/:rewardId`로 연결되며 BONUS 출금 가능 잔액에도 자동 반영됩니다.
+- 내부 qualification snapshot 전체는 노출하지 않고 sanitize된 metadata만 보여줍니다.
 
 ## Withdrawals 참고
 

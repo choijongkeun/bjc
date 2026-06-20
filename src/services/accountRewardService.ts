@@ -34,9 +34,15 @@ const USER_METADATA_KEYS = new Set([
   "duration_days_snapshot",
   "denominator",
   "formula_version",
+  "organization_scope",
   "source_principal_amount_base",
   "direct_referral_rate_bps",
   "referral_depth",
+  "rank_level",
+  "effective_bonus_bps",
+  "base_daily_reward_amount_base",
+  "qualification_calc_run_id",
+  "qualification_result_id",
   "original_reward_id",
   "original_source_reference",
   "reason",
@@ -67,6 +73,20 @@ function toApiDateOnly(value: unknown): string | null {
 }
 
 export function sanitizeRewardMetadata(value: unknown): Record<string, unknown> {
+  if (value instanceof Uint8Array) {
+    try {
+      return sanitizeRewardMetadata(JSON.parse(Buffer.from(value).toString("utf8")) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      return sanitizeRewardMetadata(JSON.parse(value) as unknown);
+    } catch {
+      return {};
+    }
+  }
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }

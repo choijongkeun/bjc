@@ -307,9 +307,10 @@ rank SQL smoke 결과:
   - smoke 시작 전/후 총 row count가 동일함
 - 이후 runtime 상태:
   - `RANK_QUALIFICATION` service/API 구현 완료
+  - `RANK_BONUS` service/API 구현 완료
   - qualification은 reward / ledger를 생성하지 않음
-  - `RANK_BONUS` service/API 미구현
-  - User/Admin 직급 UI 미구현
+  - rank bonus는 `account_rewards` / `ledger_events`를 생성함
+  - User/Admin 직급 UI 구현 완료
 - qualification runtime 반영 파일:
   - `src/domain/rankQualification.ts`
   - `src/repos/rankRulesRepo.ts`
@@ -335,3 +336,4 @@ rank SQL smoke 결과:
 1. `RANK_BONUS` runtime 구현 단계에서 qualification snapshot을 reward/ledger로 연결한다.
 2. Admin/User rank UI를 붙이기 전 rank read API를 화면 DTO에 연결한다.
 3. 원격 운영 DB 반영 시에도 동일한 identifier 길이 제약이 없도록 현재 0007 파일 기준으로 적용한다.
+4. 현재 구현된 `RANK_BONUS` runtime은 0007의 nullable `product_id`와 `RANK_QUALIFICATION` enum을 전제로 하므로, 배포 시 schema drift 여부를 먼저 확인한다.

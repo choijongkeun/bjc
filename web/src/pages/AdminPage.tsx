@@ -7,15 +7,39 @@ import { AccountsTab } from "@/components/tabs/AccountsTab";
 import { NetworkTab } from "@/components/tabs/NetworkTab";
 import { LedgerEventsTab } from "@/components/tabs/LedgerEventsTab";
 import { CalcSettlementTab } from "@/components/tabs/CalcSettlementTab";
+import { RanksTab } from "@/components/tabs/RanksTab";
 import { RewardsTab } from "@/components/tabs/RewardsTab";
 import { WithdrawalsTab } from "@/components/tabs/WithdrawalsTab";
 import { ReportsTab } from "@/components/tabs/ReportsTab";
 import { AuditLogsTab } from "@/components/tabs/AuditLogsTab";
 import { useSessionStore } from "@/store/sessionStore";
 
-type TabKey = "policies" | "stakings" | "accounts" | "network" | "ledger" | "calc" | "rewards" | "withdrawals" | "reports" | "audit";
+type TabKey =
+  | "policies"
+  | "stakings"
+  | "accounts"
+  | "network"
+  | "ledger"
+  | "calc"
+  | "ranks"
+  | "rewards"
+  | "withdrawals"
+  | "reports"
+  | "audit";
 
-const allowedTabs = new Set<TabKey>(["policies", "stakings", "accounts", "network", "ledger", "calc", "rewards", "withdrawals", "reports", "audit"]);
+const allowedTabs = new Set<TabKey>([
+  "policies",
+  "stakings",
+  "accounts",
+  "network",
+  "ledger",
+  "calc",
+  "ranks",
+  "rewards",
+  "withdrawals",
+  "reports",
+  "audit",
+]);
 
 export default function AdminPage() {
   const actorId = useSessionStore((state) => state.actorId)!;
@@ -120,6 +144,7 @@ export default function AdminPage() {
           onOpenStakings={openStakings}
           onOpenRewards={(accountId) => openRewards({ accountId })}
           onOpenWithdrawals={openWithdrawals}
+          onOpenRanks={(accountId) => updateParams({ tab: "ranks", accountId, rewardId: null })}
         />
       ) : null}
       {safeTab === "network" ? (
@@ -138,6 +163,26 @@ export default function AdminPage() {
           selectedCalcRunId={selectedCalcRunId}
           onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
           onOpenRewards={(calcRunId) => openRewards({ calcRunId })}
+          onOpenRanks={(target) =>
+            updateParams({
+              tab: "ranks",
+              calcRunId: target.calcRunId ?? null,
+              accountId: target.accountId ?? null,
+              rewardId: null,
+            })
+          }
+        />
+      ) : null}
+      {safeTab === "ranks" ? (
+        <RanksTab
+          actorId={actorId}
+          role={role}
+          selectedAccountId={selectedAccountId}
+          selectedCalcRunId={selectedCalcRunId}
+          onSelectAccountId={(accountId) => updateParams({ accountId })}
+          onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
+          onOpenRewards={openRewards}
+          onOpenCalcRun={openCalcRun}
         />
       ) : null}
       {safeTab === "rewards" ? (

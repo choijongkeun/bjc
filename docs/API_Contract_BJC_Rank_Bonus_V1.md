@@ -2,8 +2,8 @@
 
 ## 1. Scope
 
-- 이 문서는 현재 구현 완료된 `RANK_QUALIFICATION` runtime/API와, 아직 미구현인 `RANK_BONUS` 계약 초안을 함께 정리한다.
-- 현재 저장소에서 검증된 범위만 확정한다.
+- 이 문서는 현재 구현 완료된 `RANK_QUALIFICATION` runtime/API와 `RANK_BONUS` runtime/API, 그리고 User/Admin rank UI에서 사용하는 계약을 함께 정리한다.
+- 현재 저장소에서 test/build/smoke로 검증된 범위만 확정한다.
 - amount field는 모두 `DECIMAL(65,0)` 문자열로 유지한다.
 
 ## 2. Source of Truth
@@ -344,17 +344,20 @@ V1 rules:
 ```json
 {
   "policy_version_id": "uuid",
-  "calculation_date": "2026-06-30",
-  "period_from": "2026-06-30",
-  "period_to": "2026-06-30",
-  "qualification_calc_run_id": "uuid"
+  "calculation_date": "2026-06-30"
 }
 ```
 
 V1 rules:
 
-- `qualification_calc_run_id` optional
-- omitted 시 동일 `policy_version_id + calculation_date`의 최신 successful qualification run을 사용
+- 동일 `policy_version_id + calculation_date`의 successful qualification snapshot을 사용한다
+- 대상 회원:
+  - `accounts.role = 'USER'`
+  - `accounts.status = 'ACTIVE'`
+  - `account_rank_status.current_rank_level is not null`
+  - `account_rank_status.policy_version_id = request.policy_version_id`
+  - 동일 날짜 successful qualification result 존재
+- `rank_rules.effective_bonus_bps`가 source of truth다
 - `RANK_BONUS` run은 reward rows와 ledger rows를 생성한다
 
 ### Response
@@ -363,11 +366,16 @@ V1 rules:
 {
   "calc_run_id": "uuid",
   "target_count": 63,
-  "reward_created_count": 61,
+  "created_count": 61,
+  "no_rank_skip_count": 0,
+  "no_qualification_skip_count": 0,
+  "zero_base_skip_count": 0,
+  "zero_reward_skip_count": 0,
   "duplicate_skip_count": 2,
   "conflict_count": 0,
   "failed_count": 0,
-  "total_reward_amount_base": "2200000",
+  "total_base_daily_reward_amount_base": "2200000",
+  "total_rank_bonus_amount_base": "264000",
   "status": "SUCCEEDED"
 }
 ```
@@ -389,7 +397,37 @@ V1 rules:
 - `500`
   - unexpected execution failure
 
-## 7.2 Reward Row Contract
+## 7.2 POST `/api/admin/accounts/:accountId/rank-bonus`
+
+- 목적:
+  - 특정 `ACTIVE USER` 1명에 대한 rank bonus 실행 또는 동일 run 재조회
+- 권한:
+  - `ADMIN`
+
+### Request
+
+```json
+{
+  "policy_version_id": "uuid",
+  "calculation_date": "2026-06-30"
+}
+```
+
+### Response
+
+```json
+{
+  "calc_run_id": "uuid",
+  "status": "SUCCEEDED",
+  "result_type": "created",
+  "reward_id": "uuid",
+  "existing_reward_id": null,
+  "base_daily_reward_amount_base": "1200000",
+  "rank_bonus_amount_base": "144000"
+}
+```
+
+## 7.3 Reward Row Contract
 
 `RANK_BONUS` reward row:
 
@@ -408,34 +446,34 @@ V1 rules:
   "status": "CONFIRMED",
   "source_reference": "rank_bonus:2026-06-30:account-uuid:3",
   "metadata": {
+    "formula_version": "rank_bonus_v1",
+    "organization_scope": "binary_subtree_daily_reward_net_v1",
     "rank_level": 3,
-    "period_from": "2026-06-30",
-    "period_to": "2026-06-30",
-    "downline_daily_reward_amount_base": "1200000",
+    "base_daily_reward_amount_base": "1200000",
     "effective_bonus_bps": "1200",
-    "rank_share_bps": "3000",
-    "qualification_calc_run_id": "uuid"
+    "qualification_calc_run_id": "uuid",
+    "qualification_result_id": "uuid"
   }
 }
 ```
 
-## 7.3 Idempotency Rules
+## 7.4 Idempotency Rules
 
 - primary uniqueness:
   - existing `account_rewards` unique `(reward_type, source_reference)`
 - source reference rule:
 
 ```text
-rank_bonus:<period_key>:<account_id>:<rank_level>
+rank_bonus:<calculation_date>:<account_id>:<rank_level>
 ```
 
-- same `period_key + account_id + rank_level` may create at most one reward
+- same `calculation_date + account_id + rank_level` may create at most one reward
 - identical existing row -> duplicate skip
 - conflicting existing row -> conflict
 
 ## 8. Ledger Contract
 
-향후 `RANK_BONUS` ledger row:
+구현된 `RANK_BONUS` ledger row:
 
 ```json
 {
@@ -478,14 +516,18 @@ rank_bonus:<period_key>:<account_id>:<rank_level>
 
 - 실제 구현 파일:
   - `src/domain/rankQualification.ts`
+  - `src/domain/rankBonus.ts`
   - `src/repos/rankRulesRepo.ts`
   - `src/repos/rankQualificationMetricsRepo.ts`
   - `src/repos/accountRankStatusRepo.ts`
   - `src/repos/accountRankQualificationResultsRepo.ts`
   - `src/repos/accountRankHistoryRepo.ts`
   - `src/services/rankQualificationService.ts`
+  - `src/repos/rankBonusMetricsRepo.ts`
+  - `src/services/rankBonusService.ts`
   - `src/server.ts`
   - `scripts/rank_qualification_smoke.ts`
+  - `scripts/rank_bonus_smoke.ts`
 - ACTIVE staking 기준:
   - `status = 'ACTIVE'`
   - `cancel_requested_at is null`
@@ -495,13 +537,25 @@ rank_bonus:<period_key>:<account_id>:<rank_level>
 - LEFT/RIGHT leg volume:
   - `binary_edges.root_leg`
   - 하위 계정의 active staking principal 합
+- rank bonus base 조직 범위:
+  - `binary_edges` descendant subtree
+  - same-day confirmed `DAILY_REWARD`
+  - same-day confirmed `REVERSAL` of `DAILY_REWARD`를 net으로 합산
 - qualification run은 `account_rewards` / `ledger_events`를 생성하지 않는다
+- rank bonus run은 `account_rewards` / `ledger_events`를 생성한다
 - `ledger_events.product_id` nullable read-model은 repo/CSV/API DTO에서 `string | null`로 반영했다
-- `RANK_BONUS` reward/ledger/runtime은 아직 구현하지 않았다
+- user/admin rewards summary와 withdrawal BONUS bucket은 기존 집계를 재사용해 `RANK_BONUS`를 자동 포함한다
+- admin summary API:
+  - `GET /api/admin/calc-runs/:calcRunId/summary`
+- user/admin rank UI:
+  - `web/src/components/tabs/RanksTab.tsx`
+  - `web-user/src/pages/RankPage.tsx`
 
 ## 11. Deferred Items
 
 - 실제 직급명/코드 응답
 - automatic demotion application
-- monthly/weekly period semantics
+- strong leg cap / carry-over / volume depletion
+- monthly/weekly repeated payout semantics
 - manual override API
+- scheduler / actual blockchain transfer
