@@ -56,7 +56,7 @@ export type Amount = {
 
 export type LedgerEventInput = {
   account_id: string;
-  product_id: string;
+  product_id: string | null;
   policy_version_id: string;
   calc_run_id?: string | null;
   event_time: string;

@@ -18,7 +18,7 @@ function normalizeEventTime(value: string): string {
 export type LedgerEventRow = {
   id: string;
   account_id: string;
-  product_id: string;
+  product_id: string | null;
   policy_version_id: string;
   calc_run_id: string | null;
   event_time: string;
@@ -38,7 +38,7 @@ export async function insertLedgerEvent(
   input: {
     id: string;
     account_id: string;
-    product_id: string;
+    product_id: string | null;
     policy_version_id: string;
     calc_run_id?: string | null;
     event_time: string;
@@ -78,7 +78,7 @@ export async function insertLedgerEvents(
   inputs: Array<{
     id: string;
     account_id: string;
-    product_id: string;
+    product_id: string | null;
     policy_version_id: string;
     calc_run_id?: string | null;
     event_time: string;

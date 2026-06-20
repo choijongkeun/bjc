@@ -145,7 +145,7 @@ export function parseLedgerEventsCsv(text: string): ImportedLedgerEvent[] {
       row_number: rowNumber,
       reference_id: requireField(record, "reference_id", rowNumber),
       account_id: requireField(record, "account_id", rowNumber),
-      product_id: requireField(record, "product_id", rowNumber),
+      product_id: record.product_id?.trim() ? record.product_id.trim() : null,
       policy_version_id: requireField(record, "policy_version_id", rowNumber),
       calc_run_id: record.calc_run_id?.trim() ? record.calc_run_id.trim() : null,
       event_time: requireField(record, "event_time", rowNumber),

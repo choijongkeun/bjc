@@ -27,6 +27,16 @@ describe("parseLedgerEventsCsv", () => {
     });
   });
 
+  it("allows nullable product_id values", () => {
+    const csv = [
+      "reference_id,account_id,product_id,policy_version_id,event_time,event_type,amount_base,decimals,symbol",
+      "REF-2,acc-1,,policy-1,2026-06-10 00:00:00,RANK_BONUS,100,6,USDC"
+    ].join("\n");
+
+    const rows = parseLedgerEventsCsv(csv);
+    expect(rows[0]?.product_id).toBeNull();
+  });
+
   it("throws on missing required headers", () => {
     const csv = [
       "reference_id,account_id,product_id,policy_version_id,event_time,event_type,amount_base,decimals",

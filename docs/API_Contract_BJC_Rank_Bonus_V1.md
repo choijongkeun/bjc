@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-- 이 문서는 이번 단계에서 구현하지 않는 `RANK_BONUS` runtime/API/UI를 위해 필요한 서버 계약 초안을 정의한다.
+- 이 문서는 현재 구현 완료된 `RANK_QUALIFICATION` runtime/API와, 아직 미구현인 `RANK_BONUS` 계약 초안을 함께 정리한다.
 - 현재 저장소에서 검증된 범위만 확정한다.
 - amount field는 모두 `DECIMAL(65,0)` 문자열로 유지한다.
 
@@ -97,9 +97,7 @@ left/right/weak leg
 ```json
 {
   "policy_version_id": "uuid",
-  "calculation_date": "2026-06-30",
-  "period_from": "2026-06-30",
-  "period_to": "2026-06-30"
+  "calculation_date": "2026-06-30"
 }
 ```
 
@@ -107,9 +105,9 @@ V1 rules:
 
 - `policy_version_id` required
 - `calculation_date` required
-- `period_from`, `period_to` optional
-- optional period는 현재 `calculation_date`와 동일 date로 normalize 한다
 - qualification run은 `calc_runs.run_type = 'RANK_QUALIFICATION'`
+- batch 대상은 `policy_version_id` 기준으로 qualification 가능한 `ACTIVE USER`다
+- 현재 구현은 해당 policy의 staking 또는 기존 same-policy rank status가 있는 회원을 대상으로 스코프를 제한한다
 
 ### Response
 
@@ -117,9 +115,10 @@ V1 rules:
 {
   "calc_run_id": "uuid",
   "target_count": 120,
+  "initial_count": 12,
   "promoted_count": 12,
   "maintained_count": 51,
-  "demotion_candidate_count": 4,
+  "demotion_deferred_count": 4,
   "unqualified_count": 53,
   "failed_count": 0,
   "status": "SUCCEEDED"
@@ -142,7 +141,43 @@ V1 rules:
 - `500`
   - unexpected execution failure
 
-## 5.2 Qualification Result Shape
+## 5.2 POST `/api/admin/accounts/:accountId/rank-qualification`
+
+- 목적:
+  - 특정 `ACTIVE USER` 1명에 대한 qualification 실행
+- 권한:
+  - `ADMIN`
+
+### Request
+
+```json
+{
+  "policy_version_id": "uuid",
+  "calculation_date": "2026-06-30"
+}
+```
+
+### Response
+
+```json
+{
+  "calc_run": {
+    "id": "uuid",
+    "policy_version_id": "uuid",
+    "run_type": "RANK_QUALIFICATION",
+    "run_date": "2026-06-30",
+    "status": "SUCCEEDED"
+  },
+  "qualification_result": {
+    "id": "uuid",
+    "account_id": "uuid",
+    "calc_run_id": "uuid",
+    "result_status": "QUALIFIED"
+  }
+}
+```
+
+## 5.3 Qualification Result Shape
 
 ```json
 {
@@ -167,17 +202,39 @@ V1 rules:
   "strong_leg_volume_base": "15000000",
   "downline_daily_reward_amount_base": "1200000",
   "qualification_snapshot": {
-    "required_lines": 4,
-    "required_weak_volume_base": "10000000",
-    "rank_share_bps": "3000",
-    "effective_bonus_bps": "1200"
+    "formula_version": "rank_qualification_v1",
+    "policy_version_id": "uuid",
+    "rule_shape": {
+      "required_lines": "direct_active_referral_count",
+      "required_weak_volume_base": "weak_leg_volume_base"
+    },
+    "metrics": {
+      "personal_active_stake_amount_base": "1000000",
+      "personal_cumulative_stake_amount_base": "3000000",
+      "direct_referral_count": 5,
+      "direct_active_referral_count": 4,
+      "left_leg_volume_base": "15000000",
+      "right_leg_volume_base": "13000000",
+      "weak_leg_volume_base": "13000000",
+      "strong_leg_volume_base": "15000000",
+      "downline_daily_reward_amount_base": "1200000"
+    },
+    "evaluated_rules": [
+      {
+        "rule_id": "uuid",
+        "rank_level": 3,
+        "qualified": true,
+        "unmet_conditions": []
+      }
+    ],
+    "demotion_deferred": false
   }
 }
 ```
 
 ## 6. Current Rank and History APIs
 
-## 6.1 GET `/api/me/rank-status`
+## 6.1 GET `/api/me/rank`
 
 - 목적:
   - 본인의 현재 적용 직급 projection 조회
@@ -186,15 +243,45 @@ V1 rules:
 
 ```json
 {
-  "account_id": "uuid",
-  "policy_version_id": "uuid",
-  "current_rank_level": 3,
-  "qualified_at": "2026-06-30T00:00:00.000Z",
-  "maintained_until": null,
-  "last_qualification_calc_run_id": "uuid",
-  "last_bonus_calc_run_id": "uuid",
-  "last_change_type": "PROMOTED",
-  "updated_at": "2026-06-30T00:00:00.000Z"
+  "account": {
+    "id": "uuid",
+    "login_id": "user01",
+    "display_name": "User 01",
+    "role": "USER",
+    "status": "ACTIVE"
+  },
+  "rank_status": {
+    "account_id": "uuid",
+    "policy_version_id": "uuid",
+    "current_rank_level": 3,
+    "qualified_at": "2026-06-30T00:00:00.000Z",
+    "maintained_until": null,
+    "last_qualification_calc_run_id": "uuid",
+    "last_bonus_calc_run_id": null,
+    "last_change_type": "PROMOTED",
+    "updated_at": "2026-06-30T00:00:00.000Z"
+  },
+  "latest_qualification_result": {
+    "id": "uuid",
+    "result_status": "QUALIFIED"
+  },
+  "next_rank": {
+    "rank_level": 4
+  },
+  "next_rank_progress": [
+    {
+      "metric": "direct_active_referral_count",
+      "current": 3,
+      "required": 4,
+      "met": false
+    },
+    {
+      "metric": "weak_leg_volume_base",
+      "current": "13000000",
+      "required": "15000000",
+      "met": false
+    }
+  ]
 }
 ```
 
@@ -222,7 +309,7 @@ V1 rules:
 }
 ```
 
-## 6.3 GET `/api/admin/accounts/:accountId/rank-status`
+## 6.3 GET `/api/admin/accounts/:accountId/rank`
 
 - 목적:
   - Admin/Reader가 특정 회원의 현재 직급 projection 조회
@@ -233,6 +320,13 @@ V1 rules:
 
 - 목적:
   - Admin/Reader가 특정 회원의 rank history 조회
+- 권한:
+  - `READER` 또는 `ADMIN`
+
+## 6.5 GET `/api/admin/calc-runs/:calcRunId/rank-results`
+
+- 목적:
+  - 특정 qualification calc run의 결과 목록 조회
 - 권한:
   - `READER` 또는 `ADMIN`
 
@@ -380,10 +474,34 @@ rank_bonus:<period_key>:<account_id>:<rank_level>
 - `RANK_BONUS`는 BONUS bucket에 계속 포함된다
 - withdrawal 가능 보상도 BONUS 기준으로 집계된다
 
-## 10. Deferred Items
+## 10. Implemented Runtime Notes
+
+- 실제 구현 파일:
+  - `src/domain/rankQualification.ts`
+  - `src/repos/rankRulesRepo.ts`
+  - `src/repos/rankQualificationMetricsRepo.ts`
+  - `src/repos/accountRankStatusRepo.ts`
+  - `src/repos/accountRankQualificationResultsRepo.ts`
+  - `src/repos/accountRankHistoryRepo.ts`
+  - `src/services/rankQualificationService.ts`
+  - `src/server.ts`
+  - `scripts/rank_qualification_smoke.ts`
+- ACTIVE staking 기준:
+  - `status = 'ACTIVE'`
+  - `cancel_requested_at is null`
+- cumulative staking 기준:
+  - `activated_at is not null`
+  - `status in ('ACTIVE', 'CANCEL_REQUESTED', 'MATURED', 'CLOSED')`
+- LEFT/RIGHT leg volume:
+  - `binary_edges.root_leg`
+  - 하위 계정의 active staking principal 합
+- qualification run은 `account_rewards` / `ledger_events`를 생성하지 않는다
+- `ledger_events.product_id` nullable read-model은 repo/CSV/API DTO에서 `string | null`로 반영했다
+- `RANK_BONUS` reward/ledger/runtime은 아직 구현하지 않았다
+
+## 11. Deferred Items
 
 - 실제 직급명/코드 응답
-- next-rank progress 계산 로직
 - automatic demotion application
 - monthly/weekly period semantics
 - manual override API

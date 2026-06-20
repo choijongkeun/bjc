@@ -13,6 +13,7 @@ import { AccountStakingService } from "./services/accountStakingService.js";
 import { AccountRewardService } from "./services/accountRewardService.js";
 import { DailyRewardService } from "./services/dailyRewardService.js";
 import { DirectReferralRewardService } from "./services/directReferralRewardService.js";
+import { RankQualificationService } from "./services/rankQualificationService.js";
 import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
@@ -51,6 +52,7 @@ const accountStakingService = new AccountStakingService(pool);
 const accountRewardService = new AccountRewardService(pool);
 const dailyRewardService = new DailyRewardService(pool);
 const directReferralRewardService = new DirectReferralRewardService(pool);
+const rankQualificationService = new RankQualificationService(pool);
 const rewardWithdrawalService = new RewardWithdrawalService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
@@ -610,6 +612,38 @@ app.get("/api/me/downlines", requireSession, async (req, res, next) => {
   }
 });
 
+app.get("/api/me/rank", requireSession, async (req, res, next) => {
+  try {
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rankQualificationService.getMyRank({
+      account_id: sessionAccount.id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/me/rank-history", requireSession, async (req, res, next) => {
+  try {
+    const query = paginationQuerySchema.parse(req.query);
+    const sessionAccount = requireSessionAccount(req);
+    const result = await rankQualificationService.listMyRankHistory({
+      account_id: sessionAccount.id,
+      page: query.page,
+      limit: query.limit
+    });
+    res.json({
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get("/api/admin/accounts", async (req, res, next) => {
   try {
     const actor_account_id = requireActorId(req);
@@ -733,6 +767,43 @@ app.get("/api/admin/accounts/:accountId/downlines", async (req, res, next) => {
       limit: query.limit
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/rank", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const result = await rankQualificationService.getAdminAccountRank({
+      actor_account_id,
+      account_id
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/accounts/:accountId/rank-history", async (req, res, next) => {
+  try {
+    const actor_account_id = requireActorId(req);
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const query = paginationQuerySchema.parse(req.query);
+    const result = await rankQualificationService.listAdminAccountRankHistory({
+      actor_account_id,
+      account_id,
+      page: query.page,
+      limit: query.limit
+    });
+    res.json({
+      account: result.account,
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
+    });
   } catch (err) {
     next(err);
   }
@@ -1280,6 +1351,50 @@ app.post("/api/admin/rewards/direct-referral/run", async (req, res, next) => {
   }
 });
 
+app.post("/api/admin/rewards/rank-qualification/run", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await rankQualificationService.runBatch({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/accounts/:accountId/rank-qualification", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await rankQualificationService.runForAccount({
+      actor_account_id,
+      account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/api/admin/stakings/:stakingId/direct-referral-calculate", async (req, res, next) => {
   try {
     const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
@@ -1328,6 +1443,29 @@ app.get("/api/admin/calc-runs/:calcRunId/rewards", async (req, res, next) => {
       page: query.page,
       limit: query.limit,
       total: result.total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/calc-runs/:calcRunId/rank-results", async (req, res, next) => {
+  try {
+    const calc_run_id = z.string().trim().min(1).parse(req.params.calcRunId);
+    const query = paginationQuerySchema.parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await rankQualificationService.listCalcRunRankResults({
+      actor_account_id,
+      calc_run_id,
+      page: query.page,
+      limit: query.limit
+    });
+    res.json({
+      calc_run: result.calc_run,
+      items: result.items,
+      page: query.page,
+      limit: query.limit,
+      total: result.total
     });
   } catch (err) {
     next(err);
@@ -1411,7 +1549,7 @@ app.post("/admin/ledger-events", async (req, res, next) => {
       .object({
         event: z.object({
           account_id: z.string(),
-          product_id: z.string(),
+          product_id: z.string().nullable(),
           policy_version_id: z.string(),
           calc_run_id: z.string().nullable().optional(),
           event_time: z.string(),
@@ -1440,7 +1578,7 @@ app.post("/api/ledger-events", async (req, res, next) => {
       .object({
         event: z.object({
           account_id: z.string(),
-          product_id: z.string(),
+          product_id: z.string().nullable(),
           policy_id: z.string(),
           calc_run_id: z.string().nullable().optional(),
           event_time: z.string(),
@@ -1675,7 +1813,7 @@ app.get("/api/calc-runs", async (req, res, next) => {
       .extend({
         policy_id: z.string().optional(),
         run_type: z
-          .enum(["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_BONUS", "CONTRIBUTION", "WITHDRAWAL_FEE", "SIDECAR"])
+          .enum(["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_QUALIFICATION", "RANK_BONUS", "CONTRIBUTION", "WITHDRAWAL_FEE", "SIDECAR"])
           .optional(),
         status: z.enum(["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "FINALIZED"]).optional(),
         run_date_from: z.string().optional(),

@@ -2,9 +2,9 @@
 
 ## 1. Goal
 
-- 현재 BJC 저장소에 이미 존재하는 `rank_rules`, `RANK_BONUS` enum, 추천/바이너리 구조를 기반으로 직급 산정과 직급 보상 설계를 고정한다.
-- 이번 단계는 설계, migration, SQL smoke, API 계약, 구현 계획까지만 포함한다.
-- 실제 `RANK_BONUS` runtime service, API wiring, User/Admin UI, 스케줄러는 이번 단계 범위에서 제외한다.
+- 현재 BJC 저장소에 이미 존재하는 `rank_rules`, `RANK_BONUS` enum, 추천/바이너리 구조를 기반으로 직급 산정과 직급 보상 구조를 고정한다.
+- 현재 단계에는 `RANK_QUALIFICATION` runtime repository/service/API, unit test, smoke, 회귀 검증까지 포함한다.
+- `RANK_BONUS` runtime service, User/Admin UI, 스케줄러는 이번 단계 범위에서 제외한다.
 
 ## 2. Scope
 
@@ -16,7 +16,8 @@
 - 승급/유지/하락 정책 설계
 - 직급 projection/history/qualification DB 구조 설계
 - `0007` migration 및 SQL smoke 작성
-- User/Admin API 계약 초안 작성
+- User/Admin qualification/rank API 구현
+- unit test 및 `rank qualification` smoke 추가
 
 제외:
 
@@ -27,6 +28,29 @@
 - `SIDECAR`
 - 바이너리 매칭 수당 실지급
 - 기존 `DIRECT_REFERRAL` 수정
+
+## 2.1 Actual Implementation Status
+
+구현 완료:
+
+- `src/domain/rankQualification.ts`
+- `src/repos/rankRulesRepo.ts`
+- `src/repos/rankQualificationMetricsRepo.ts`
+- `src/repos/accountRankStatusRepo.ts`
+- `src/repos/accountRankQualificationResultsRepo.ts`
+- `src/repos/accountRankHistoryRepo.ts`
+- `src/services/rankQualificationService.ts`
+- `src/services/rankQualificationService.test.ts`
+- `scripts/rank_qualification_smoke.ts`
+- `src/server.ts` rank routes
+- `shared/bjc-types.ts`, `src/repos/ledgerEventsRepo.ts`, `src/services/ledgerEventsCsv.ts`
+
+미구현 유지:
+
+- `RANK_BONUS` reward 생성
+- `RANK_BONUS` ledger event 생성
+- 자동 demotion
+- 신규 rank UI
 
 ## 3. Source Analysis
 
@@ -155,12 +179,12 @@ LEFT/RIGHT 레그 / weak leg / rank qualification
 | 현재 직급 | `account_rank_status` | latest projection | n/a | n/a | KST display | yes |
 | 직급 계산 결과 | `account_rank_qualification_results` | `calculation_date` 기준 | n/a | n/a | KST | yes |
 | 직급 이력 | `account_rank_history` | effective_date 기준 누적 | n/a | n/a | KST | yes |
-| 직접 라인 수 | `referral_edges.depth = 1` | `calculation_date` snapshot | 계정 `ACTIVE` 여부는 별도 count로 기록 | `WITHDRAWN`/비활성은 qualification 해석시 별도 | KST snapshot date | yes |
-| 직접 ACTIVE 라인 수 | `accounts` + `referral_edges` | `calculation_date` snapshot | `accounts.status = ACTIVE` | `BLOCKED`, `WITHDRAWN` | KST snapshot date | yes |
-| 개인 활성 스테이킹 원금 | `account_stakings` | `calculation_date` snapshot | 정책 미확정, V1 결과 테이블에는 기록 | 정책 미확정 | KST | yes |
-| 개인 누적 스테이킹 원금 | `account_stakings` | cumulative to `calculation_date` | 정책 미확정, V1 결과 테이블에는 기록 | 정책 미확정 | KST | yes |
-| LEFT 레그 매출 | `binary_edges` + `account_stakings` | `calculation_date` snapshot | 정책상 인정되는 staking status | 미확정 | KST | yes |
-| RIGHT 레그 매출 | `binary_edges` + `account_stakings` | `calculation_date` snapshot | 정책상 인정되는 staking status | 미확정 | KST | yes |
+| 직접 라인 수 | `accounts.sponsor_account_id` | `calculation_date` snapshot | `child.role = USER` | non-USER | KST snapshot date | yes |
+| 직접 ACTIVE 라인 수 | `accounts.sponsor_account_id` | `calculation_date` snapshot | `child.role = USER`, `child.status = ACTIVE` | `BLOCKED`, `WITHDRAWN`, non-USER | KST snapshot date | yes |
+| 개인 활성 스테이킹 원금 | `account_stakings` | `calculation_date` snapshot | `status = ACTIVE`, `cancel_requested_at is null` | `PENDING`, `CANCEL_REQUESTED`, `CANCELLED`, `MATURED`, `CLOSED` | KST | yes |
+| 개인 누적 스테이킹 원금 | `account_stakings` | cumulative to `calculation_date` | `activated_at is not null`, `status in ('ACTIVE', 'CANCEL_REQUESTED', 'MATURED', 'CLOSED')` | `PENDING`, `CANCELLED` | KST | yes |
+| LEFT 레그 매출 | `binary_edges` + `account_stakings` | `calculation_date` snapshot | `status = ACTIVE`, `cancel_requested_at is null` | `PENDING`, `CANCEL_REQUESTED`, `CANCELLED`, `MATURED`, `CLOSED` | KST | yes |
+| RIGHT 레그 매출 | `binary_edges` + `account_stakings` | `calculation_date` snapshot | `status = ACTIVE`, `cancel_requested_at is null` | `PENDING`, `CANCEL_REQUESTED`, `CANCELLED`, `MATURED`, `CLOSED` | KST | yes |
 | weak leg 매출 | qualification 결과 집계값 | `calculation_date` snapshot | `min(left, right)` | n/a | KST | yes |
 | 강한 라인 매출 | qualification 결과 집계값 | `calculation_date` snapshot | `max(left, right)` | n/a | KST | yes |
 | 보상 기준 매출 | `account_rewards` 또는 `settlement_items` of `DAILY_REWARD` | `calculation_date` | `DAILY_REWARD` only | other reward types | KST | yes |
@@ -175,27 +199,27 @@ LEFT/RIGHT 레그 / weak leg / rank qualification
 - weak leg / leg volume은 binary tree 기준이다.
 - rank bonus 계산은 same-day subordinate `DAILY_REWARD`와 qualification result를 함께 사용한다.
 
-### 10.2 V1 recommended volume source
+### 10.2 V1 runtime volume source
 
-원본 BJC 자료 부재로 포함 상태는 완전히 확정할 수 없으므로, V1 구현 설계는 아래를 권장한다.
+현재 구현된 V1 volume 기준은 아래와 같다.
 
 - 집계 원천:
   - `binary_edges.root_leg`
   - `account_stakings.principal_amount_base`
-- 권장 인정 상태:
+- 인정 상태:
   - `ACTIVE`
-  - `CANCEL_REQUESTED`
+  - `cancel_requested_at is null`
 - 제외 상태:
   - `PENDING`
+  - `CANCEL_REQUESTED`
   - `CANCELLED`
   - `MATURED`
   - `CLOSED`
 
-이 권장안의 이유:
+비고:
 
 - 현재 `account_stakings`가 원금 snapshot과 상태를 가장 명확하게 제공한다.
-- `CANCEL_REQUESTED`는 아직 원금이 release 되지 않았을 수 있어 qualification snapshot에 포함할 수 있다.
-- 하지만 이는 저장소 문서만으로 완전 확정된 정책은 아니므로, 실제 runtime 구현 단계에서 운영 확인이 필요하다.
+- carry-over / strong leg cap / period depletion은 포함하지 않는다.
 
 ## 11. Promotion / Maintenance / Demotion Policy
 
@@ -225,8 +249,9 @@ V1 설계 결정:
   - `qualified_rank_level`
   - `applied_rank_level`
   - `result_status = DEMOTION_CANDIDATE`
+  - `qualification_snapshot_json.demotion_deferred = true`
   를 기록한다.
-- 즉, 계산은 지원하되 status projection 자동 반영은 하지 않는다.
+- `account_rank_history.change_type`와 `account_rank_status.last_change_type`은 enum 제약 때문에 `MAINTAINED`를 사용한다.
 
 ## 12. Calculation Cadence
 
@@ -458,28 +483,37 @@ week/month 지급 정책은 미확정이다.
 
 ## 19. User and Admin API Plan
 
-### 19.1 User API plan
+### 19.1 User API
 
-조회 후보:
+구현 완료:
 
-- `GET /api/me/rank-status`
+- `GET /api/me/rank`
 - `GET /api/me/rank-history`
-- `GET /api/me/rank-progress`
-- `GET /api/me/rewards?reward_type=RANK_BONUS`
 
-### 19.2 Admin API plan
+응답 포함:
 
-실행 후보:
+- 현재 rank status
+- latest qualification result
+- next rank
+- next rank progress
+
+### 19.2 Admin API
+
+구현 완료:
 
 - `POST /api/admin/rewards/rank-qualification/run`
-- `POST /api/admin/rewards/rank-bonus/run`
+- `POST /api/admin/accounts/:accountId/rank-qualification`
 
-조회 후보:
+조회 구현:
 
-- `GET /api/admin/accounts/:accountId/rank-status`
+- `GET /api/admin/accounts/:accountId/rank`
 - `GET /api/admin/accounts/:accountId/rank-history`
-- `GET /api/admin/rank-qualification-results`
 - `GET /api/admin/calc-runs/:calcRunId/rank-results`
+
+미구현 유지:
+
+- `POST /api/admin/rewards/rank-bonus/run`
+- `GET /api/me/rewards?reward_type=RANK_BONUS`
 
 ## 20. Risks
 
@@ -517,15 +551,27 @@ week/month 지급 정책은 미확정이다.
   - 정상 insert/enum/FK/nullable ledger 시나리오 확인
   - duplicate/check/fk/change_type/duplicate reward 실패 시나리오가 의도대로 발생
   - rollback 후 rank fixture 잔존 0
-- 현재도 runtime 상태는 변하지 않는다:
-  - `RANK_QUALIFICATION` service/API 미구현
+- 이후 runtime 상태:
+  - `RANK_QUALIFICATION` service/API 구현 완료
+  - qualification은 reward / ledger를 생성하지 않음
   - `RANK_BONUS` service/API 미구현
   - User/Admin 직급 UI 미구현
 
-## 22. Recommended Next Steps
+## 22. Runtime Validation
+
+백엔드 검증 결과:
+
+- `npm test` PASS
+- `npm run build` PASS
+- `BJC_SMOKE_BASE_URL=http://127.0.0.1:3001 npm run smoke:rank-qualification` PASS
+- qualification은 reward / ledger 미생성 확인
+- cleanup 후 fixture row 0 확인
+- `ledger_events.product_id` nullable read-model 회귀 테스트 PASS
+
+## 23. Recommended Next Steps
 
 1. 원본 BJC 자료를 확보해 실제 직급명과 지급 주기를 확정한다.
-2. `RANK_QUALIFICATION` runtime service를 구현한다.
-3. qualification result와 current status read API를 추가한다.
-4. 이후 `RANK_BONUS` reward runtime을 구현한다.
-5. 마지막 단계에서 User/Admin UI를 붙인다.
+2. `RANK_BONUS` reward/ledger runtime을 구현한다.
+3. Admin/User rank UI를 붙인다.
+4. 자동 demotion / grace period 정책을 확정한다.
+5. carry-over / strong leg cap / period semantics를 후속 확장한다.

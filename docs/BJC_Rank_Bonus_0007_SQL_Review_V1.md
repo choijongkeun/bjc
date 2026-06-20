@@ -25,6 +25,7 @@
 - `rank_level`은 서비스 응답에서 placeholder `0`으로 채워지는 부분이 많다.
 - `ledger_events.product_id`는 현재 `NOT NULL`이다.
 - qualification snapshot 전용 테이블과 current rank projection 테이블은 아직 없다.
+- 당시 `RANK_QUALIFICATION` runtime/API는 아직 연결되지 않은 상태였다.
 
 ## 3. 0007 Design Summary
 
@@ -167,10 +168,14 @@
 
 기존 TypeScript/runtime 일부는 `product_id`가 항상 존재한다고 암묵적으로 가정할 수 있다.
 
-이번 단계에서 runtime 수정은 하지 않으므로:
+후속 구현 결과:
 
-- SQL review에 이 risk를 명시한다
-- 실제 `RANK_BONUS` runtime 구현 단계에서 read-model null handling 검토가 필요하다
+- `shared/bjc-types.ts`
+- `src/repos/ledgerEventsRepo.ts`
+- `src/services/ledgerEventsCsv.ts`
+- `src/server.ts`
+
+에서 `product_id: string | null` 처리를 반영했다.
 
 ## 7. Duplicate Prevention Review
 
@@ -300,6 +305,21 @@ rank SQL smoke 결과:
 - rollback 결과:
   - rank 전용 fixture row는 잔존하지 않음
   - smoke 시작 전/후 총 row count가 동일함
+- 이후 runtime 상태:
+  - `RANK_QUALIFICATION` service/API 구현 완료
+  - qualification은 reward / ledger를 생성하지 않음
+  - `RANK_BONUS` service/API 미구현
+  - User/Admin 직급 UI 미구현
+- qualification runtime 반영 파일:
+  - `src/domain/rankQualification.ts`
+  - `src/repos/rankRulesRepo.ts`
+  - `src/repos/rankQualificationMetricsRepo.ts`
+  - `src/repos/accountRankStatusRepo.ts`
+  - `src/repos/accountRankQualificationResultsRepo.ts`
+  - `src/repos/accountRankHistoryRepo.ts`
+  - `src/services/rankQualificationService.ts`
+  - `src/server.ts`
+  - `scripts/rank_qualification_smoke.ts`
 
 ## 11. Review Conclusion
 
@@ -308,9 +328,10 @@ rank SQL smoke 결과:
 - `ledger_events.product_id nullable`은 `RANK_BONUS`에 가장 정합적인 해결책이다.
 - 실제 writable `bjc_db`에 0007 적용과 rank SQL smoke 검증까지 완료했다.
 - 0007은 MySQL constraint identifier 길이 제한을 고려해 짧은 CHECK 이름을 사용해야 한다.
+- nullable `product_id` read-model 회귀도 unit test와 runtime DTO에서 반영 완료했다.
 
 ## 12. Follow-up Items
 
-1. `RANK_QUALIFICATION` runtime 구현 단계에서 `account_rank_qualification_results` write path를 연결한다.
-2. 이후 `RANK_BONUS` runtime 구현 단계에서 `product_id nullable` read-model 영향을 점검한다.
+1. `RANK_BONUS` runtime 구현 단계에서 qualification snapshot을 reward/ledger로 연결한다.
+2. Admin/User rank UI를 붙이기 전 rank read API를 화면 DTO에 연결한다.
 3. 원격 운영 DB 반영 시에도 동일한 identifier 길이 제약이 없도록 현재 0007 파일 기준으로 적용한다.
