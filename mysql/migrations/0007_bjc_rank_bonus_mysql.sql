@@ -100,31 +100,31 @@ create table if not exists account_rank_qualification_results (
     foreign key (account_id) references accounts(id),
   constraint fk_account_rank_qualification_results_policy
     foreign key (policy_version_id) references policy_versions(id),
-  constraint chk_account_rank_qualification_results_period
+  constraint chk_arqr_period
     check (period_from <= period_to),
-  constraint chk_account_rank_qualification_results_previous_rank
+  constraint chk_arqr_previous_rank
     check (previous_rank_level is null or previous_rank_level between 1 and 10),
-  constraint chk_account_rank_qualification_results_qualified_rank
+  constraint chk_arqr_qualified_rank
     check (qualified_rank_level is null or qualified_rank_level between 1 and 10),
-  constraint chk_account_rank_qualification_results_applied_rank
+  constraint chk_arqr_applied_rank
     check (applied_rank_level is null or applied_rank_level between 1 and 10),
-  constraint chk_account_rank_qualification_results_personal_active
+  constraint chk_arqr_personal_active
     check (personal_active_stake_amount_base >= 0),
-  constraint chk_account_rank_qualification_results_personal_cumulative
+  constraint chk_arqr_personal_cumulative
     check (personal_cumulative_stake_amount_base >= 0),
-  constraint chk_account_rank_qualification_results_direct_referral_count
+  constraint chk_arqr_direct_referral_count
     check (direct_referral_count >= 0),
-  constraint chk_account_rank_qualification_results_direct_active_referral_count
+  constraint chk_arqr_direct_active_referral_count
     check (direct_active_referral_count >= 0),
-  constraint chk_account_rank_qualification_results_left_leg_volume
+  constraint chk_arqr_left_leg_volume
     check (left_leg_volume_base >= 0),
-  constraint chk_account_rank_qualification_results_right_leg_volume
+  constraint chk_arqr_right_leg_volume
     check (right_leg_volume_base >= 0),
-  constraint chk_account_rank_qualification_results_weak_leg_volume
+  constraint chk_arqr_weak_leg_volume
     check (weak_leg_volume_base >= 0),
-  constraint chk_account_rank_qualification_results_strong_leg_volume
+  constraint chk_arqr_strong_leg_volume
     check (strong_leg_volume_base >= 0),
-  constraint chk_account_rank_qualification_results_downline_daily_reward
+  constraint chk_arqr_downline_daily_reward
     check (downline_daily_reward_amount_base >= 0)
 ) engine=InnoDB default charset=utf8mb4;
 
@@ -164,28 +164,28 @@ create table if not exists account_rank_history (
     foreign key (calc_run_id) references calc_runs(id),
   constraint fk_account_rank_history_qualification_result
     foreign key (qualification_result_id) references account_rank_qualification_results(id),
-  constraint chk_account_rank_history_previous_rank
+  constraint chk_arh_previous_rank
     check (previous_rank_level is null or previous_rank_level between 1 and 10),
-  constraint chk_account_rank_history_calculated_rank
+  constraint chk_arh_calculated_rank
     check (calculated_rank_level is null or calculated_rank_level between 1 and 10),
-  constraint chk_account_rank_history_final_rank
+  constraint chk_arh_final_rank
     check (final_rank_level is null or final_rank_level between 1 and 10),
-  constraint chk_account_rank_history_personal_active
+  constraint chk_arh_personal_active
     check (personal_active_stake_amount_base >= 0),
-  constraint chk_account_rank_history_personal_cumulative
+  constraint chk_arh_personal_cumulative
     check (personal_cumulative_stake_amount_base >= 0),
-  constraint chk_account_rank_history_direct_referral_count
+  constraint chk_arh_direct_referral_count
     check (direct_referral_count >= 0),
-  constraint chk_account_rank_history_direct_active_referral_count
+  constraint chk_arh_direct_active_referral_count
     check (direct_active_referral_count >= 0),
-  constraint chk_account_rank_history_left_leg_volume
+  constraint chk_arh_left_leg_volume
     check (left_leg_volume_base >= 0),
-  constraint chk_account_rank_history_right_leg_volume
+  constraint chk_arh_right_leg_volume
     check (right_leg_volume_base >= 0),
-  constraint chk_account_rank_history_weak_leg_volume
+  constraint chk_arh_weak_leg_volume
     check (weak_leg_volume_base >= 0),
-  constraint chk_account_rank_history_strong_leg_volume
+  constraint chk_arh_strong_leg_volume
     check (strong_leg_volume_base >= 0),
-  constraint chk_account_rank_history_downline_daily_reward
+  constraint chk_arh_downline_daily_reward
     check (downline_daily_reward_amount_base >= 0)
 ) engine=InnoDB default charset=utf8mb4;

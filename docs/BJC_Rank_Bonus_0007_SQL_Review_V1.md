@@ -18,7 +18,7 @@
 
 ## 2. Current State Summary
 
-현재 저장소/원격 DB 기준으로 확인된 상태:
+0007 적용 전 writable `bjc_db` 기준으로 확인된 상태:
 
 - `rank_rules` 테이블은 존재하지만 실제 row는 비어 있다.
 - `RANK_BONUS` enum은 `calc_runs`, `ledger_events`, `settlement_items`, `account_rewards`에 이미 존재한다.
@@ -222,36 +222,95 @@ rank_bonus:<period_key>:<account_id>:<rank_level>
 - `account_rewards.reward_type = RANK_BONUS` duplicate `source_reference` 실패
 - rollback 후 잔존 count 원복
 
-## 10. Remote DB Validation Status
+## 10. Actual Apply and Validation Status
 
-이번 세션에서 원격 DB에 대해 확인한 사실:
+이번 세션에서는 MCP read-only 연결이 아니라, 앱과 smoke가 사용하는 writable `bjc_db` 연결로 실제 적용을 수행했다.
 
-- 연결은 `readonly = true`
-- `DDL`, `DROP`, `DELETE` 권한이 없다
-- 따라서 원격 DB 실제 apply는 이번 세션에서 수행할 수 없다
+연결 요약:
 
-확인 가능한 범위:
+- `db_connection = ok`
+- `db_name = bj***`
+- 적용 전 상태:
+  - `migration_0007_state = NOT_APPLIED`
+  - `account_rank_status` 없음
+  - `account_rank_qualification_results` 없음
+  - `account_rank_history` 없음
+  - `calc_runs.run_type`에 `RANK_QUALIFICATION` 없음
+  - `ledger_events.product_id = NOT NULL`
+  - `rank_rules.updated_at` 없음
 
-- `SHOW CREATE TABLE rank_rules`
-- `SHOW CREATE TABLE ledger_events`
-- `SELECT * from rank_rules`
+백업:
 
-확인 결과:
+- 관련 테이블(`rank_rules`, `calc_runs`, `ledger_events`, `account_rewards`, `accounts`, `policy_versions`)을 저장소 밖 `/tmp/bjc_backups/` 경로로 백업했다.
 
-- `rank_rules`는 기존 shape만 존재한다
-- `ledger_events.product_id`는 여전히 `NOT NULL`
-- `rank_rules` row는 비어 있다
+실제 적용 과정:
+
+1. `mysql/migrations/0007_bjc_rank_bonus_mysql.sql`를 writable `bjc_db`에 실행
+2. 최초 실행은 `PARTIALLY_APPLIED` 상태가 됨
+3. 실패 원인:
+   - `account_rank_qualification_results`의 CHECK constraint 이름 `chk_account_rank_qualification_results_direct_active_referral_count`가 MySQL identifier 64자 제한을 초과
+4. 조치:
+   - 0007의 qualification/history CHECK constraint 이름을 짧은 이름으로 수정
+   - 이미 적용된 앞선 `ALTER`/`account_rank_status`는 유지
+   - 남은 `account_rank_qualification_results`, `account_rank_history` 생성문만 이어서 적용
+5. 최종 상태:
+   - `migration_0007_state = APPLIED`
+
+적용 후 확인 결과:
+
+- `calc_runs.run_type`에 `RANK_QUALIFICATION` 포함
+- 기존 `RANK_BONUS` 유지
+- `ledger_events.product_id = NULLABLE`
+- `rank_rules.updated_at` 존재
+- `account_rank_status` 생성 완료
+- `account_rank_qualification_results` 생성 완료
+- `account_rank_history` 생성 완료
+- FK 개수:
+  - `account_rank_status = 4`
+  - `account_rank_qualification_results = 3`
+  - `account_rank_history = 4`
+
+`SHOW CREATE TABLE` 확인 결과:
+
+- `account_rank_status`:
+  - PK, 3개 secondary index, 4개 FK, 2개 CHECK 존재
+- `account_rank_qualification_results`:
+  - PK, unique `(calc_run_id, account_id)`, 3개 secondary index, 3개 FK, shortened CHECK names 존재
+- `account_rank_history`:
+  - PK, unique `(calc_run_id, account_id)`, 4개 secondary index, 4개 FK, shortened CHECK names 존재
+
+rank SQL smoke 결과:
+
+- `mysql --force < mysql/smoke/bjc_rank_bonus_smoketest.sql` 실행 완료
+- 의도한 실패가 실제로 확인됨:
+  - duplicate rank level
+  - invalid weak volume
+  - invalid bps range
+  - invalid `account_rank_status` FK
+  - duplicate qualification result unique
+  - invalid `change_type`
+  - duplicate rank reward
+- 정상 검증도 확인됨:
+  - valid rank rule insert
+  - `RANK_QUALIFICATION` enum insert
+  - valid `account_rank_status`
+  - valid qualification result
+  - valid history row
+  - `ledger_events.product_id is null` + `event_type = RANK_BONUS` insert 성공
+- rollback 결과:
+  - rank 전용 fixture row는 잔존하지 않음
+  - smoke 시작 전/후 총 row count가 동일함
 
 ## 11. Review Conclusion
 
 - 0007은 기존 `rank_rules`를 버리지 않고 qualification/history/projection을 덧붙이는 방향으로 타당하다.
 - qualification run과 reward run을 분리하기 위해 `RANK_QUALIFICATION` enum 추가가 필요하다.
 - `ledger_events.product_id nullable`은 `RANK_BONUS`에 가장 정합적인 해결책이다.
-- 원격 DB readonly 때문에 실제 apply는 이번 세션에서 불가능하므로, migration 작성과 smoke 검증 범위는 문서/파일/SELECT 기반 검토까지만 완료할 수 있다.
+- 실제 writable `bjc_db`에 0007 적용과 rank SQL smoke 검증까지 완료했다.
+- 0007은 MySQL constraint identifier 길이 제한을 고려해 짧은 CHECK 이름을 사용해야 한다.
 
 ## 12. Follow-up Items
 
-1. 원격 DDL 권한이 있는 환경에서 0007 apply 수행
-2. apply 후 `SHOW CREATE TABLE` 재검증
-3. rank smoke 실행
-4. 이후 runtime 구현 단계에서 `product_id nullable` read-model 영향 확인
+1. `RANK_QUALIFICATION` runtime 구현 단계에서 `account_rank_qualification_results` write path를 연결한다.
+2. 이후 `RANK_BONUS` runtime 구현 단계에서 `product_id nullable` read-model 영향을 점검한다.
+3. 원격 운영 DB 반영 시에도 동일한 identifier 길이 제약이 없도록 현재 0007 파일 기준으로 적용한다.

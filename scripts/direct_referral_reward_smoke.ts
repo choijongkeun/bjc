@@ -6,6 +6,7 @@ import { pool } from "../src/db/pool.js";
 import { withTx } from "../src/db/tx.js";
 import { hashPassword } from "../src/util/passwordHash.js";
 import { resolveSmokeBaseUrl } from "./smoke_config.js";
+import { findFixtureRewards, fixtureCleanupSucceeded } from "./direct_referral_reward_smoke_helpers.js";
 
 type Result = {
   name: string;
@@ -439,16 +440,12 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
     );
     const rewards = rewardRows as Array<{ id: string; source_reference: string }>;
     const rewardIds = rewards.map((row) => row.id);
-    const rewardRefs = rewards.map((row) => row.source_reference);
 
     if (rewardIds.length > 0) {
       const placeholders = rewardIds.map(() => "?").join(", ");
       await conn.query(`delete from account_rewards where id in (${placeholders})`, rewardIds);
     }
-    if (rewardRefs.length > 0) {
-      const placeholders = rewardRefs.map(() => "?").join(", ");
-      await conn.query(`delete from ledger_events where reference_id in (${placeholders})`, rewardRefs);
-    }
+    await conn.query(`delete from ledger_events where policy_version_id = ?`, [fixture.policyId]);
 
     await conn.query(`delete from calc_runs where policy_version_id = ?`, [fixture.policyId]);
     await conn.query(
@@ -476,6 +473,9 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
     );
 
     const [remainingRewardRows] = await conn.query(`select count(*) as total from account_rewards where policy_version_id = ?`, [
+      fixture.policyId
+    ]);
+    const [remainingLedgerRows] = await conn.query(`select count(*) as total from ledger_events where policy_version_id = ?`, [
       fixture.policyId
     ]);
     const [remainingCalcRows] = await conn.query(`select count(*) as total from calc_runs where policy_version_id = ?`, [
@@ -509,15 +509,16 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
 
     return {
       remaining: {
-        rewards: Number((remainingRewardRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        calc_runs: Number((remainingCalcRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        stakings: Number((remainingStakingRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        rules: Number((remainingRuleRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        referral_edges: Number((remainingEdgeRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        accounts: Number((remainingAccountRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        sessions: Number((remainingSessionRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        products: Number((remainingProductRows as Array<{ total: number | string }>)[0]?.total ?? 0),
-        policies: Number((remainingPolicyRows as Array<{ total: number | string }>)[0]?.total ?? 0)
+        fixture_rewards: Number((remainingRewardRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_ledger_events: Number((remainingLedgerRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_calc_runs: Number((remainingCalcRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_stakings: Number((remainingStakingRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_rules: Number((remainingRuleRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_referral_edges: Number((remainingEdgeRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_accounts: Number((remainingAccountRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_sessions: Number((remainingSessionRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_products: Number((remainingProductRows as Array<{ total: number | string }>)[0]?.total ?? 0),
+        fixture_policies: Number((remainingPolicyRows as Array<{ total: number | string }>)[0]?.total ?? 0)
       }
     };
   });
@@ -803,12 +804,22 @@ async function main() {
 
     currentStep = "admin reward list";
     const adminRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
-      `/api/admin/rewards?page=1&limit=20&reward_type=DIRECT_REFERRAL`,
+      `/api/admin/rewards?page=1&limit=20&reward_type=DIRECT_REFERRAL&account_id=${fixture.sponsorId}&calc_run_id=${calcRunId}`,
       { actorId: fixture.adminId }
     );
+    const fixtureAdminRewards = findFixtureRewards(adminRewards.payload.items, {
+      rewardId,
+      accountId: fixture.sponsorId,
+      calcRunId,
+      sourceReference: `direct_referral:${fixture.activeSourceStakingId}:${fixture.sponsorId}`
+    });
     results.push({
       name: "Admin rewards 목록",
-      ok: adminRewards.payload.total === 1 && adminRewards.payload.items[0]?.id === rewardId
+      ok: fixtureAdminRewards.length === 1,
+      message: JSON.stringify({
+        total: adminRewards.payload.total,
+        matched_reward_ids: fixtureAdminRewards.map((item) => item.id)
+      })
     });
 
     currentStep = "admin account rewards";
@@ -860,7 +871,7 @@ async function main() {
     const cleanup = await cleanupFixture(fixture);
     results.push({
       name: "cleanup 후 관련 row 0",
-      ok: Object.values(cleanup.remaining).every((value) => value === 0),
+      ok: fixtureCleanupSucceeded(cleanup.remaining),
       message: JSON.stringify(cleanup.remaining)
     });
 

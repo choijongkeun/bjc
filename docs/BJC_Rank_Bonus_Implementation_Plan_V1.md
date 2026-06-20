@@ -489,7 +489,40 @@ week/month 지급 정책은 미확정이다.
 - 레그 매출 포함 상태(`ACTIVE` vs `CANCEL_REQUESTED` 포함 여부)는 운영 확인이 필요하다.
 - 자동 demotion 미구현 상태에서는 qualification 결과와 current status가 달라질 수 있다.
 
-## 21. Recommended Next Steps
+## 21. Actual Apply Validation
+
+2026-06-20 writable `bjc_db` 기준 실제 검증 결과:
+
+- `0007` 적용 전 상태:
+  - `migration_0007_state = NOT_APPLIED`
+  - `account_rank_status`, `account_rank_qualification_results`, `account_rank_history` 미존재
+  - `calc_runs.run_type`에 `RANK_QUALIFICATION` 없음
+  - `ledger_events.product_id = NOT NULL`
+  - `rank_rules.updated_at` 없음
+- 관련 핵심 테이블은 저장소 밖 `/tmp/bjc_backups/` 경로로 백업 후 적용했다.
+- 최초 `0007` 실행은 MySQL identifier 길이 제한 때문에 `PARTIALLY_APPLIED`가 되었다.
+- 실패 원인:
+  - qualification 결과 테이블의 CHECK 이름 `chk_account_rank_qualification_results_direct_active_referral_count`가 64자 제한을 초과
+- 조치:
+  - 0007의 qualification/history CHECK 이름을 축약
+  - 이미 적용된 `ALTER`와 `account_rank_status`는 유지
+  - 남은 rank 결과/이력 테이블만 이어서 생성
+- 최종 상태:
+  - `migration_0007_state = APPLIED`
+  - `calc_runs.run_type`에 `RANK_QUALIFICATION` 포함
+  - `ledger_events.product_id = NULLABLE`
+  - `rank_rules.updated_at` 존재
+  - `account_rank_status`, `account_rank_qualification_results`, `account_rank_history` 모두 존재
+- `mysql/smoke/bjc_rank_bonus_smoketest.sql` 실행 결과:
+  - 정상 insert/enum/FK/nullable ledger 시나리오 확인
+  - duplicate/check/fk/change_type/duplicate reward 실패 시나리오가 의도대로 발생
+  - rollback 후 rank fixture 잔존 0
+- 현재도 runtime 상태는 변하지 않는다:
+  - `RANK_QUALIFICATION` service/API 미구현
+  - `RANK_BONUS` service/API 미구현
+  - User/Admin 직급 UI 미구현
+
+## 22. Recommended Next Steps
 
 1. 원본 BJC 자료를 확보해 실제 직급명과 지급 주기를 확정한다.
 2. `RANK_QUALIFICATION` runtime service를 구현한다.
