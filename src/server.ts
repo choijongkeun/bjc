@@ -12,6 +12,7 @@ import { AdminAccountService } from "./services/adminAccountService.js";
 import { AccountStakingService } from "./services/accountStakingService.js";
 import { AccountRewardService } from "./services/accountRewardService.js";
 import { DailyRewardService } from "./services/dailyRewardService.js";
+import { DirectReferralRewardService } from "./services/directReferralRewardService.js";
 import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
@@ -49,6 +50,7 @@ const adminAccountService = new AdminAccountService(pool);
 const accountStakingService = new AccountStakingService(pool);
 const accountRewardService = new AccountRewardService(pool);
 const dailyRewardService = new DailyRewardService(pool);
+const directReferralRewardService = new DirectReferralRewardService(pool);
 const rewardWithdrawalService = new RewardWithdrawalService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
@@ -1248,6 +1250,50 @@ app.post("/api/admin/calc-runs/daily-reward", async (req, res, next) => {
       actor_account_id,
       policy_version_id: body.policy_version_id,
       reward_date: body.reward_date,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/rewards/direct-referral/run", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        activated_from: z.string().trim().min(1),
+        activated_to: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await directReferralRewardService.runBatch({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      activated_from: body.activated_from,
+      activated_to: body.activated_to
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/stakings/:stakingId/direct-referral-calculate", async (req, res, next) => {
+  try {
+    const staking_id = z.string().trim().min(1).parse(req.params.stakingId);
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1).optional()
+      })
+      .parse(req.body ?? {});
+
+    const actor_account_id = requireActorId(req);
+    const result = await directReferralRewardService.runForStaking({
+      actor_account_id,
+      staking_id,
+      policy_version_id: body.policy_version_id
     });
     res.json(result);
   } catch (err) {

@@ -16,6 +16,8 @@ export type RewardRow = {
   id: string;
   account_id: string;
   account_staking_id: string | null;
+  source_account_id: string | null;
+  source_account_staking_id: string | null;
   policy_version_id: string;
   calc_run_id: string | null;
   reward_type: RewardType;
@@ -36,10 +38,16 @@ export type RewardRow = {
 export type RewardViewRow = RewardRow & {
   account_login_id: string | null;
   account_display_name: string | null;
+  source_account_login_id: string | null;
+  source_account_display_name: string | null;
   staking_principal_amount_base: string | null;
   staking_daily_interest_bps_snapshot: string | null;
   staking_duration_days_snapshot: number | null;
   staking_status: string | null;
+  source_staking_principal_amount_base: string | null;
+  source_staking_daily_interest_bps_snapshot: string | null;
+  source_staking_duration_days_snapshot: number | null;
+  source_staking_status: string | null;
   product_id: string | null;
   product_name: string | null;
   product_symbol: string | null;
@@ -63,6 +71,7 @@ export type RewardSummaryRow = {
   withdrawable_reward_amount_base: string;
   withdrawn_reward_amount_base: string;
   daily_reward_amount_base: string;
+  bonus_reward_amount_base: string;
   reward_count: number;
 };
 
@@ -99,6 +108,8 @@ function baseSelectSql() {
       r.id,
       r.account_id,
       r.account_staking_id,
+      r.source_account_id,
+      r.source_account_staking_id,
       r.policy_version_id,
       r.calc_run_id,
       r.reward_type,
@@ -116,10 +127,16 @@ function baseSelectSql() {
       r.updated_at,
       a.login_id as account_login_id,
       a.display_name as account_display_name,
+      source_a.login_id as source_account_login_id,
+      source_a.display_name as source_account_display_name,
       s.principal_amount_base as staking_principal_amount_base,
       s.daily_interest_bps_snapshot as staking_daily_interest_bps_snapshot,
       s.duration_days_snapshot as staking_duration_days_snapshot,
       s.status as staking_status,
+      source_s.principal_amount_base as source_staking_principal_amount_base,
+      source_s.daily_interest_bps_snapshot as source_staking_daily_interest_bps_snapshot,
+      source_s.duration_days_snapshot as source_staking_duration_days_snapshot,
+      source_s.status as source_staking_status,
       p.id as product_id,
       p.name as product_name,
       p.symbol as product_symbol,
@@ -130,10 +147,14 @@ function baseSelectSql() {
      from account_rewards r
      inner join accounts a
        on a.id = r.account_id
+     left join accounts source_a
+       on source_a.id = r.source_account_id
      left join account_stakings s
        on s.id = r.account_staking_id
+     left join account_stakings source_s
+       on source_s.id = r.source_account_staking_id
      left join staking_products p
-       on p.id = s.staking_product_id
+       on p.id = coalesce(s.staking_product_id, source_s.staking_product_id)
      left join calc_runs cr
        on cr.id = r.calc_run_id`;
 }
@@ -157,12 +178,14 @@ function buildListWhere(input: {
   }
   if (input.q) {
     const q = `%${input.q}%`;
-    where.push("(r.id like ? or a.login_id like ? or a.display_name like ?)");
-    params.push(q, q, q);
+    where.push(
+      "(r.id like ? or a.login_id like ? or a.display_name like ? or source_a.login_id like ? or source_a.display_name like ?)"
+    );
+    params.push(q, q, q, q, q);
   }
   if (input.staking_id) {
-    where.push("r.account_staking_id = ?");
-    params.push(input.staking_id);
+    where.push("(r.account_staking_id = ? or r.source_account_staking_id = ?)");
+    params.push(input.staking_id, input.staking_id);
   }
   if (input.reward_type) {
     where.push("r.reward_type = ?");
@@ -197,6 +220,8 @@ export async function insertAccountReward(
     id: string;
     account_id: string;
     account_staking_id?: string | null;
+    source_account_id?: string | null;
+    source_account_staking_id?: string | null;
     policy_version_id: string;
     calc_run_id?: string | null;
     reward_type: RewardType;
@@ -219,6 +244,8 @@ export async function insertAccountReward(
         id,
         account_id,
         account_staking_id,
+        source_account_id,
+        source_account_staking_id,
         policy_version_id,
         calc_run_id,
         reward_type,
@@ -234,11 +261,13 @@ export async function insertAccountReward(
         metadata_json,
         created_at,
         updated_at
-      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as json), ?, ?)`,
+      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as json), ?, ?)`,
     [
       input.id,
       input.account_id,
       input.account_staking_id ?? null,
+      input.source_account_id ?? null,
+      input.source_account_staking_id ?? null,
       input.policy_version_id,
       input.calc_run_id ?? null,
       input.reward_type,
@@ -287,6 +316,8 @@ export async function getRewardByIdForUpdate(conn: DbConn, id: string): Promise<
         id,
         account_id,
         account_staking_id,
+        source_account_id,
+        source_account_staking_id,
         policy_version_id,
         calc_run_id,
         reward_type,
@@ -362,7 +393,16 @@ export async function listMyRewards(
   });
   const offset = (input.page - 1) * input.limit;
 
-  const [countRows] = await conn.query(`select count(*) as total from account_rewards r ${whereSql}`, params);
+  const [countRows] = await conn.query(
+    `select count(*) as total
+       from account_rewards r
+       inner join accounts a
+         on a.id = r.account_id
+       left join accounts source_a
+         on source_a.id = r.source_account_id
+       ${whereSql}`,
+    params
+  );
   const total = Number((countRows as Array<{ total: number | string }>)[0]?.total ?? 0);
 
   const [rows] = await conn.query(
@@ -399,6 +439,7 @@ export async function listAdminRewards(
     `select count(*) as total
        from account_rewards r
        inner join accounts a on a.id = r.account_id
+       left join accounts source_a on source_a.id = r.source_account_id
        ${whereSql}`,
     params
   );
@@ -498,6 +539,18 @@ export async function getMyRewardSummary(
           ),
           0
         ) as daily_reward_amount_base,
+        coalesce(
+          sum(
+            case
+              when r.status = 'CONFIRMED' and r.reward_type in ('DIRECT_REFERRAL', 'RANK_BONUS', 'CONTRIBUTION', 'SIDECAR') then r.amount_base
+              when r.status = 'CONFIRMED'
+                and r.reward_type = 'REVERSAL'
+                and original.reward_type in ('DIRECT_REFERRAL', 'RANK_BONUS', 'CONTRIBUTION', 'SIDECAR') then r.amount_base
+              else 0
+            end
+          ),
+          0
+        ) as bonus_reward_amount_base,
         cast(count(*) as unsigned) as reward_count
        from account_rewards r
        left join account_rewards original
@@ -513,6 +566,7 @@ export async function getMyRewardSummary(
     withdrawable_reward_amount_base: String(row.withdrawable_reward_amount_base ?? "0"),
     withdrawn_reward_amount_base: String(row.withdrawn_reward_amount_base ?? "0"),
     daily_reward_amount_base: String(row.daily_reward_amount_base ?? "0"),
+    bonus_reward_amount_base: String(row.bonus_reward_amount_base ?? "0"),
     reward_count: Number(row.reward_count ?? 0)
   };
 }

@@ -33,6 +33,10 @@ const USER_METADATA_KEYS = new Set([
   "daily_interest_bps_snapshot",
   "duration_days_snapshot",
   "denominator",
+  "formula_version",
+  "source_principal_amount_base",
+  "direct_referral_rate_bps",
+  "referral_depth",
   "original_reward_id",
   "original_source_reference",
   "reason",
@@ -77,6 +81,14 @@ export function sanitizeRewardMetadata(value: unknown): Record<string, unknown> 
 }
 
 function toRewardResponse(row: RewardViewRow, options?: { includeMetadata?: boolean; includeAccount?: boolean }) {
+  const visibleMetadata = sanitizeRewardMetadata(row.metadata_json);
+  const sourcePrincipalAmountBase =
+    row.source_staking_principal_amount_base ?? String(visibleMetadata.source_principal_amount_base ?? "");
+  const directReferralRateBps =
+    visibleMetadata.direct_referral_rate_bps !== undefined
+      ? String(visibleMetadata.direct_referral_rate_bps)
+      : null;
+
   return {
     id: row.id,
     account_id: row.account_id,
@@ -85,6 +97,8 @@ function toRewardResponse(row: RewardViewRow, options?: { includeMetadata?: bool
     amount_base: row.amount_base,
     status: row.status,
     account_staking_id: row.account_staking_id,
+    source_account_id: options?.includeAccount ? row.source_account_id : undefined,
+    source_account_staking_id: row.source_account_staking_id,
     policy_version_id: row.policy_version_id,
     calc_run_id: row.calc_run_id,
     source_reference: row.source_reference,
@@ -95,7 +109,7 @@ function toRewardResponse(row: RewardViewRow, options?: { includeMetadata?: bool
     reversed_at: toApiDateTime(row.reversed_at),
     created_at: toApiDateTime(row.created_at),
     updated_at: toApiDateTime(row.updated_at),
-    metadata: options?.includeMetadata ? sanitizeRewardMetadata(row.metadata_json) : undefined,
+    metadata: options?.includeMetadata ? visibleMetadata : undefined,
     staking: row.account_staking_id
       ? {
           id: row.account_staking_id,
@@ -105,6 +119,22 @@ function toRewardResponse(row: RewardViewRow, options?: { includeMetadata?: bool
           status: row.staking_status
         }
       : null,
+    source:
+      row.source_account_id || row.source_account_staking_id
+        ? {
+            account_id: options?.includeAccount ? row.source_account_id : undefined,
+            login_id: options?.includeAccount ? row.source_account_login_id : undefined,
+            display_name: row.source_account_display_name,
+            staking: row.source_account_staking_id
+              ? {
+                  id: row.source_account_staking_id,
+                  principal_amount_base: sourcePrincipalAmountBase || null,
+                  status: row.source_staking_status
+                }
+              : null,
+            direct_referral_rate_bps: directReferralRateBps
+          }
+        : null,
     product: row.product_id
       ? {
           id: row.product_id,

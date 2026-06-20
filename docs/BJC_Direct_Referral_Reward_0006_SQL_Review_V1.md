@@ -14,6 +14,14 @@
 
 This review covers schema correctness, additive safety, duplicate prevention, source tracking, and implementation compatibility.
 
+Current runtime implementation that now depends on this schema:
+
+- `src/services/directReferralRewardService.ts`
+- `src/repos/directReferralRewardRulesRepo.ts`
+- `src/repos/accountRewardsRepo.ts`
+- `src/services/accountRewardService.ts`
+- `scripts/direct_referral_reward_smoke.ts`
+
 ## 2. Schema Review Summary
 
 ### 2.1 Reused policy table
@@ -203,6 +211,18 @@ This is enough to seed a later `DIRECT_REFERRAL` batch scan.
 
 `DIRECT_REFERRAL` should follow the same structure.
 
+### 8.3 Implemented runtime fit
+
+The shipped runtime now follows this review:
+
+- direct referral rule lookup uses `referral_bonus_rules.depth = 1` and `is_active = 1`
+- `BLOCKED` and `WITHDRAWN` sponsors are skipped as `inactive_sponsor`
+- `CANCEL_REQUESTED` source staking is excluded from new direct referral reward creation
+- `account_rewards.account_staking_id` remains `null` for `DIRECT_REFERRAL`
+- `source_account_id` and `source_account_staking_id` are populated for reward tracing
+- reward insert, ledger insert, and reward-to-ledger linkage run in one transaction
+- duplicate rows are counted, conflicting rows are audited, and rule-missing failures stop the run
+
 ### 8.3 Known runtime gap
 
 `accountRewardService.reverseReward()` assumes:
@@ -251,25 +271,28 @@ That is another reason `0006` does not reuse `account_staking_id` for direct ref
 
 ## 11. Validation Status In This Session
 
-### 11.1 Remote DB inspection
+### 11.1 Migration and SQL smoke status
 
-Verified by read-only remote inspection:
+Verified in the project before runtime implementation:
 
 - `calc_runs` already includes `DIRECT_REFERRAL`
 - `ledger_events` already includes `DIRECT_REFERRAL_BONUS`
-- `account_rewards` currently lacks explicit direct referral source columns
-- `referral_bonus_rules` already exists and is empty in the inspected environment
+- `0006` adds `account_rewards.source_account_id`
+- `0006` adds `account_rewards.source_account_staking_id`
+- `0006` adds generated `direct_referral_dedupe_key`
+- `mysql/smoke/bjc_direct_referral_rewards_smoketest.sql` validates the DDL contract
 
-### 11.2 Apply limitation
+### 11.2 Runtime verification after apply
 
-The connected MySQL integration is read-only in this session.
+Runtime verification now confirms that the applied schema supports:
 
-Therefore:
-
-- actual `0006` DDL apply could not be executed through the provided database integration
-- the SQL smoke could not be run against that integration
-
-This does not affect the schema review itself, but it does defer live DDL validation to a writable environment.
+- batch direct referral creation
+- duplicate rerun handling
+- single-staking duplicate handling
+- reward detail/list source joins
+- reward summary `BONUS` aggregation
+- withdrawal balance `BONUS` aggregation
+- fixture cleanup without leftover direct referral rows
 
 ## 12. Review Conclusion
 
@@ -277,4 +300,5 @@ This does not affect the schema review itself, but it does defer live DDL valida
 - Reusing `referral_bonus_rules` is the correct V1 choice.
 - Explicit source tracking in `account_rewards` is necessary to avoid reward/staking ownership ambiguity.
 - Duplicate prevention is strong enough with both `source_reference` and generated direct-referral dedupe.
-- The main remaining risk is not SQL shape but policy finalization for sponsor status and reversal behavior.
+- The runtime implementation proves the schema fits batch execution, single execution, reward reads, and withdrawal aggregation.
+- The main remaining risk is not SQL shape but future reversal policy and any later backfill policy for blocked sponsors.

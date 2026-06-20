@@ -2,9 +2,8 @@
 
 ## 1. Scope
 
-- This document defines the planned V1 contract for direct referral reward calculation and inspection APIs.
-- This phase does not implement the runtime service or routes.
-- The contract is intended to guide the later implementation of the admin execution flow and reuse of existing reward read APIs.
+- This document defines the implemented V1 contract for direct referral reward calculation and inspection APIs.
+- Runtime service, admin execution routes, reward DTO wiring, and smoke coverage are implemented in this phase.
 - All amount fields sourced from `DECIMAL(65,0)` remain string values in request and response bodies.
 
 ## 2. Source of Truth
@@ -35,6 +34,13 @@ Rules:
 - use sponsor lineage only
 - do not use binary parent lineage
 - `referral_edges.depth = 1` may be used for verification only
+- sponsor must satisfy all of:
+  - exists
+  - `role = USER`
+  - `status = ACTIVE`
+  - `id != source account id`
+- missing sponsor increments `no_sponsor_skip_count`
+- `BLOCKED` or `WITHDRAWN` sponsor increments `inactive_sponsor_skip_count`
 
 ### 3.2 Trigger timing
 
@@ -46,6 +52,16 @@ PENDING -> ACTIVE
 ```
 
 - V1 contract assumes a separate `DIRECT_REFERRAL` batch execution after activation, not immediate reward creation inside staking activation.
+- eligible source staking conditions:
+  - `status = ACTIVE`
+  - `activated_at is not null`
+  - `cancel_requested_at is null`
+- excluded source statuses in V1:
+  - `PENDING`
+  - `CANCELLED`
+  - `MATURED`
+  - `CLOSED`
+  - `CANCEL_REQUESTED`
 
 ### 3.3 Formula
 
@@ -59,6 +75,7 @@ Rules:
 - amount math uses `BigInt` or MySQL `DECIMAL`
 - float math is forbidden
 - zero result means no reward row is created
+- current rule source is `referral_bonus_rules.depth = 1`
 
 ### 3.4 Reward storage rules
 
@@ -98,7 +115,7 @@ For `DIRECT_REFERRAL`:
   - reuse existing authenticated reward endpoints
 - `USER` cannot trigger calc runs
 
-## 5. Planned Admin Execution APIs
+## 5. Implemented Admin Execution APIs
 
 ## 5.1 POST `/api/admin/rewards/direct-referral/run`
 
@@ -113,44 +130,32 @@ For `DIRECT_REFERRAL`:
 {
   "policy_version_id": "uuid",
   "activated_from": "2026-06-01",
-  "activated_to": "2026-06-19",
-  "staking_ids": ["optional-source-staking-id"]
+  "activated_to": "2026-06-19"
 }
 ```
 
 Rules:
 
 - `policy_version_id` is required
-- at least one targeting method is required:
-  - activation window
-  - explicit `staking_ids`
-- when `staking_ids` is omitted, the service scans activated source stakings in the requested window
+- the service scans activated source stakings in the requested window
 - the run uses `calc_runs.run_type = 'DIRECT_REFERRAL'`
+- date window is interpreted as KST `[from 00:00, to + 1 day 00:00)`
 
 ### Response
 
 ```json
 {
-  "calc_run": {
-    "id": "uuid",
-    "policy_version_id": "uuid",
-    "run_type": "DIRECT_REFERRAL",
-    "run_date": "2026-06-19",
-    "status": "SUCCEEDED",
-    "started_at": "2026-06-19T00:00:00.000Z",
-    "finished_at": "2026-06-19T00:00:10.000Z",
-    "finalized_at": null,
-    "error_message": null
-  },
+  "calc_run_id": "uuid",
   "target_count": 10,
   "created_count": 7,
   "no_sponsor_skip_count": 1,
   "inactive_sponsor_skip_count": 1,
-  "non_user_sponsor_skip_count": 0,
   "zero_reward_skip_count": 0,
   "duplicate_skip_count": 1,
+  "conflict_count": 0,
   "failed_count": 0,
-  "total_reward_amount_base": "1050000"
+  "total_reward_amount_base": "1050000",
+  "status": "SUCCEEDED"
 }
 ```
 
@@ -159,18 +164,23 @@ Rules:
 - `400`
   - invalid request body
   - invalid date format
-  - missing targeting condition
 - `403`
   - actor is not `ADMIN`
 - `404`
   - policy version missing
 - `409`
-  - same completed run already exists
-  - existing conflicting reward row detected during rerun
+  - same run is already `PENDING` or `RUNNING`
 - `422`
-  - policy or source data invalid for execution
+  - active depth-1 rule missing for the requested policy
 - `500`
   - unexpected execution failure
+
+Idempotency:
+
+- if the same window is rerun after completion, the existing `calc_run_id` is reused
+- identical existing reward rows count as `duplicate_skip_count`
+- conflicting existing reward rows count as `conflict_count`
+- rule-level configuration failure fails the whole run
 
 ## 5.2 POST `/api/admin/stakings/:stakingId/direct-referral-calculate`
 
@@ -189,30 +199,41 @@ Rules:
 
 ### Response
 
-Same response envelope as the batch endpoint, but:
+```json
+{
+  "calc_run_id": "uuid",
+  "status": "SUCCEEDED",
+  "result_type": "duplicate",
+  "reward_id": null,
+  "existing_reward_id": "uuid"
+}
+```
 
-- `target_count` is `0` or `1`
-- the execution target is the given staking only
+Rules:
+
+- request body may be empty
+- if `policy_version_id` is present, it must match the source staking snapshot
+- duplicate result does not create a new reward row
+- the service may create or reuse a `calc_run` for the staking's KST reward date
 
 ### Errors
 
 - `404`
   - staking missing
-  - policy version missing
-- `409`
-  - duplicate or conflicting reward already exists
+  - policy version missing through validation path
 - `422`
+  - active direct referral rule missing
+  - `policy_version_id` mismatches staking snapshot
+- `409`
   - staking is not eligible for direct referral calculation
 
-## 6. Planned Admin Read APIs
+## 6. Implemented Admin Read APIs
 
 ### 6.1 Reuse existing calc-run reward inspection
 
 Reuse:
 
 - `GET /api/admin/calc-runs/:calcRunId/rewards`
-
-Recommended behavior:
 
 - support `reward_type=DIRECT_REFERRAL`
 - include source member summary and source staking summary when available
@@ -225,10 +246,11 @@ Reuse:
 - `GET /api/admin/rewards/:rewardId`
 - `GET /api/admin/accounts/:accountId/rewards`
 
-Recommended filter additions for the future implementation:
+Implemented filter behavior:
 
-- `source_account_id`
-- `source_staking_id`
+- `reward_type=DIRECT_REFERRAL` works on existing admin reward endpoints
+- `staking_id` matches either `account_staking_id` or `source_account_staking_id`
+- admin search query also matches source member `login_id` and `display_name`
 
 ## 7. User Read APIs
 
@@ -236,26 +258,30 @@ Reuse:
 
 - `GET /api/me/rewards`
 - `GET /api/me/rewards/:rewardId`
+- `GET /api/me/rewards/summary`
+- `GET /api/me/withdrawal-balance`
 
-Expected `DIRECT_REFERRAL` list/detail behavior:
+Implemented `DIRECT_REFERRAL` list/detail behavior:
 
 - reward row appears in the existing reward timeline
 - user-visible metadata remains minimal
 - internal IDs are not overexposed
+- direct referral rewards contribute to reward summary `BONUS`
+- direct referral rewards contribute to withdrawal balance `BONUS`
 
-Recommended user metadata shape:
+User metadata shape:
 
 ```json
 {
-  "source_display_name": "member name",
-  "principal_amount_base": "1000000",
+  "formula_version": "direct_referral_v1",
+  "source_principal_amount_base": "1000000",
   "direct_referral_rate_bps": "1500"
 }
 ```
 
 ## 8. Reward Detail Shape
 
-Recommended `DIRECT_REFERRAL` reward response additions:
+Implemented `DIRECT_REFERRAL` reward response additions:
 
 ```json
 {
@@ -274,18 +300,21 @@ Recommended `DIRECT_REFERRAL` reward response additions:
   "available_at": "2026-06-19T00:00:00.000Z",
   "confirmed_at": "2026-06-19T00:00:00.000Z",
   "metadata": {
-    "principal_amount_base": "1000000",
+    "formula_version": "direct_referral_v1",
+    "source_principal_amount_base": "1000000",
     "direct_referral_rate_bps": "1500",
-    "source_display_name": "member name"
+    "referral_depth": 1
   },
-  "source_account": {
-    "id": "referred-account-id",
-    "display_name": "member name"
-  },
-  "source_staking": {
-    "id": "source-staking-id",
-    "principal_amount_base": "1000000",
-    "status": "ACTIVE"
+  "source": {
+    "account_id": "referred-account-id",
+    "login_id": "source-login-id",
+    "display_name": "member name",
+    "direct_referral_rate_bps": "1500",
+    "staking": {
+      "id": "source-staking-id",
+      "principal_amount_base": "1000000",
+      "status": "ACTIVE"
+    }
   },
   "calc_run": {
     "id": "uuid",
@@ -295,6 +324,13 @@ Recommended `DIRECT_REFERRAL` reward response additions:
   }
 }
 ```
+
+Visibility rules:
+
+- user response includes `source.display_name`, staking summary, and rate only
+- user response does not expose source `login_id`
+- admin response may include `source_account_id`, `source.login_id`, and `calc_run`
+- internal metadata is sanitized before response
 
 ## 9. Ledger Contract
 
@@ -324,6 +360,11 @@ Required fields:
 - created direct referral rewards are expected to be stored as `CONFIRMED` in V1
 - `available_at = confirmed_at` is the current recommended behavior unless later policy introduces a holding delay
 - reward rows participate in the existing reward summary and withdrawal bucket logic as `BONUS`
+- runtime metadata currently stores:
+  - `formula_version`
+  - `source_principal_amount_base`
+  - `direct_referral_rate_bps`
+  - `referral_depth`
 
 ## 11. Reversal Scope
 
@@ -351,16 +392,27 @@ If reversal is later required, it should reuse the existing append-only reward r
 
 ## 13. Implementation Notes
 
-- implementation should follow the batch pattern proven by `dailyRewardService`
-- source query should be based on activated staking rows, not raw binary structure
-- duplicate detection must happen before insert and be reinforced by DB constraints
-- reward and ledger writes must be in one transaction
+- core service:
+  - `src/services/directReferralRewardService.ts`
+- rule repository:
+  - `src/repos/directReferralRewardRulesRepo.ts`
+- domain helpers:
+  - `src/domain/directReferralReward.ts`
+- DTO integration:
+  - `src/repos/accountRewardsRepo.ts`
+  - `src/services/accountRewardService.ts`
+- route wiring:
+  - `src/server.ts`
+- smoke verification:
+  - `scripts/direct_referral_reward_smoke.ts`
+- implementation follows the batch pattern proven by `dailyRewardService`
+- source query is based on activated staking rows, not raw binary structure
+- duplicate detection happens before insert and is reinforced by DB constraints
+- reward and ledger writes happen in one transaction
+- automatic reversal is not implemented in V1
 
 ## 14. Deferred Items
 
-- runtime service implementation
-- route wiring
-- response DTO wiring for source account and source staking
 - admin button/UI work
 - user display refinements
 - reversal automation

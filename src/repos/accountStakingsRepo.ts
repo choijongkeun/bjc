@@ -68,6 +68,13 @@ export type DailyRewardEligibleStakingRow = {
   product_decimals: number;
 };
 
+export type DirectReferralEligibleStakingCandidateRow = {
+  id: string;
+  account_id: string;
+  policy_version_id: string;
+  activated_at: string;
+};
+
 export type AccountStakingSummaryRow = {
   pending_count: number;
   active_count: number;
@@ -476,6 +483,42 @@ export async function listDailyRewardEligibleStakings(
   );
 
   return rows as DailyRewardEligibleStakingRow[];
+}
+
+export async function listDirectReferralEligibleStakingCandidates(
+  conn: DbConn,
+  input: {
+    policy_version_id: string;
+    activated_from_sql: string;
+    activated_to_exclusive_sql: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<DirectReferralEligibleStakingCandidateRow[]> {
+  const [rows] = await conn.query(
+    `select
+        s.id,
+        s.account_id,
+        s.policy_version_id,
+        s.activated_at
+       from account_stakings s
+      where s.policy_version_id = ?
+        and s.status = 'ACTIVE'
+        and s.activated_at is not null
+        and s.activated_at >= ?
+        and s.activated_at < ?
+      order by s.activated_at asc, s.id asc
+      limit ? offset ?`,
+    [
+      input.policy_version_id,
+      input.activated_from_sql,
+      input.activated_to_exclusive_sql,
+      input.limit ?? 1000,
+      input.offset ?? 0
+    ]
+  );
+
+  return rows as DirectReferralEligibleStakingCandidateRow[];
 }
 
 export async function getMyStakingSummary(conn: DbConn, account_id: string): Promise<AccountStakingSummaryRow> {

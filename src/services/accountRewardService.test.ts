@@ -46,4 +46,21 @@ describe("accountRewardService helpers", () => {
     expect(sanitizeRewardMetadata("secret")).toEqual({});
     expect(sanitizeRewardMetadata(["secret"])).toEqual({});
   });
+
+  it("keeps only allowed direct referral metadata keys", () => {
+    expect(
+      sanitizeRewardMetadata({
+        formula_version: "direct_referral_v1",
+        source_principal_amount_base: "1000000",
+        direct_referral_rate_bps: "1500",
+        referral_depth: 1,
+        login_id: "should-drop"
+      })
+    ).toEqual({
+      formula_version: "direct_referral_v1",
+      source_principal_amount_base: "1000000",
+      direct_referral_rate_bps: "1500",
+      referral_depth: 1
+    });
+  });
 });

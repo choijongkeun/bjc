@@ -2,9 +2,9 @@
 
 ## 1. Goal
 
-- Define the V1 direct referral reward policy and execution design on top of the already completed member, staking, reward, withdrawal, and User/Admin foundations.
-- Keep this phase limited to design, migration, SQL smoke, and API contract work.
-- Do not implement the actual direct referral service, API handler, or User/Admin UI in this phase.
+- Implement the V1 direct referral reward runtime on top of the already completed member, staking, reward, withdrawal, and User/Admin foundations.
+- Keep this phase limited to repository, domain helper, service, API wiring, reward DTO reuse, smoke, and documentation updates.
+- Do not implement new User/Admin screens, automatic scheduler, or automatic reversal in this phase.
 
 ## 2. Scope
 
@@ -15,16 +15,18 @@ Included in this phase:
 - reward trigger timing decision
 - duplicate prevention design
 - reward source tracking design
-- `calc_runs` execution design for `DIRECT_REFERRAL`
-- additive migration draft
-- SQL smoke draft
-- API contract draft
+- `calc_runs` execution runtime for `DIRECT_REFERRAL`
+- runtime service and admin routes
+- reward read-model integration
+- unit test and dedicated smoke implementation
+- documentation alignment with the shipped behavior
 
 Excluded from this phase:
 
-- `DIRECT_REFERRAL` runtime service implementation
-- `DIRECT_REFERRAL` API route implementation
 - User/Admin new screens
+- automatic scheduler
+- automatic reversal for cancelled source staking
+- retroactive payout for blocked sponsor backlog
 - `RANK_BONUS`
 - `CONTRIBUTION`
 - `SIDECAR`
@@ -83,10 +85,8 @@ The following points are confirmed from repository materials:
 
 ## 5. Unconfirmed Policy
 
-The following points are not fully confirmed by the repository materials and must remain policy-open:
+The following points are not fully confirmed by the repository materials and remain future-policy items:
 
-- whether `BLOCKED` sponsor should always be excluded
-- whether reward is created immediately as `CONFIRMED` or starts as `PENDING`
 - whether a later `ACTIVE -> CANCELLED` source staking should reverse an already confirmed direct referral reward
 - whether policy will later add:
   - minimum staking amount
@@ -97,6 +97,8 @@ The following points are not fully confirmed by the repository materials and mus
 
 V1 design decision for this phase:
 
+- exclude `BLOCKED` and `WITHDRAWN` sponsor from new reward creation
+- store new direct referral rewards as `CONFIRMED`
 - do not auto-implement reversal
 - do not add min/max rule columns yet
 - do not assume sponsor reassignment support
@@ -117,19 +119,21 @@ Rules:
 - if sponsor is missing, the source staking is skipped
 - self-sponsor is already prevented by `accounts` table check constraints
 
-### 6.1 Recommended beneficiary eligibility
+### 6.1 Implemented beneficiary eligibility
 
 - sponsor exists
 - sponsor `role = USER`
 - sponsor `status = ACTIVE`
 - sponsor is not the same account as the staking owner
 
-### 6.2 Conservative skip buckets
+### 6.2 Implemented skip buckets
 
 - `no_sponsor`
 - `inactive_sponsor`
-- `non_user_sponsor`
-- `self_sponsor_conflict`
+- `zero_reward`
+- `duplicate`
+- `conflict`
+- `failed`
 
 ## 7. Reward Trigger Timing
 
@@ -153,7 +157,7 @@ Reason:
 
 Choose:
 
-- record the eligible source when staking activation succeeds
+- scan eligible activated source staking rows by activation window
 - calculate reward in a separate `DIRECT_REFERRAL` calc run
 
 Why this is preferred over immediate in-transaction creation:
@@ -186,6 +190,7 @@ Rules:
 - runtime math must use `BigInt`
 - `Number`, `parseInt`, and `parseFloat` must not be used
 - zero result means no reward row is created
+- runtime stores `formula_version = direct_referral_v1`
 
 ### 8.3 V1 policy depth
 
@@ -256,14 +261,10 @@ Use:
 
 Keep operational snapshot data in `metadata_json`:
 
-- `policy_version_id`
-- `source_account_id`
-- `source_staking_id`
-- `principal_amount_base`
+- `formula_version`
+- `source_principal_amount_base`
 - `direct_referral_rate_bps`
-- `sponsor_account_id`
-- `source_activation_reference`
-- `calculation_formula_version`
+- `referral_depth`
 
 User exposure should stay minimal:
 
@@ -320,7 +321,7 @@ Primary:
 
 - batch run by activation window
 
-Optional operator helper:
+Operator helper:
 
 - single staking run for one source staking
 
@@ -344,16 +345,16 @@ Single staking:
 }
 ```
 
-### 12.4 Recommended response fields
+### 12.4 Implemented response fields
 
 - `calc_run_id`
 - `target_count`
 - `created_count`
 - `no_sponsor_skip_count`
 - `inactive_sponsor_skip_count`
-- `non_user_sponsor_skip_count`
 - `zero_reward_skip_count`
 - `duplicate_skip_count`
+- `conflict_count`
 - `failed_count`
 - `total_reward_amount_base`
 - `status`
@@ -366,9 +367,21 @@ Mirror `dailyRewardService`:
 - paged source staking scan
 - one short transaction per reward creation
 - `reward + ledger + reward.source_ledger_event_id` in one transaction
+- conflict is tracked when an existing reward row does not match the expected snapshot
 - partial success allowed with final run status:
   - `SUCCEEDED`
   - `FAILED`
+
+### 12.6 Implemented files
+
+- `src/services/directReferralRewardService.ts`
+- `src/services/directReferralRewardService.test.ts`
+- `src/domain/directReferralReward.ts`
+- `src/repos/directReferralRewardRulesRepo.ts`
+- `src/repos/accountRewardsRepo.ts`
+- `src/services/accountRewardService.ts`
+- `src/server.ts`
+- `scripts/direct_referral_reward_smoke.ts`
 
 ## 13. Ledger Integration
 
@@ -403,6 +416,7 @@ Current recommendation:
 
 - reversal remains unimplemented in V1
 - automatic reversal on source staking cancellation is explicitly deferred
+- manual handling continues to rely on the existing admin reward reversal flow only
 
 Open decision items:
 
@@ -456,22 +470,46 @@ Coverage:
 - duplicate direct referral dedupe key
 - rollback residual verification
 
-## 17. API and UI Follow-up
+## 17. Runtime Verification Summary
 
-### 17.1 Planned admin endpoints
+- dedicated unit coverage was added for:
+  - 15% calculation
+  - floor rounding
+  - zero reward
+  - sponsor eligibility
+  - duplicate vs conflict classification
+  - KST reward date conversion
+  - batch count aggregation
+  - admin-only execution guard
+- dedicated API smoke now verifies:
+  - `READER` batch execution returns `403`
+  - `ADMIN` batch execution creates one valid reward
+  - missing sponsor, blocked sponsor, and zero reward are skipped
+  - rerun returns duplicate without new reward creation
+  - single staking execution returns duplicate with `existing_reward_id`
+  - user/admin reward reads include source info with sanitized metadata
+  - reward summary `BONUS` and withdrawal balance `BONUS` include direct referral amount
+  - fixture cleanup leaves related rows at `0`
+
+## 18. API and UI Follow-up
+
+### 18.1 Implemented admin endpoints
 
 - `POST /api/admin/rewards/direct-referral/run`
 - `POST /api/admin/stakings/:stakingId/direct-referral-calculate`
 
-### 17.2 Reused read endpoints
+### 18.2 Reused read endpoints
 
 - `GET /api/admin/calc-runs/:calcRunId/rewards`
 - `GET /api/admin/rewards`
 - `GET /api/admin/rewards/:rewardId`
+- `GET /api/admin/accounts/:accountId/rewards`
 - `GET /api/me/rewards`
 - `GET /api/me/rewards/:rewardId`
+- `GET /api/me/rewards/summary`
+- `GET /api/me/withdrawal-balance`
 
-### 17.3 UI follow-up
+### 18.3 UI follow-up
 
 - admin:
   - calc run trigger
@@ -481,18 +519,19 @@ Coverage:
   - direct referral reward row in rewards history
   - minimal source display only
 
-## 18. Risks
+## 19. Risks
 
 - repository evidence for the original BJC office files is absent in this session
 - current reversal service assumes reward account and staking owner match
-- sponsor status policy for `BLOCKED` is not fully settled
 - source staking cancellation policy is not yet defined
-- direct referral reward detail and list queries will need explicit source joins once implementation starts
+- future reversal behavior still needs explicit policy and audit design
+- batch `calc_run.run_date` and single-run `calc_run.run_date` may differ because batch uses request window date while single uses source staking reward date
+- runtime now depends on explicit source joins and sanitized source DTO handling staying aligned
 
-## 19. Recommended Next Steps
+## 20. Recommended Next Steps
 
-1. confirm the business treatment of `BLOCKED` sponsor accounts
-2. confirm whether source staking cancellation causes direct referral reversal
-3. implement repository support for `source_account_id` and `source_account_staking_id`
-4. implement `DirectReferralRewardService` using the `dailyRewardService` batch pattern
-5. wire planned admin endpoints and read-model exposure after service validation
+1. confirm whether source staking cancellation causes direct referral reversal
+2. define whether future policy needs blocked-sponsor backfill handling
+3. extend admin UI with direct referral batch trigger and result detail
+4. extend user/admin reward screens with clearer direct referral source labeling if needed
+5. consider richer calc-run reporting if back-office operations require per-row failure exports
