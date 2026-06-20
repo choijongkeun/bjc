@@ -30,7 +30,7 @@ export function ConfirmationModal({
       <div className="w-full max-w-lg rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Confirm Action</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">작업 확인</div>
             <h3 className="mt-2 text-xl font-bold text-slate-50">{title}</h3>
           </div>
           <button type="button" className="rounded-2xl border border-slate-800 p-2 text-slate-400 hover:text-slate-100" onClick={onClose}>

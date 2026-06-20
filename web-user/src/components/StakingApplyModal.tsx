@@ -57,9 +57,9 @@ export function StakingApplyModal({
       <div className="w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Staking Apply</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">스테이킹 신청</div>
             <h2 className="mt-2 text-xl font-bold text-slate-50">{product.name}</h2>
-            <p className="mt-2 text-sm text-slate-400">신청 후 상태는 관리자 활성화 전까지 `PENDING`으로 유지됩니다.</p>
+            <p className="mt-2 text-sm text-slate-400">신청 후 승인 전까지 대기 상태로 표시됩니다.</p>
           </div>
           <button
             type="button"
@@ -73,7 +73,7 @@ export function StakingApplyModal({
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <InfoTile label="심볼" value={product.symbol} />
-          <InfoTile label="일일 이율" value={`${formatDailyInterestBps(product.daily_interest_bps)} (${product.daily_interest_bps} bps)`} />
+          <InfoTile label="일일 이율" value={`${formatDailyInterestBps(product.daily_interest_bps)} (${product.daily_interest_bps}bp)`} />
           <InfoTile label="스테이킹 기간" value={`${product.staking_days}일`} />
           <InfoTile label="신청 가능 범위" value={rangeText} />
         </div>
@@ -85,12 +85,12 @@ export function StakingApplyModal({
           <TextField
             id="principal_amount_base"
             inputMode="numeric"
-            placeholder="정수 문자열 기준으로 입력"
+            placeholder="금액을 입력해 주세요"
             value={amountBase}
             onChange={(event) => setAmountBase(event.target.value.replace(/[^\d]/g, ""))}
             disabled={submitting}
           />
-          <p className="text-xs text-slate-500">현재 상품의 최소/최대 범위를 확인한 뒤 base amount 그대로 입력합니다.</p>
+          <p className="text-xs text-slate-500">최소 및 최대 신청 금액을 확인한 뒤 입력해 주세요.</p>
         </div>
 
         {error ? (

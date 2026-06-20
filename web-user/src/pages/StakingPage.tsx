@@ -9,7 +9,7 @@ import {
   type StakingProduct,
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
-import { type UserStakingFilter } from "@/lib/staking";
+import { getStakingStatusLabel, type UserStakingFilter } from "@/lib/staking";
 import { useSessionStore } from "@/store/sessionStore";
 import { FeedbackState } from "@/components/FeedbackState";
 import { Pagination } from "@/components/Pagination";
@@ -21,12 +21,12 @@ import { Badge, Button, Card, SectionTitle, TableShell } from "@/components/ui";
 
 const FILTERS: Array<{ key: UserStakingFilter; label: string }> = [
   { key: "ALL", label: "전체" },
-  { key: "PENDING", label: "PENDING" },
-  { key: "ACTIVE", label: "ACTIVE" },
-  { key: "CANCEL_REQUESTED", label: "CANCEL_REQUESTED" },
-  { key: "CANCELLED", label: "CANCELLED" },
-  { key: "MATURED", label: "MATURED" },
-  { key: "CLOSED", label: "CLOSED" },
+  { key: "PENDING", label: "대기" },
+  { key: "ACTIVE", label: "활성" },
+  { key: "CANCEL_REQUESTED", label: "취소 요청" },
+  { key: "CANCELLED", label: "취소" },
+  { key: "MATURED", label: "만기" },
+  { key: "CLOSED", label: "종료" },
 ];
 
 export default function StakingPage() {
@@ -137,29 +137,28 @@ export default function StakingPage() {
 
   return (
     <UserShell
-      title="Staking"
+      title="내 스테이킹"
       subtitle="상품을 확인하고 스테이킹을 신청한 뒤, 내 스테이킹 상태를 추적합니다."
       actions={<Badge tone="blue">신청 후 관리자 활성화</Badge>}
     >
       <div className="space-y-6">
         <Card className="p-6">
           <SectionTitle
-            eyebrow="Staking Overview"
+            eyebrow="스테이킹 현황"
             title="신청 가능한 스테이킹 상품"
-            description="신청이 완료되면 먼저 `PENDING` 상태로 생성되며, 관리자 처리 후 활성화됩니다."
+            description="신청 후 관리자 승인 전까지는 대기 상태로 표시됩니다."
           />
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <SummaryTile icon={<Layers3 className="h-5 w-5" />} label="활성 스테이킹 건수" value={summaryLoading ? "..." : String(summary.active)} />
             <SummaryTile icon={<FolderClock className="h-5 w-5" />} label="대기 중 건수" value={summaryLoading ? "..." : String(summary.pending)} />
             <SummaryTile icon={<Clock3 className="h-5 w-5" />} label="취소 요청 건수" value={summaryLoading ? "..." : String(summary.cancelRequested)} />
           </div>
-          <div className="mt-4 text-xs text-slate-500">현재 목록 API 기준으로 정확한 건수를 별도 조회합니다. 금액 총합 전용 summary API는 추후 분리할 수 있습니다.</div>
         </Card>
 
         {lastCreated ? (
           <FeedbackState
             title="스테이킹 신청 완료"
-            description={`상태가 ${lastCreated.status}로 생성되었습니다. 상세 화면에서 진행 상태를 확인할 수 있습니다.`}
+            description={`상태가 ${getStakingStatusLabel(lastCreated.status)}로 생성되었습니다. 상세 화면에서 진행 상태를 확인할 수 있습니다.`}
             tone="success"
           />
         ) : null}
@@ -168,7 +167,7 @@ export default function StakingPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-slate-50">상품 목록</h2>
-              <p className="text-sm text-slate-400">현재 공개된 ACTIVE 상품만 노출합니다.</p>
+              <p className="text-sm text-slate-400">현재 신청 가능한 상품입니다.</p>
             </div>
             <Button variant="secondary" onClick={() => void loadProducts()}>
               상품 새로고침

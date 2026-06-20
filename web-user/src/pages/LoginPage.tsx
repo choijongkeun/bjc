@@ -46,34 +46,18 @@ export default function LoginPage() {
         <Card className="hidden overflow-hidden p-8 lg:block">
           <div className="soft-grid absolute inset-0 opacity-40" />
           <div className="relative">
-            <div className="text-xs uppercase tracking-[0.22em] text-blue-300">BJC Member Access</div>
-            <h1 className="mt-5 max-w-xl text-5xl font-extrabold tracking-tight text-slate-50">추천인과 네트워크가 바로 보이는 회원용 포털</h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-slate-400">
-              `template/login.html`의 중앙 auth card와 검증 블록 구성을 바탕으로, 실제 BJC 회원 로그인과 네트워크 조회 흐름에 맞게 React 페이지로 재구성했습니다.
-            </p>
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {[
-                { title: "추천 코드 검증", value: "실제 API 연결" },
-                { title: "세션 인증", value: "Bearer Token" },
-                { title: "조직도 조회", value: "Referral / Binary" },
-                { title: "대시보드", value: "내 계정 기준" },
-              ].map((item) => (
-                <div key={item.title} className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-5">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.title}</div>
-                  <div className="mt-3 tabular text-2xl font-bold text-slate-50">{item.value}</div>
-                </div>
-              ))}
-            </div>
+            <div className="text-xs uppercase tracking-[0.22em] text-blue-300">BJC MEMBER</div>
+            <h1 className="mt-5 max-w-xl text-5xl font-extrabold tracking-tight text-slate-50">회원 전용 서비스에 로그인하세요</h1>
           </div>
         </Card>
 
         <Card className="mx-auto w-full max-w-xl overflow-hidden p-0">
           <div className="border-b border-slate-800 bg-slate-950/50 px-8 py-7">
-            <SectionTitle eyebrow="Welcome Back" title="회원 로그인" description="로그인 후 대시보드와 네트워크 화면을 바로 사용할 수 있습니다." />
+            <SectionTitle eyebrow="로그인" title="회원 로그인" description="로그인 후 주요 화면을 바로 사용할 수 있습니다." />
           </div>
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Login ID</span>
+              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">아이디</span>
               <div className="relative">
                 <UserRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextField
@@ -87,7 +71,7 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Password</span>
+              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호</span>
               <div className="relative">
                 <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextField

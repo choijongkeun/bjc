@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowUpRight, RefreshCcw, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api, getErrorMessage, type AccountStaking, type RewardListResponse } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
-import { createClientIdempotencyKey, formatDailyInterestBps, getAvailableUserStakingAction } from "@/lib/staking";
+import { createClientIdempotencyKey, formatDailyInterestBps, getAvailableUserStakingAction, getStakingStatusLabel } from "@/lib/staking";
 import { formatRewardAmountBase, formatRewardDate, isNegativeRewardAmount } from "@/lib/rewards";
 import { useSessionStore } from "@/store/sessionStore";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -101,8 +101,8 @@ export default function StakingDetailPage() {
       setRewardPage(1);
       setActionSuccess(
         availableAction === "cancel"
-          ? "PENDING 스테이킹이 취소되어 CANCELLED 상태로 변경되었습니다."
-          : "취소 요청이 접수되어 CANCEL_REQUESTED 상태로 변경되었습니다."
+          ? "대기 중인 스테이킹이 취소되었습니다."
+          : "취소 요청이 접수되었습니다."
       );
       setConfirmOpen(false);
       setReason("");
@@ -130,11 +130,11 @@ export default function StakingDetailPage() {
 
   return (
     <UserShell
-      title="Staking Detail"
-      subtitle="신청 상세, 상태 변경 시점, 상품 snapshot을 확인합니다."
+      title="스테이킹 상세"
+      subtitle="스테이킹 정보와 처리 상태를 확인합니다."
       actions={
         <div className="flex items-center gap-2">
-          {staking ? <StakingStatusBadge status={staking.status} /> : <Badge tone="slate">Loading</Badge>}
+          {staking ? <StakingStatusBadge status={staking.status} /> : <Badge tone="slate">불러오는 중</Badge>}
           <Button variant="secondary" onClick={() => void loadDetail()} disabled={loading}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             새로고침
@@ -151,19 +151,17 @@ export default function StakingDetailPage() {
         {error ? <FeedbackState title="상세 조회 오류" description={error} tone="error" /> : null}
         {actionError ? <FeedbackState title="처리 실패" description={actionError} tone="error" /> : null}
         {actionSuccess ? <FeedbackState title="처리 완료" description={actionSuccess} tone="success" /> : null}
-        {loading ? <FeedbackState title="상세 로딩 중" description="스테이킹 상세 정보를 불러오고 있습니다." /> : null}
+        {loading ? <FeedbackState title="불러오는 중" description="스테이킹 정보를 불러오고 있습니다." /> : null}
 
         {staking ? (
           <>
             <Card className="p-6">
               <SectionTitle
-                eyebrow="Staking Summary"
+                eyebrow="스테이킹 정보"
                 title={staking.product.name}
-                description="현재 상태와 신청 당시 snapshot, 현재 상품 정보를 함께 표시합니다."
               />
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoTile label="staking id" value={staking.id} mono />
-                <InfoTile label="현재 상태" value={staking.status} />
+                <InfoTile label="현재 상태" value={getStakingStatusLabel(staking.status)} />
                 <InfoTile
                   label="원금"
                   value={`${formatBaseAmount(staking.principal_amount_base, staking.product.decimals)} ${staking.product.symbol}`}
@@ -182,7 +180,7 @@ export default function StakingDetailPage() {
             </Card>
 
             <Card className="p-6">
-              <SectionTitle eyebrow="Timeline" title="상태 타임라인" />
+              <SectionTitle eyebrow="처리 일시" title="상태 타임라인" />
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <InfoTile label="신청일" value={formatDateTime(staking.created_at)} />
                 <InfoTile label="활성화일" value={formatDateTime(staking.activated_at)} />
@@ -191,18 +189,18 @@ export default function StakingDetailPage() {
                 <InfoTile label="취소 요청일" value={formatDateTime(staking.cancel_requested_at)} />
                 <InfoTile label="취소일" value={formatDateTime(staking.cancelled_at)} />
                 <InfoTile label="종료일" value={formatDateTime(staking.closed_at)} />
-                <InfoTile label="matured_at" value={formatDateTime(staking.matured_at)} />
+                <InfoTile label="만기 일시" value={formatDateTime(staking.matured_at)} />
               </div>
             </Card>
 
             <Card className="p-6">
-              <SectionTitle eyebrow="Action" title="상태별 처리" />
+              <SectionTitle eyebrow="상태별 처리" title="상태별 처리" />
               <div className="mt-4">
                 {availableAction === "cancel" ? (
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-800 bg-slate-950/50 p-4">
                     <div>
                       <div className="font-semibold text-slate-100">신청 취소 가능</div>
-                      <div className="mt-1 text-sm text-slate-400">현재 상태가 `PENDING`이므로 즉시 취소할 수 있습니다.</div>
+                      <div className="mt-1 text-sm text-slate-400">현재 상태가 대기이므로 즉시 취소할 수 있습니다.</div>
                     </div>
                     <Button onClick={() => setConfirmOpen(true)}>신청 취소</Button>
                   </div>
@@ -211,16 +209,16 @@ export default function StakingDetailPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-800 bg-slate-950/50 p-4">
                     <div>
                       <div className="font-semibold text-slate-100">취소 요청 가능</div>
-                      <div className="mt-1 text-sm text-slate-400">현재 상태가 `ACTIVE`이므로 관리자 확인을 위한 취소 요청을 보낼 수 있습니다.</div>
+                      <div className="mt-1 text-sm text-slate-400">현재 상태가 활성이라 취소 요청을 보낼 수 있습니다.</div>
                     </div>
                     <Button onClick={() => setConfirmOpen(true)}>취소 요청</Button>
                   </div>
                 ) : null}
                 {staking.status === "CANCEL_REQUESTED" ? (
-                  <FeedbackState title="처리 중" description="취소 요청이 접수되었습니다. 현재는 재요청 버튼을 노출하지 않습니다." />
+                  <FeedbackState title="처리 중" description="취소 요청이 접수되었습니다." />
                 ) : null}
                 {availableAction === "none" && staking.status !== "CANCEL_REQUESTED" ? (
-                  <FeedbackState title="추가 액션 없음" description="현재 상태에서는 취소 또는 취소 요청을 진행할 수 없습니다." />
+                  <FeedbackState title="추가 작업 없음" description="현재 상태에서는 취소를 진행할 수 없습니다." />
                 ) : null}
               </div>
             </Card>
@@ -228,9 +226,8 @@ export default function StakingDetailPage() {
             <Card className="p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <SectionTitle
-                  eyebrow="Staking Rewards"
+                  eyebrow="발생 보상"
                   title="이 스테이킹에서 발생한 보상"
-                  description="해당 staking_id 기준 reward 목록을 최신순으로 표시합니다."
                 />
                 <div className="text-sm text-slate-400">
                   전체 건수 <span className="tabular text-slate-100">{rewardState?.total ?? 0}</span>
@@ -238,7 +235,7 @@ export default function StakingDetailPage() {
               </div>
               <div className="mt-5">
                 {rewardError ? <FeedbackState title="보상 조회 오류" description={rewardError} tone="error" /> : null}
-                {rewardLoading ? <FeedbackState title="보상 목록 로딩 중" description="이 스테이킹에서 발생한 rewards를 불러오고 있습니다." /> : null}
+                {rewardLoading ? <FeedbackState title="불러오는 중" description="이 스테이킹에서 발생한 보상 내역을 불러오고 있습니다." /> : null}
                 {!rewardLoading && !rewardError && (rewardState?.items.length ?? 0) === 0 ? (
                   <FeedbackState title="보상 내역 없음" description="이 스테이킹에서 아직 발생한 보상이 없습니다." />
                 ) : null}
@@ -248,10 +245,10 @@ export default function StakingDetailPage() {
                       <table className="min-w-full text-left text-sm text-slate-300">
                         <thead className="sticky top-0 bg-slate-950/95 text-xs uppercase tracking-[0.16em] text-slate-500">
                           <tr>
-                            <th className="px-4 py-3">reward date</th>
-                            <th className="px-4 py-3">type</th>
-                            <th className="px-4 py-3">amount</th>
-                            <th className="px-4 py-3">status</th>
+                            <th className="px-4 py-3">보상 기준일</th>
+                            <th className="px-4 py-3">보상 구분</th>
+                            <th className="px-4 py-3">보상 금액</th>
+                            <th className="px-4 py-3">상태</th>
                             <th className="px-4 py-3 text-right">상세</th>
                           </tr>
                         </thead>
@@ -301,7 +298,7 @@ export default function StakingDetailPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  {availableAction === "cancel" ? "Cancel Staking" : "Cancel Request"}
+                  {availableAction === "cancel" ? "신청 취소" : "취소 요청"}
                 </div>
                 <h2 className="mt-2 text-xl font-bold text-slate-50">
                   {availableAction === "cancel" ? "신청 취소 확인" : "취소 요청 확인"}
@@ -313,8 +310,8 @@ export default function StakingDetailPage() {
             </div>
             <div className="mt-4 rounded-[20px] border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-300">
               {availableAction === "cancel"
-                ? "이 요청은 즉시 CANCELLED 상태로 전환됩니다."
-                : "이 요청은 CANCEL_REQUESTED 상태로 전환되며, 최종 취소는 관리자 처리 후 확정됩니다."}
+                ? "이 요청은 즉시 취소 상태로 변경됩니다."
+                : "취소 요청이 접수되며, 최종 취소는 관리자 확인 후 반영됩니다."}
             </div>
             <div className="mt-4">
               <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="cancel-reason">
@@ -348,7 +345,7 @@ export default function StakingDetailPage() {
 function InfoTile({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="rounded-[20px] border border-slate-800 bg-slate-950/50 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
       <div className={`mt-2 text-sm font-semibold text-slate-100 ${mono ? "break-all font-mono" : "tabular"}`}>{value}</div>
     </div>
   );

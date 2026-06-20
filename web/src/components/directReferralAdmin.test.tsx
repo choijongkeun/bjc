@@ -172,10 +172,10 @@ describe("direct referral admin UI", () => {
       />
     );
 
-    expect(html).toContain("Direct Referral Source");
-    expect(html).toContain("source account id");
-    expect(html).toContain("source login_id");
-    expect(html).toContain("source staking id");
-    expect(html).toContain("formula version");
+    expect(html).toContain("직추천 발생 정보");
+    expect(html).toContain("발생 회원 ID");
+    expect(html).toContain("발생 회원 아이디");
+    expect(html).toContain("발생 스테이킹 ID");
+    expect(html).toContain("계산식 버전");
   });
 });

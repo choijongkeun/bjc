@@ -3,16 +3,17 @@ import { useMemo, useState } from "react";
 import { ArrowUpRight, Coins, Gift, GitBranch, LayoutDashboard, LogOut, Menu, TrendingUp, Wallet } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { getAccountStatusLabel, getBinaryPositionLabel } from "@/lib/display";
 import { useSessionStore } from "@/store/sessionStore";
 import { Badge, Button, Card, cn } from "@/components/ui";
 
 const menuItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-  { label: "Staking", href: "/staking", icon: Coins, enabled: true },
-  { label: "Rank", href: "/rank", icon: TrendingUp, enabled: true },
-  { label: "Rewards", href: "/rewards", icon: Gift, enabled: true },
-  { label: "Withdrawals", href: "/withdrawals", icon: Wallet, enabled: true },
-  { label: "Network", href: "/network", icon: GitBranch, enabled: true },
+  { label: "대시보드", href: "/dashboard", icon: LayoutDashboard, enabled: true },
+  { label: "내 스테이킹", href: "/staking", icon: Coins, enabled: true },
+  { label: "직급", href: "/rank", icon: TrendingUp, enabled: true },
+  { label: "보상 내역", href: "/rewards", icon: Gift, enabled: true },
+  { label: "내 출금", href: "/withdrawals", icon: Wallet, enabled: true },
+  { label: "추천 조직", href: "/network", icon: GitBranch, enabled: true },
 ] as const;
 
 export function UserShell({
@@ -63,9 +64,8 @@ export function UserShell({
         >
           <div className="flex h-full flex-col">
             <div className="rounded-[28px] border border-slate-800 bg-slate-900/65 p-5">
-              <div className="text-xs uppercase tracking-[0.22em] text-slate-500">BJC User Front</div>
-              <div className="mt-3 text-2xl font-extrabold text-slate-50">회원 워크스페이스</div>
-              <div className="mt-2 text-sm text-slate-400">추천인과 바이너리 조직을 기준으로 개인 네트워크 상태를 조회합니다.</div>
+              <div className="text-xs tracking-[0.22em] text-slate-500">BJC 회원</div>
+              <div className="mt-3 text-2xl font-extrabold text-slate-50">회원 서비스</div>
             </div>
 
             <nav className="mt-6 flex-1 space-y-2">
@@ -101,7 +101,7 @@ export function UserShell({
                       <item.icon className="h-4 w-4" />
                       {item.label}
                     </span>
-                    <Badge tone="slate">Coming Soon</Badge>
+                    <Badge tone="slate">준비 중</Badge>
                   </button>
                 )
               )}
@@ -112,12 +112,12 @@ export function UserShell({
               <div className="mt-2 text-lg font-semibold text-slate-50">{accountName}</div>
               <div className="mt-2 text-sm text-slate-400">{account?.login_id ?? "로그인 정보 로딩 중"}</div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Badge tone="blue">{account?.status ?? "ACTIVE"}</Badge>
-                <Badge tone="slate">{account?.binary_position ?? "ROOT"}</Badge>
+                <Badge tone="blue">{getAccountStatusLabel(account?.status)}</Badge>
+                <Badge tone="slate">{getBinaryPositionLabel(account?.binary_position)}</Badge>
               </div>
               <Button className="mt-4 w-full" variant="secondary" onClick={() => void handleLogout()} disabled={loggingOut}>
                 <LogOut className="mr-2 h-4 w-4" />
-                {loggingOut ? "로그아웃 중..." : "Logout"}
+                {loggingOut ? "로그아웃 중..." : "로그아웃"}
               </Button>
             </Card>
           </div>
@@ -135,7 +135,7 @@ export function UserShell({
                   <Menu className="h-5 w-5" />
                 </button>
                 <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">BJC Member View</div>
+                  <div className="text-xs tracking-[0.18em] text-slate-500">회원 서비스</div>
                   <h1 className="mt-1 text-xl font-bold text-slate-50">{title}</h1>
                   <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
                 </div>

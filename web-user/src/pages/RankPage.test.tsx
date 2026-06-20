@@ -163,11 +163,11 @@ describe("RankPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("현재 직급")).toBeInTheDocument();
-      expect(screen.getByText("다음 직급")).toBeInTheDocument();
-      expect(screen.getByText("직추천 ACTIVE")).toBeInTheDocument();
+      expect(screen.getAllByText("현재 직급").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("다음 직급").length).toBeGreaterThan(0);
+      expect(screen.getByText("직추천 수")).toBeInTheDocument();
       expect(screen.getByText("최근 직급 이력")).toBeInTheDocument();
-      expect(screen.getByText("최근 RANK_BONUS 내역")).toBeInTheDocument();
+      expect(screen.getByText("최근 직급 보상 내역")).toBeInTheDocument();
       expect(screen.getByText("45,000")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "보상 상세" })).toHaveAttribute("href", "/rewards/reward-1");
     });

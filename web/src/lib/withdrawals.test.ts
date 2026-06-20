@@ -71,7 +71,7 @@ describe("admin withdrawal helpers", () => {
   });
 
   it("validates complete action fields", () => {
-    expect(validateWithdrawalActionInput("complete", { network: "BASE" })).toBe("tx_hash를 입력해 주세요.");
+    expect(validateWithdrawalActionInput("complete", { network: "BASE" })).toBe("거래 해시를 입력해 주세요.");
     expect(validateWithdrawalActionInput("complete", { tx_hash: "0xabc" })).toBe("네트워크를 입력해 주세요.");
     expect(validateWithdrawalActionInput("complete", { tx_hash: "0xabc", network: "BASE" })).toBeNull();
   });

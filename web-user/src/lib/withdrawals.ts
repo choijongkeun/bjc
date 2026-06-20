@@ -19,7 +19,7 @@ export const WITHDRAWAL_TYPE_OPTIONS: Array<{ value: WithdrawalType; label: stri
 export const WITHDRAWAL_STATUS_OPTIONS: Array<{ value: WithdrawalStatus; label: string }> = [
   { value: "REQUESTED", label: "신청" },
   { value: "APPROVED", label: "승인" },
-  { value: "PROCESSING", label: "처리중" },
+  { value: "PROCESSING", label: "처리 중" },
   { value: "COMPLETED", label: "완료" },
   { value: "REJECTED", label: "거절" },
   { value: "FAILED", label: "실패" },
@@ -43,7 +43,7 @@ const withdrawalTypeLabelMap: Record<WithdrawalType, string> = {
 const withdrawalStatusLabelMap: Record<WithdrawalStatus, string> = {
   REQUESTED: "신청",
   APPROVED: "승인",
-  PROCESSING: "처리중",
+  PROCESSING: "처리 중",
   COMPLETED: "완료",
   REJECTED: "거절",
   FAILED: "실패",

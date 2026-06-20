@@ -100,10 +100,10 @@ describe("rank admin UI", () => {
       />
     );
 
-    expect(html).toContain("organization scope");
-    expect(html).toContain("rank level");
-    expect(html).toContain("effective bonus bps");
-    expect(html).toContain("qualification result");
+    expect(html).toContain("조직 범위");
+    expect(html).toContain("직급 단계");
+    expect(html).toContain("추가 비율");
+    expect(html).toContain("직급 산정 결과 ID");
     expect(html).not.toContain("password");
     expect(html).not.toContain("token");
   });

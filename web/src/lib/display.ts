@@ -1,0 +1,51 @@
+const displayLabelMap: Record<string, string> = {
+  ACTIVE: "활성",
+  INACTIVE: "비활성",
+  BLOCKED: "차단",
+  WITHDRAWN: "탈퇴",
+  PENDING: "대기",
+  REQUESTED: "신청",
+  APPROVED: "승인",
+  PROCESSING: "처리 중",
+  COMPLETED: "완료",
+  FAILED: "실패",
+  REJECTED: "거절",
+  CANCELLED: "취소",
+  CONFIRMED: "확정",
+  REVERSED: "취소 반영",
+  RELEASED: "예약 해제",
+  RESERVED: "출금 예약",
+  CONSUMED: "출금 완료",
+  RUNNING: "실행 중",
+  SUCCEEDED: "성공",
+  FINALIZED: "확정 완료",
+  DUPLICATE: "중복",
+  CONFLICT: "충돌",
+  INITIAL: "최초 산정",
+  PROMOTED: "승급",
+  MAINTAINED: "유지",
+  DEMOTION_CANDIDATE: "하락 검토",
+  LEFT: "좌측",
+  RIGHT: "우측",
+  USER: "일반 회원",
+  READER: "조회 관리자",
+  ADMIN: "관리자",
+  DAILY_REWARD: "일일 보상",
+  DIRECT_REFERRAL: "직추천 보상",
+  RANK_QUALIFICATION: "직급 산정",
+  RANK_BONUS: "직급 보상",
+  CONTRIBUTION: "기여 보상",
+  SIDECAR: "사이드카 정산",
+  WITHDRAWAL_FEE: "출금 수수료",
+  ADJUSTMENT: "조정",
+  REVERSAL: "보상 취소",
+  DRAFT: "초안",
+  RETIRED: "종료",
+};
+
+export function getDisplayLabel(value: string | null | undefined): string {
+  if (!value) {
+    return "-";
+  }
+  return displayLabelMap[value] ?? value;
+}

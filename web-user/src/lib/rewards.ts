@@ -18,9 +18,9 @@ export const REWARD_TYPE_OPTIONS: Array<{ value: RewardType; label: string }> = 
   { value: "RANK_BONUS", label: "직급 보상" },
   { value: "CONTRIBUTION", label: "기여 보상" },
   { value: "WITHDRAWAL_FEE", label: "출금 수수료" },
-  { value: "SIDECAR", label: "사이드카" },
+  { value: "SIDECAR", label: "사이드카 정산" },
   { value: "ADJUSTMENT", label: "조정" },
-  { value: "REVERSAL", label: "역분개" },
+  { value: "REVERSAL", label: "보상 취소" },
 ];
 
 export const REWARD_STATUS_OPTIONS: Array<{ value: RewardStatus; label: string }> = [
@@ -44,15 +44,15 @@ const rewardTypeLabelMap: Record<RewardType, string> = {
   RANK_BONUS: "직급 보상",
   CONTRIBUTION: "기여 보상",
   WITHDRAWAL_FEE: "출금 수수료",
-  SIDECAR: "사이드카",
+  SIDECAR: "사이드카 정산",
   ADJUSTMENT: "조정",
-  REVERSAL: "역분개",
+  REVERSAL: "보상 취소",
 };
 
 const rewardStatusLabelMap: Record<RewardStatus, string> = {
   PENDING: "대기",
   CONFIRMED: "확정",
-  REVERSED: "역분개 완료",
+  REVERSED: "취소 반영",
 };
 
 export function getRewardTypeLabel(type: RewardType): string {
@@ -121,32 +121,24 @@ export function getVisibleRewardMetadataEntries(metadata?: RewardMetadata | null
   }
 
   const items: Array<{ label: string; value: string | number | undefined }> = [
-    { label: "원금 snapshot", value: metadata.principal_amount_base },
-    { label: "bps snapshot", value: metadata.daily_interest_bps_snapshot },
-    { label: "기간 snapshot", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
-    { label: "denominator", value: metadata.denominator },
-    { label: "formula version", value: metadata.formula_version },
-    { label: "organization scope", value: metadata.organization_scope },
-    { label: "rank level", value: metadata.rank_level },
-    { label: "effective bonus bps", value: metadata.effective_bonus_bps },
-    { label: "base daily reward", value: metadata.base_daily_reward_amount_base },
-    { label: "qualification calc run", value: metadata.qualification_calc_run_id },
-    { label: "qualification result", value: metadata.qualification_result_id },
-    { label: "rule id", value: metadata.rule_id },
-    { label: "rate bps", value: metadata.rate_bps },
-    { label: "weight bps", value: metadata.weight_bps },
-    { label: "base amount", value: metadata.base_amount_base },
-    { label: "pool amount", value: metadata.pool_amount_base },
-    { label: "total score", value: metadata.total_score },
-    { label: "score amount", value: metadata.score_amount_base },
-    { label: "score ratio", value: metadata.score_ratio_bps ? `${metadata.score_ratio_bps} bps` : undefined },
-    { label: "qualification source", value: metadata.qualification_source },
-    { label: "requested amount", value: metadata.requested_amount_base },
-    { label: "release amount", value: metadata.release_amount_base },
-    { label: "freeze amount", value: metadata.freeze_amount_base },
-    { label: "release bps", value: metadata.release_bps ? `${metadata.release_bps} bps` : undefined },
-    { label: "freeze bps", value: metadata.freeze_bps ? `${metadata.freeze_bps} bps` : undefined },
-    { label: "sidecar status", value: metadata.sidecar_status },
+    { label: "스테이킹 원금", value: metadata.principal_amount_base },
+    { label: "일일 적용 비율", value: metadata.daily_interest_bps_snapshot ? `${metadata.daily_interest_bps_snapshot} bps` : undefined },
+    { label: "적용 기간", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
+    { label: "직급 단계", value: metadata.rank_level },
+    { label: "추가 비율", value: metadata.effective_bonus_bps ? `${metadata.effective_bonus_bps} bps` : undefined },
+    { label: "기준 일일 보상", value: metadata.base_daily_reward_amount_base },
+    { label: "보상 적용 비율", value: metadata.rate_bps ? `${metadata.rate_bps} bps` : undefined },
+    { label: "가중치 비율", value: metadata.weight_bps ? `${metadata.weight_bps} bps` : undefined },
+    { label: "기준 금액", value: metadata.base_amount_base },
+    { label: "풀 금액", value: metadata.pool_amount_base },
+    { label: "총 점수", value: metadata.total_score },
+    { label: "점수 반영 금액", value: metadata.score_amount_base },
+    { label: "점수 비율", value: metadata.score_ratio_bps ? `${metadata.score_ratio_bps} bps` : undefined },
+    { label: "신청 금액", value: metadata.requested_amount_base },
+    { label: "지급 금액", value: metadata.release_amount_base },
+    { label: "동결 금액", value: metadata.freeze_amount_base },
+    { label: "지급 비율", value: metadata.release_bps ? `${metadata.release_bps} bps` : undefined },
+    { label: "동결 비율", value: metadata.freeze_bps ? `${metadata.freeze_bps} bps` : undefined },
   ];
 
   return items

@@ -253,11 +253,10 @@ export default function WithdrawalsPage() {
 
   return (
     <UserShell
-      title="Withdrawals"
-      subtitle="출금 가능 잔액 확인, 수수료 미리보기, 출금 신청과 내 출금 이력을 관리합니다."
+      title="내 출금"
+      subtitle="출금 가능 금액을 확인하고 출금을 신청할 수 있습니다."
       actions={
         <div className="flex items-center gap-2">
-          <Badge tone="blue">Withdrawal API 연결</Badge>
           <Button variant="secondary" onClick={() => setRefreshNonce((current) => current + 1)} disabled={balanceLoading || listLoading}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             새로고침
@@ -271,29 +270,27 @@ export default function WithdrawalsPage() {
 
         <Card className="p-6">
           <SectionTitle
-            eyebrow="Withdrawal Balance"
+            eyebrow="출금 가능 금액"
             title="출금 가능 잔액"
-            description="DAILY_REWARD와 BONUS 출금 가능 금액, 예약 금액, 완료 금액을 실시간 집계 기준으로 표시합니다."
           />
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="DAILY_REWARD 출금 가능" value={balance ? formatWithdrawalAmountBase(balance.daily_reward.available_amount_base) : "..."} note="일일 보상 bucket" />
-            <MetricCard label="BONUS 출금 가능" value={balance ? formatWithdrawalAmountBase(balance.bonus.available_amount_base) : "..."} note="보너스 bucket" />
-            <MetricCard label="예약 금액" value={balance ? formatWithdrawalAmountBase(balance.total.reserved_amount_base) : "..."} note="현재 RESERVED allocation 합계" />
-            <MetricCard label="완료 출금액" value={balance ? formatWithdrawalAmountBase(balance.total.completed_amount_base) : "..."} note="현재 CONSUMED allocation 합계" />
+            <MetricCard label="일일 보상 출금 가능" value={balance ? formatWithdrawalAmountBase(balance.daily_reward.available_amount_base) : "..."} />
+            <MetricCard label="보너스 출금 가능" value={balance ? formatWithdrawalAmountBase(balance.bonus.available_amount_base) : "..."} />
+            <MetricCard label="출금 예약 금액" value={balance ? formatWithdrawalAmountBase(balance.total.reserved_amount_base) : "..."} />
+            <MetricCard label="출금 완료 금액" value={balance ? formatWithdrawalAmountBase(balance.total.completed_amount_base) : "..."} />
           </div>
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-400">
             <span>총 출금 가능: <span className="tabular text-slate-100">{formatWithdrawalAmountBase(totalAvailableAmountBase)}</span></span>
             <Link to="/rewards" className="font-semibold text-blue-200 hover:text-blue-100">
-              Rewards 화면으로 돌아가기
+              보상 내역 보기
             </Link>
           </div>
         </Card>
 
         <Card className="p-6">
           <SectionTitle
-            eyebrow="Withdrawal Request"
+            eyebrow="출금 신청"
             title="출금 신청"
-            description="미리보기는 안내용이며, 실제 신청 시 동일 조건을 서버 transaction에서 다시 계산합니다."
           />
 
           {previewError ? <div className="mt-4"><FeedbackState title="미리보기 오류" description={previewError} tone="error" /></div> : null}
@@ -319,24 +316,24 @@ export default function WithdrawalsPage() {
               />
             </FilterField>
 
-            <FilterField label="wallet_address">
+            <FilterField label="지갑 주소">
               <TextField value={form.wallet_address} onChange={(event) => updateForm("wallet_address", event.target.value)} placeholder="출금 지갑 주소" />
             </FilterField>
 
-            <FilterField label="network">
+            <FilterField label="네트워크">
               <TextField value={form.network} onChange={(event) => updateForm("network", event.target.value)} placeholder="BASE" />
             </FilterField>
 
-            <FilterField label="idempotency_key">
+            <FilterField label="중복 방지 키">
               <TextField value={form.idempotency_key} onChange={(event) => updateForm("idempotency_key", event.target.value)} />
             </FilterField>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="선택 타입 출금 가능" value={formatWithdrawalAmountBase(availableAmountBase)} note={`${form.withdrawal_type} bucket 기준`} />
-            <MetricCard label="예상 신청 금액" value={form.requested_amount_base ? formatWithdrawalAmountBase(form.requested_amount_base) : "-"} note="입력값 기준" />
-            <MetricCard label="예상 수수료" value={preview ? formatWithdrawalAmountBase(preview.fee_amount_base) : "-"} note="미리보기 결과" />
-            <MetricCard label="예상 수령액" value={preview ? formatWithdrawalAmountBase(preview.net_amount_base) : "-"} note="미리보기 결과" />
+            <MetricCard label="선택 구분 출금 가능" value={formatWithdrawalAmountBase(availableAmountBase)} />
+            <MetricCard label="예상 신청 금액" value={form.requested_amount_base ? formatWithdrawalAmountBase(form.requested_amount_base) : "-"} />
+            <MetricCard label="예상 수수료" value={preview ? formatWithdrawalAmountBase(preview.fee_amount_base) : "-"} />
+            <MetricCard label="예상 수령액" value={preview ? formatWithdrawalAmountBase(preview.net_amount_base) : "-"} />
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -358,22 +355,15 @@ export default function WithdrawalsPage() {
               }}
             >
               <RotateCcw className="mr-2 h-4 w-4" />
-              폼 초기화
+              초기화
             </Button>
-          </div>
-
-          <div className="mt-4">
-            <FeedbackState
-              title="미리보기 안내"
-              description="미리보기 결과는 참고용이며, 실제 신청 시 후보 reward와 수수료가 다시 계산됩니다. DAILY_REWARD와 BONUS는 한 요청에 혼합할 수 없습니다."
-            />
           </div>
 
           {preview ? (
             <div className="mt-5 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Preview Result</div>
+                  <div className="text-xs tracking-[0.16em] text-slate-500">미리보기 결과</div>
                   <div className="mt-2 text-lg font-bold text-slate-50">적용 reward 수 {getWithdrawalPreviewCount(preview.allocations)}건</div>
                 </div>
                 <WithdrawalTypeBadge type={preview.withdrawal_type} />
@@ -383,25 +373,25 @@ export default function WithdrawalsPage() {
                 <MetricCard label="신청 금액" value={formatWithdrawalAmountBase(preview.requested_amount_base)} />
                 <MetricCard label="예상 수수료" value={formatWithdrawalAmountBase(preview.fee_amount_base)} />
                 <MetricCard label="예상 수령액" value={formatWithdrawalAmountBase(preview.net_amount_base)} />
-                <MetricCard label="현재 available" value={formatWithdrawalAmountBase(preview.available_amount_base)} />
+                <MetricCard label="현재 출금 가능 금액" value={formatWithdrawalAmountBase(preview.available_amount_base)} />
               </div>
 
               <details className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-100">reward별 holding days / fee rate 상세</summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-100">보상별 보유 일수와 수수료 비율</summary>
                 <div className="mt-4 space-y-3">
                   {preview.allocations.map((allocation) => (
                     <div key={allocation.reward_id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="font-mono text-xs text-slate-400">{allocation.reward_id}</div>
+                        <div className="text-xs text-slate-400">배정 대상 보상</div>
                         <div className="text-sm text-slate-300">
                           {allocation.holding_days}일 보유 / {allocation.fee_rate_bps} bps
                         </div>
                       </div>
                       <div className="mt-3 grid gap-3 md:grid-cols-4">
-                        <InfoTile label="allocated" value={formatWithdrawalAmountBase(allocation.allocated_amount_base)} />
-                        <InfoTile label="fee" value={formatWithdrawalAmountBase(allocation.fee_amount_base)} />
-                        <InfoTile label="net" value={formatWithdrawalAmountBase(allocation.net_amount_base)} />
-                        <InfoTile label="schedule days" value={String(allocation.fee_schedule_days)} />
+                        <InfoTile label="배정 금액" value={formatWithdrawalAmountBase(allocation.allocated_amount_base)} />
+                        <InfoTile label="수수료 금액" value={formatWithdrawalAmountBase(allocation.fee_amount_base)} />
+                        <InfoTile label="실수령액" value={formatWithdrawalAmountBase(allocation.net_amount_base)} />
+                        <InfoTile label="수수료 기준 일수" value={String(allocation.fee_schedule_days)} />
                       </div>
                     </div>
                   ))}
@@ -413,7 +403,7 @@ export default function WithdrawalsPage() {
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <SectionTitle eyebrow="Withdrawal History" title="내 출금 목록" description="타입, 상태, 신청일 범위로 내 출금 내역을 조회합니다." />
+            <SectionTitle eyebrow="출금 내역" title="내 출금 목록" />
             <div className="text-sm text-slate-400">
               전체 건수 <span className="tabular text-slate-100">{listState?.total ?? 0}</span>
             </div>
@@ -500,8 +490,8 @@ export default function WithdrawalsPage() {
                         <th className="px-4 py-3">수수료</th>
                         <th className="px-4 py-3">실수령액</th>
                         <th className="px-4 py-3">상태</th>
-                        <th className="px-4 py-3">network</th>
-                        <th className="px-4 py-3">tx_hash</th>
+                        <th className="px-4 py-3">네트워크</th>
+                        <th className="px-4 py-3">거래 해시</th>
                         <th className="px-4 py-3">취소 가능</th>
                         <th className="px-4 py-3 text-right">상세</th>
                       </tr>
@@ -518,7 +508,7 @@ export default function WithdrawalsPage() {
                           <td className="px-4 py-3 text-slate-400">{item.network ?? "-"}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-400">{item.tx_hash ?? "-"}</td>
                           <td className="px-4 py-3">
-                            {canCancelMyWithdrawal(item.status) ? <Badge tone="blue">REQUESTED 취소 가능</Badge> : <Badge tone="slate">-</Badge>}
+                            {canCancelMyWithdrawal(item.status) ? <Badge tone="blue">취소 가능</Badge> : <Badge tone="slate">-</Badge>}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <Link to={`/withdrawals/${item.id}`}>
@@ -548,7 +538,7 @@ export default function WithdrawalsPage() {
 function MetricCard({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="rounded-[24px] border border-slate-800 bg-slate-950/50 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
       <div className="mt-3 tabular text-2xl font-bold text-slate-50">{value}</div>
       {note ? <div className="mt-2 text-sm text-slate-400">{note}</div> : null}
     </div>
@@ -558,7 +548,7 @@ function MetricCard({ label, value, note }: { label: string; value: string; note
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="mb-2 text-xs tracking-[0.16em] text-slate-500">{label}</div>
       {children}
     </label>
   );
@@ -567,7 +557,7 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
 function InfoTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[20px] border border-slate-800 bg-slate-950/50 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
       <div className="mt-2 text-sm font-semibold text-slate-100">{value}</div>
     </div>
   );

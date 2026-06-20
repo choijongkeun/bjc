@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getDisplayLabel } from "@/lib/display";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -90,6 +91,7 @@ export function StatusBadge({
   tone?: "blue" | "emerald" | "rose" | "slate";
 }) {
   const safe = value ?? "N/A";
+  const displayValue = getDisplayLabel(safe);
   const customTone =
     tone === "blue"
       ? "bg-blue-500/15 text-blue-300 ring-blue-400/30"
@@ -102,7 +104,7 @@ export function StatusBadge({
             : null;
   return (
     <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1", customTone ?? toneMap[safe] ?? "bg-slate-500/15 text-slate-200 ring-slate-400/20")}>
-      {safe}
+      {displayValue}
     </span>
   );
 }

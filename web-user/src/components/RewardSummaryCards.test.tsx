@@ -29,9 +29,9 @@ describe("RewardSummaryCards", () => {
 
     expect(screen.getByText("대기 보상")).toBeInTheDocument();
     expect(screen.getByText("출금 완료 보상")).toBeInTheDocument();
-    expect(screen.getByText("실제 완료된 출금 합계")).toBeInTheDocument();
+    expect(screen.getByText("출금 완료 합계")).toBeInTheDocument();
     expect(screen.getByText("350")).toBeInTheDocument();
-    expect(screen.getByText("BONUS 누적")).toBeInTheDocument();
+    expect(screen.getByText("보너스 누적")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /출금 가능 보상/i })).toHaveAttribute("href", "/withdrawals");

@@ -20,10 +20,10 @@ test.afterAll(async () => {
 test("리포트 화면과 CSV content-type을 검증한다", async ({ page, request }) => {
   await loginAdminUi(page, fixture.accounts.admin.id);
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=reports`);
-  await expect(page.getByText("Reward By Type")).toBeVisible();
-  await expect(page.getByText("Calc Run Summary")).toBeVisible();
-  await expect(page.getByRole("button", { name: "rewards.csv" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "calc-runs.csv" })).toBeVisible();
+  await expect(page.getByText("보상 구분별 집계")).toBeVisible();
+  await expect(page.getByText("계산 실행 집계")).toBeVisible();
+  await expect(page.getByRole("button", { name: "보상 CSV 다운로드" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "계산 실행 CSV 다운로드" })).toBeVisible();
 
   const rewardsCsv = await request.get(
     `${E2E_API_URL}/api/admin/reports/rewards.csv?policy_version_id=${fixture.ids.policy_id}&reward_type=CONTRIBUTION`,

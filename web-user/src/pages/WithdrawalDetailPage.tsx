@@ -7,9 +7,13 @@ import {
   canCancelMyWithdrawal,
   formatWithdrawalAmountBase,
   formatWithdrawalDateTime,
+  getWithdrawalStatusLabel,
+  getWithdrawalTypeLabel,
   maskWalletAddress,
   shortenTxHash,
 } from "@/lib/withdrawals";
+import { getRewardStatusLabel, getRewardTypeLabel } from "@/lib/rewards";
+import { getAllocationStatusLabel } from "@/lib/display";
 import { useSessionStore } from "@/store/sessionStore";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -63,7 +67,7 @@ export default function WithdrawalDetailPage() {
       setCancelError(null);
       const result = await api.cancelMyWithdrawal(withdrawal.id, accessToken);
       setWithdrawal(result.withdrawal);
-      setNotice("출금 요청이 취소되었고 예약 allocation이 RELEASED 처리되었습니다.");
+      setNotice("출금 요청이 취소되었습니다.");
       setCancelOpen(false);
     } catch (cancelFailure) {
       setCancelError(getErrorMessage(cancelFailure));
@@ -75,11 +79,11 @@ export default function WithdrawalDetailPage() {
   return (
     <>
       <UserShell
-        title="Withdrawal Detail"
-        subtitle="출금 요청의 상태, 금액, allocation 요약과 reward 연결 정보를 확인합니다."
+        title="출금 상세"
+        subtitle="출금 정보와 처리 상태를 확인합니다."
         actions={
           <div className="flex items-center gap-2">
-            {withdrawal ? <WithdrawalStatusBadge status={withdrawal.status} /> : <Badge tone="slate">Loading</Badge>}
+            {withdrawal ? <WithdrawalStatusBadge status={withdrawal.status} /> : <Badge tone="slate">불러오는 중</Badge>}
             <Button variant="secondary" onClick={() => setRefreshNonce((current) => current + 1)} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               새로고침
@@ -95,74 +99,74 @@ export default function WithdrawalDetailPage() {
 
           {error ? <FeedbackState title="출금 상세 조회 오류" description={error} tone="error" /> : null}
           {notice ? <FeedbackState title="처리 완료" description={notice} tone="success" /> : null}
-          {loading ? <FeedbackState title="출금 상세 로딩 중" description="출금 상세 정보를 불러오고 있습니다." /> : null}
+          {loading ? <FeedbackState title="불러오는 중" description="출금 정보를 조회하고 있습니다." /> : null}
 
           {withdrawal ? (
             <>
               <Card className="p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <SectionTitle eyebrow="Withdrawal Summary" title="출금 기본 정보" description="신청 금액, 수수료, 실수령액과 상태를 확인합니다." />
+                  <SectionTitle eyebrow="출금 정보" title="출금 기본 정보" />
                   <div className="flex flex-wrap gap-2">
                     <WithdrawalTypeBadge type={withdrawal.withdrawal_type} />
                     <WithdrawalStatusBadge status={withdrawal.status} />
                   </div>
                 </div>
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <InfoTile label="출금 ID" value={withdrawal.id} mono />
+                  <InfoTile label="출금 구분" value={getWithdrawalTypeLabel(withdrawal.withdrawal_type)} />
                   <InfoTile label="신청 금액" value={formatWithdrawalAmountBase(withdrawal.requested_amount_base)} />
-                  <InfoTile label="수수료" value={formatWithdrawalAmountBase(withdrawal.fee_amount_base)} />
+                  <InfoTile label="수수료 금액" value={formatWithdrawalAmountBase(withdrawal.fee_amount_base)} />
                   <InfoTile label="실수령액" value={formatWithdrawalAmountBase(withdrawal.net_amount_base)} />
-                  <InfoTile label="wallet address" value={withdrawal.wallet_address ?? "-"} mono />
-                  <InfoTile label="network" value={withdrawal.network ?? "-"} />
-                  <InfoTile label="tx_hash" value={withdrawal.tx_hash ?? "-"} mono />
-                  <InfoTile label="idempotency_key" value={withdrawal.idempotency_key} mono />
+                  <InfoTile label="지갑 주소" value={maskWalletAddress(withdrawal.wallet_address)} mono />
+                  <InfoTile label="네트워크" value={withdrawal.network ?? "-"} />
+                  <InfoTile label="거래 해시" value={shortenTxHash(withdrawal.tx_hash)} mono />
+                  <InfoTile label="상태" value={getWithdrawalStatusLabel(withdrawal.status)} />
                 </div>
               </Card>
 
               <Card className="p-6">
-                <SectionTitle eyebrow="Timeline" title="상태 타임라인" />
+                <SectionTitle eyebrow="처리 일시" title="상태 타임라인" />
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <InfoTile label="requested_at" value={formatWithdrawalDateTime(withdrawal.requested_at)} />
-                  <InfoTile label="approved_at" value={formatWithdrawalDateTime(withdrawal.approved_at)} />
-                  <InfoTile label="processing_at" value={formatWithdrawalDateTime(withdrawal.processing_at)} />
-                  <InfoTile label="completed_at" value={formatWithdrawalDateTime(withdrawal.completed_at)} />
-                  <InfoTile label="rejected_at" value={formatWithdrawalDateTime(withdrawal.rejected_at)} />
-                  <InfoTile label="failed_at" value={formatWithdrawalDateTime(withdrawal.failed_at)} />
-                  <InfoTile label="cancelled_at" value={formatWithdrawalDateTime(withdrawal.cancelled_at)} />
-                  <InfoTile label="updated_at" value={formatWithdrawalDateTime(withdrawal.updated_at)} />
+                  <InfoTile label="신청 일시" value={formatWithdrawalDateTime(withdrawal.requested_at)} />
+                  <InfoTile label="승인 일시" value={formatWithdrawalDateTime(withdrawal.approved_at)} />
+                  <InfoTile label="처리 시작 일시" value={formatWithdrawalDateTime(withdrawal.processing_at)} />
+                  <InfoTile label="완료 일시" value={formatWithdrawalDateTime(withdrawal.completed_at)} />
+                  <InfoTile label="거절 일시" value={formatWithdrawalDateTime(withdrawal.rejected_at)} />
+                  <InfoTile label="실패 일시" value={formatWithdrawalDateTime(withdrawal.failed_at)} />
+                  <InfoTile label="취소 일시" value={formatWithdrawalDateTime(withdrawal.cancelled_at)} />
+                  <InfoTile label="수정 일시" value={formatWithdrawalDateTime(withdrawal.updated_at)} />
                 </div>
               </Card>
 
               <Card className="p-6">
-                <SectionTitle eyebrow="Allocation Summary" title="allocation 요약" description="예약, 소비, 해제 상태별 allocation 금액과 reward 연결 개수를 표시합니다." />
+                <SectionTitle eyebrow="출금 배정" title="배정 요약" />
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <InfoTile label="allocation_count" value={String(withdrawal.allocation_summary.allocation_count)} />
-                  <InfoTile label="reserved_amount_base" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.reserved_amount_base)} />
-                  <InfoTile label="consumed_amount_base" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.consumed_amount_base)} />
-                  <InfoTile label="released_amount_base" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.released_amount_base)} />
+                  <InfoTile label="배정 건수" value={String(withdrawal.allocation_summary.allocation_count)} />
+                  <InfoTile label="출금 예약 금액" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.reserved_amount_base)} />
+                  <InfoTile label="출금 완료 금액" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.consumed_amount_base)} />
+                  <InfoTile label="예약 해제 금액" value={formatWithdrawalAmountBase(withdrawal.allocation_summary.released_amount_base)} />
                 </div>
               </Card>
 
               {withdrawal.reject_reason ? (
                 <Card className="p-6">
-                  <SectionTitle eyebrow="Reject Reason" title="거절 사유" />
+                  <SectionTitle eyebrow="거절 사유" title="거절 사유" />
                   <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">{withdrawal.reject_reason}</div>
                 </Card>
               ) : null}
 
               {withdrawal.failure_reason ? (
                 <Card className="p-6">
-                  <SectionTitle eyebrow="Failure Reason" title="실패 사유" />
+                  <SectionTitle eyebrow="실패 사유" title="실패 사유" />
                   <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">{withdrawal.failure_reason}</div>
                 </Card>
               ) : null}
 
               <Card className="p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <SectionTitle eyebrow="Allocations" title="reward allocation 상세" description="각 reward slice의 fee snapshot과 상태를 확인합니다." />
+                  <SectionTitle eyebrow="배정 내역" title="출금 배정 상세" />
                   {canCancelMyWithdrawal(withdrawal.status) ? (
                     <Button onClick={() => setCancelOpen(true)} disabled={cancelSubmitting}>
-                      REQUESTED 출금 취소
+                      출금 신청 취소
                     </Button>
                   ) : (
                     <Badge tone="slate">취소 불가 상태</Badge>
@@ -171,42 +175,40 @@ export default function WithdrawalDetailPage() {
 
                 <div className="mt-5 space-y-4">
                   {withdrawal.allocations.length === 0 ? (
-                    <FeedbackState title="allocation 없음" description="현재 연결된 reward allocation 정보가 없습니다." />
+                    <FeedbackState title="배정 내역 없음" description="현재 연결된 출금 배정 정보가 없습니다." />
                   ) : (
                     withdrawal.allocations.map((allocation) => (
                       <div key={allocation.id} className="rounded-[24px] border border-slate-800 bg-slate-950/50 p-5">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Allocation #{allocation.id}</div>
-                            <div className="mt-2 font-mono text-xs text-slate-400">{allocation.reward_id}</div>
+                            <div className="text-xs tracking-[0.16em] text-slate-500">배정 내역</div>
+                            <div className="mt-2 text-sm text-slate-400">{getWithdrawalTypeLabel(withdrawal.withdrawal_type)}</div>
                           </div>
                           <Badge tone={allocation.status === "CONSUMED" ? "emerald" : allocation.status === "RELEASED" ? "rose" : "blue"}>
-                            {allocation.status}
+                            {getAllocationStatusLabel(allocation.status)}
                           </Badge>
                         </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                          <InfoTile label="allocated" value={formatWithdrawalAmountBase(allocation.allocated_amount_base)} />
-                          <InfoTile label="fee" value={formatWithdrawalAmountBase(allocation.fee_amount_base)} />
-                          <InfoTile label="net" value={formatWithdrawalAmountBase(allocation.net_amount_base)} />
-                          <InfoTile label="holding_days_snapshot" value={String(allocation.holding_days_snapshot)} />
-                          <InfoTile label="fee_schedule_days" value={String(allocation.fee_schedule_days_snapshot)} />
-                          <InfoTile label="fee_rate_snapshot" value={allocation.fee_rate_snapshot} />
-                          <InfoTile label="reserved_at" value={formatWithdrawalDateTime(allocation.reserved_at)} />
-                          <InfoTile label="consumed_at" value={formatWithdrawalDateTime(allocation.consumed_at)} />
+                          <InfoTile label="배정 금액" value={formatWithdrawalAmountBase(allocation.allocated_amount_base)} />
+                          <InfoTile label="수수료 금액" value={formatWithdrawalAmountBase(allocation.fee_amount_base)} />
+                          <InfoTile label="실수령액" value={formatWithdrawalAmountBase(allocation.net_amount_base)} />
+                          <InfoTile label="보유 일수" value={`${allocation.holding_days_snapshot}일`} />
+                          <InfoTile label="수수료 기준 일수" value={`${allocation.fee_schedule_days_snapshot}일`} />
+                          <InfoTile label="수수료 비율" value={allocation.fee_rate_snapshot} />
+                          <InfoTile label="예약 일시" value={formatWithdrawalDateTime(allocation.reserved_at)} />
+                          <InfoTile label="완료 일시" value={formatWithdrawalDateTime(allocation.consumed_at)} />
                         </div>
 
                         <details className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                          <summary className="cursor-pointer text-sm font-semibold text-slate-100">연결 reward 정보</summary>
+                          <summary className="cursor-pointer text-sm font-semibold text-slate-100">연결된 보상 정보</summary>
                           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                            <InfoTile label="reward_type" value={allocation.reward.reward_type} />
-                            <InfoTile label="reward_date" value={allocation.reward.reward_date ?? "-"} />
-                            <InfoTile label="reward_amount_base" value={formatWithdrawalAmountBase(allocation.reward.amount_base)} />
-                            <InfoTile label="reward_status" value={allocation.reward.status} />
-                            <InfoTile label="available_at" value={formatWithdrawalDateTime(allocation.reward.available_at)} />
-                            <InfoTile label="confirmed_at" value={formatWithdrawalDateTime(allocation.reward.confirmed_at)} />
-                            <InfoTile label="source_reference" value={allocation.reward.source_reference} mono />
-                            <InfoTile label="policy_version_id" value={allocation.reward.policy_version_id} mono />
+                            <InfoTile label="보상 구분" value={getRewardTypeLabel(allocation.reward.reward_type)} />
+                            <InfoTile label="보상 기준일" value={allocation.reward.reward_date ?? "-"} />
+                            <InfoTile label="보상 금액" value={formatWithdrawalAmountBase(allocation.reward.amount_base)} />
+                            <InfoTile label="보상 상태" value={getRewardStatusLabel(allocation.reward.status)} />
+                            <InfoTile label="출금 가능 일시" value={formatWithdrawalDateTime(allocation.reward.available_at)} />
+                            <InfoTile label="확정 일시" value={formatWithdrawalDateTime(allocation.reward.confirmed_at)} />
                           </div>
                         </details>
                       </div>
@@ -215,14 +217,6 @@ export default function WithdrawalDetailPage() {
                 </div>
               </Card>
 
-              <Card className="p-6">
-                <SectionTitle eyebrow="Security Note" title="보안 및 표시 정책" />
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <InfoTile label="상세 wallet 표시" value={withdrawal.wallet_address ?? "-"} mono />
-                  <InfoTile label="목록 wallet 마스킹 예시" value={maskWalletAddress(withdrawal.wallet_address)} mono />
-                  <InfoTile label="tx_hash 축약 예시" value={shortenTxHash(withdrawal.tx_hash)} mono />
-                </div>
-              </Card>
             </>
           ) : null}
         </div>
@@ -231,8 +225,8 @@ export default function WithdrawalDetailPage() {
       <ConfirmationModal
         open={cancelOpen}
         title="출금 요청을 취소할까요?"
-        description="REQUESTED 상태의 출금만 취소할 수 있습니다. 취소 시 RESERVED allocation은 RELEASED로 전환됩니다."
-        confirmLabel="출금 취소"
+        description="신청 상태의 출금만 취소할 수 있습니다."
+        confirmLabel="출금 신청 취소"
         submitting={cancelSubmitting}
         error={cancelError}
         onClose={() => setCancelOpen(false)}
@@ -256,7 +250,7 @@ function InfoTile({
   return (
     <div className="rounded-[20px] border border-slate-800 bg-slate-950/50 p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+        <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
         {badge}
       </div>
       <div className={`mt-2 text-sm font-semibold text-slate-100 ${mono ? "break-all font-mono" : "tabular"}`}>{value}</div>

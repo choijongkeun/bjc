@@ -47,8 +47,8 @@ test("현재 직급, 다음 직급 조건, rank history와 최근 rank bonus를 
 
   await loginUserUi(page, fixture.credentials.root_user);
   await page.goto(`${E2E_USER_URL}/rank`);
-  await expect(page.getByText("현재 직급", { exact: true })).toBeVisible();
-  await expect(page.getByText("다음 직급", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "최근 RANK_BONUS 내역" })).toBeVisible();
+  await expect(page.getByText("현재 직급", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("다음 직급", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "최근 직급 보상 내역" })).toBeVisible();
   await expect(page.getByRole("link", { name: "보상 상세" }).first()).toBeVisible();
 });

@@ -94,8 +94,8 @@ describe("bonus admin UI", () => {
       />
     );
 
-    expect(html).toContain("CONTRIBUTION 실행");
-    expect(html).toContain("SIDECAR 실행");
+    expect(html).toContain("기여 보상 실행");
+    expect(html).toContain("사이드카 정산 실행");
   });
 
   it("hides contribution and sidecar batch buttons for READER", () => {
@@ -113,8 +113,8 @@ describe("bonus admin UI", () => {
       />
     );
 
-    expect(html).not.toContain("CONTRIBUTION 실행");
-    expect(html).not.toContain("SIDECAR 실행");
+    expect(html).not.toContain("기여 보상 실행");
+    expect(html).not.toContain("사이드카 정산 실행");
   });
 
   it("renders contribution and sidecar metadata in reward detail", () => {
@@ -125,11 +125,11 @@ describe("bonus admin UI", () => {
       <RewardDetailPanel actorId="admin-1" role="ADMIN" reward={sidecarReward} onUpdated={() => undefined} />
     );
 
-    expect(contributionHtml).toContain("rule id");
-    expect(contributionHtml).toContain("pool amount");
-    expect(contributionHtml).toContain("score ratio");
-    expect(sidecarHtml).toContain("requested amount");
-    expect(sidecarHtml).toContain("freeze amount");
-    expect(sidecarHtml).toContain("sidecar status");
+    expect(contributionHtml).toContain("풀 금액");
+    expect(contributionHtml).toContain("점수 비율");
+    expect(contributionHtml).toContain("가중치 비율");
+    expect(sidecarHtml).toContain("신청 금액");
+    expect(sidecarHtml).toContain("동결 금액");
+    expect(sidecarHtml).toContain("사이드카 상태");
   });
 });

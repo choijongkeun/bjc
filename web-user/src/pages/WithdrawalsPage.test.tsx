@@ -92,12 +92,12 @@ describe("WithdrawalsPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("DAILY_REWARD 출금 가능")).toBeInTheDocument();
+      expect(screen.getByText("일일 보상 출금 가능")).toBeInTheDocument();
       expect(screen.getAllByText("1,200").length).toBeGreaterThan(0);
-      expect(screen.getByText("BONUS 출금 가능")).toBeInTheDocument();
+      expect(screen.getByText("보너스 출금 가능")).toBeInTheDocument();
       expect(screen.getByText("300")).toBeInTheDocument();
-      expect(screen.getByText("예약 금액")).toBeInTheDocument();
-      expect(screen.getByText("완료 출금액")).toBeInTheDocument();
+      expect(screen.getByText("출금 예약 금액")).toBeInTheDocument();
+      expect(screen.getByText("출금 완료 금액")).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByPlaceholderText("예: 1000000"), { target: { value: "1000" } });
@@ -106,7 +106,7 @@ describe("WithdrawalsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /수수료 미리보기/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Preview Result")).toBeInTheDocument();
+      expect(screen.getByText("미리보기 결과")).toBeInTheDocument();
       expect(screen.getByText("적용 reward 수 1건")).toBeInTheDocument();
     });
 

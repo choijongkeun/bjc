@@ -348,8 +348,7 @@ export function RewardsTab({
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-50">Rewards 관리</h2>
-            <p className="text-sm text-slate-400">전체 보상 조회, 회원별 조회, calc_run별 조회, reversal, 수동 DAILY_REWARD 및 DIRECT_REFERRAL 실행을 관리합니다.</p>
+            <h2 className="text-lg font-bold text-slate-50">보상 실행 관리</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {role === "ADMIN" ? <Button onClick={() => setDailyRunModalOpen(true)}>일일 보상 계산 실행</Button> : null}
@@ -360,12 +359,12 @@ export function RewardsTab({
             ) : null}
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => setContributionRunModalOpen(true)}>
-                CONTRIBUTION 실행
+                기여 보상 실행
               </Button>
             ) : null}
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => setSidecarRunModalOpen(true)}>
-                SIDECAR 실행
+                사이드카 정산 실행
               </Button>
             ) : null}
             <Button variant="secondary" onClick={() => void refreshList()} disabled={loading}>
@@ -388,8 +387,8 @@ export function RewardsTab({
         {contributionRunResult ? (
           <div className="mb-4">
             <FeedbackState
-              title="CONTRIBUTION 실행 결과"
-              description={`calc_run=${contributionRunResult.calc_run_id}, created=${contributionRunResult.created_count}, duplicate=${contributionRunResult.duplicate_skip_count}, conflict=${contributionRunResult.conflict_count}`}
+              title="기여 보상 실행 결과"
+              description={`계산 실행 ID ${contributionRunResult.calc_run_id}, 생성 ${contributionRunResult.created_count}건, 중복 ${contributionRunResult.duplicate_skip_count}건, 충돌 ${contributionRunResult.conflict_count}건`}
               tone={contributionRunResult.failed_count > 0 || contributionRunResult.conflict_count > 0 ? "error" : "success"}
             />
           </div>
@@ -397,40 +396,40 @@ export function RewardsTab({
         {sidecarRunResult ? (
           <div className="mb-4">
             <FeedbackState
-              title="SIDECAR 실행 결과"
-              description={`calc_run=${sidecarRunResult.calc_run_id}, created=${sidecarRunResult.created_count}, duplicate=${sidecarRunResult.duplicate_skip_count}, conflict=${sidecarRunResult.conflict_count}`}
+              title="사이드카 정산 실행 결과"
+              description={`계산 실행 ID ${sidecarRunResult.calc_run_id}, 생성 ${sidecarRunResult.created_count}건, 중복 ${sidecarRunResult.duplicate_skip_count}건, 충돌 ${sidecarRunResult.conflict_count}건`}
               tone={sidecarRunResult.failed_count > 0 || sidecarRunResult.conflict_count > 0 ? "error" : "success"}
             />
           </div>
         ) : null}
         {selectedCalcRunId ? (
           <div className="mb-4">
-            <FeedbackState title="calc_run 필터 적용" description={`현재 calc_run_id ${selectedCalcRunId} 기준으로 rewards를 조회 중입니다.`} />
+            <FeedbackState title="계산 실행 필터 적용" description={`현재 계산 실행 ID ${selectedCalcRunId} 기준으로 보상을 조회 중입니다.`} />
           </div>
         ) : null}
 
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="reward id / login_id / source login/display / source_reference"
+            placeholder="보상 ID / 회원 아이디 / 발생 회원"
             value={draftFilters.q ?? ""}
             onChange={(event) => updateDraft("q", event.target.value)}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="account_id"
+            placeholder="회원 ID"
             value={draftFilters.account_id ?? ""}
             onChange={(event) => updateDraft("account_id", event.target.value)}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="staking_id / source_staking_id"
+            placeholder="스테이킹 ID"
             value={draftFilters.staking_id ?? ""}
             onChange={(event) => updateDraft("staking_id", event.target.value)}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="calc_run_id"
+            placeholder="계산 실행 ID"
             value={draftFilters.calc_run_id ?? ""}
             onChange={(event) => updateDraft("calc_run_id", event.target.value)}
           />
@@ -439,7 +438,7 @@ export function RewardsTab({
             value={draftFilters.reward_type ?? ""}
             onChange={(event) => updateDraft("reward_type", event.target.value as AdminRewardFilters["reward_type"])}
           >
-            <option value="">전체 reward_type</option>
+            <option value="">전체 보상 구분</option>
             {REWARD_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -451,7 +450,7 @@ export function RewardsTab({
             value={draftFilters.status ?? ""}
             onChange={(event) => updateDraft("status", event.target.value as AdminRewardFilters["status"])}
           >
-            <option value="">전체 status</option>
+            <option value="">전체 상태</option>
             {REWARD_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -517,8 +516,8 @@ export function RewardsTab({
           총 <span className="tabular text-slate-200">{total}</span>건
         </div>
 
-        {loading ? <FeedbackState title="보상 목록 로딩 중" description="admin rewards 목록을 불러오고 있습니다." /> : null}
-        {!loading && items.length === 0 ? <FeedbackState title="보상 내역 없음" description="현재 필터 조건에 맞는 rewards가 없습니다." /> : null}
+        {loading ? <FeedbackState title="보상 목록을 불러오는 중" description="보상 목록을 조회하고 있습니다." /> : null}
+        {!loading && items.length === 0 ? <FeedbackState title="보상 내역이 없습니다" description="조회된 내용이 없습니다." /> : null}
 
         {items.length > 0 ? (
           <>
@@ -526,17 +525,17 @@ export function RewardsTab({
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
-                    <th>reward id</th>
-                    <th>reward date</th>
-                    <th>login_id</th>
-                    <th>display_name</th>
-                    <th>reward type</th>
-                    <th>amount</th>
-                    <th>status</th>
-                    <th>staking / source</th>
-                    <th>calc_run_id</th>
-                    <th>confirmed_at</th>
-                    <th>available_at</th>
+                    <th>보상 ID</th>
+                    <th>보상 기준일</th>
+                    <th>아이디</th>
+                    <th>이름</th>
+                    <th>보상 구분</th>
+                    <th>보상 금액</th>
+                    <th>상태</th>
+                    <th>스테이킹 / 발생 정보</th>
+                    <th>계산 실행 ID</th>
+                    <th>확정 일시</th>
+                    <th>출금 가능 일시</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -565,7 +564,7 @@ export function RewardsTab({
                           <div className="font-mono text-xs text-slate-500">{item.account_staking_id ?? item.source_account_staking_id ?? "-"}</div>
                           {item.reward_type === "DIRECT_REFERRAL" ? (
                             <div className="mt-1 text-xs text-slate-400">
-                              source: {item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}
+                              발생 회원: {item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}
                             </div>
                           ) : null}
                         </td>
@@ -601,8 +600,8 @@ export function RewardsTab({
       </Card>
 
       <div className="space-y-6">
-        {detailLoading ? <FeedbackState title="보상 상세 로딩 중" description="선택한 reward 상세를 불러오고 있습니다." /> : null}
-        {detailError ? <FeedbackState title="보상 상세 조회 오류" description={detailError} tone="error" /> : null}
+        {detailLoading ? <FeedbackState title="보상 상세를 불러오는 중" description="선택한 보상 정보를 조회하고 있습니다." /> : null}
+        {detailError ? <FeedbackState title="보상 상세를 불러오지 못했습니다" description={detailError} tone="error" /> : null}
         <RewardDetailPanel actorId={actorId} role={role} reward={selectedReward} onUpdated={handleUpdated} />
       </div>
 
@@ -629,8 +628,8 @@ export function RewardsTab({
       <BonusOperationRunModal
         kind="CONTRIBUTION"
         open={contributionRunModalOpen}
-        title="CONTRIBUTION 배치 실행"
-        description="기여도 계산은 contribution rule, depth/weight, 조직 범위, duplicate/conflict 기준을 그대로 사용합니다."
+        title="기여 보상 실행"
+        description="기준일에 해당하는 기여 보상을 계산합니다."
         submitting={contributionRunSubmitting}
         error={contributionRunError}
         result={contributionRunResult}
@@ -642,8 +641,8 @@ export function RewardsTab({
       <BonusOperationRunModal
         kind="SIDECAR"
         open={sidecarRunModalOpen}
-        title="SIDECAR 배치 실행"
-        description="사이드카는 rule-driven split과 nullable product 정책을 유지하며, release/freeze 합계를 calc_run 단위로 집계합니다."
+        title="사이드카 정산 실행"
+        description="기준일의 사이드카 정산 내역을 계산합니다."
         submitting={sidecarRunSubmitting}
         error={sidecarRunError}
         result={sidecarRunResult}

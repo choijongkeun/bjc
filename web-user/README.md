@@ -1,6 +1,6 @@
 # BJC User Front
 
-일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증, 네트워크 조회, 스테이킹, Rewards 조회, Withdrawals 흐름을 구현합니다.
+일반 회원용 프론트엔드입니다. `web/` 관리자 콘솔과 분리된 독립 Vite 앱으로, 현재는 인증, 추천 조직 조회, 스테이킹, 보상 내역, 출금 흐름을 구현합니다.
 
 ## 설치
 
@@ -27,7 +27,7 @@ cd web-user
 npm run build
 ```
 
-production-like preview:
+운영 환경과 유사한 미리보기:
 
 ```bash
 cd web-user
@@ -58,7 +58,7 @@ cp .env.example .env.local
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-- preview 또는 production-like 실행 시에는 `VITE_API_BASE_URL`을 명시하는 방식을 권장합니다.
+- 미리보기 실행 시에는 `VITE_API_BASE_URL`을 명시하는 방식을 권장합니다.
 - `.env`, `.env.local`은 커밋하지 않습니다.
 
 ## API 서버 실행 필요
@@ -96,13 +96,13 @@ npm run dev
 - 스테이킹 신청
 - 내 스테이킹 목록
 - 내 스테이킹 상세
-- 내 Rewards 요약/목록/상세
-- 내 Rank 현재 상태/다음 직급 조건/직급 이력/최근 `RANK_BONUS`
-- 내 Withdrawals 잔액/미리보기/신청/목록/상세
+- 내 보상 요약/목록/상세
+- 내 직급 현재 상태/다음 직급 조건/직급 이력/최근 직급 보상
+- 내 출금 잔액/미리보기/신청/목록/상세
 - `REQUESTED` 출금 취소
 - 스테이킹 상세의 rewards 섹션
-- Dashboard rewards/stakings summary
-- Dashboard withdrawals summary/action
+- 대시보드 보상/스테이킹 요약
+- 대시보드 출금 요약
 - PENDING 취소 / ACTIVE 취소 요청
 - 추천 조직도
 - 바이너리 조직도
@@ -116,31 +116,31 @@ npm run dev
 - `ACTIVE` 전환은 관리자 화면에서 처리합니다.
 - 현재 범위에는 reward 지급, principal 실제 차감/반환, 자동 만기 처리가 포함되지 않습니다.
 
-## Rewards 참고
+## 보상 참고
 
 - Dashboard는 `GET /api/me/rewards/summary`, `GET /api/me/stakings/summary` 값을 그대로 사용합니다.
-- Rewards 화면은 `GET /api/me/rewards`, `GET /api/me/rewards/:rewardId`, `GET /api/me/stakings/:stakingId/rewards`를 사용합니다.
+- 보상 내역 화면은 `GET /api/me/rewards`, `GET /api/me/rewards/:rewardId`, `GET /api/me/stakings/:stakingId/rewards`를 사용합니다.
 - 금액은 모두 string/base amount로 유지하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
-- Rewards 요약 카드의 `출금 가능 보상`, `출금 완료 보상`은 `/withdrawals` 화면으로 연결됩니다.
-- Rewards 요약 카드의 `BONUS 누적`에는 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 함께 반영됩니다.
+- 보상 요약 카드의 `출금 가능 보상`, `출금 완료 보상`은 `/withdrawals` 화면으로 연결됩니다.
+- 보상 요약 카드의 `보너스 누적`에는 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 함께 반영됩니다.
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급합니다.
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 변경될 수 있습니다.
 - `CONTRIBUTION` reward 상세는 sanitize된 metadata allowlist만 표시합니다.
 - repository design 기준 현재 `SIDECAR`는 reward accrual이 아니라 withdrawal split settlement이므로 사용자 rewards 목록에 `SIDECAR` row는 생성하지 않습니다.
 
-## Rank 참고
+## 직급 참고
 
 - `/rank` 화면은 `GET /api/me/rank`, `GET /api/me/rank-history`, `GET /api/me/rewards?reward_type=RANK_BONUS`를 함께 사용합니다.
 - 현재 직급, 승급일, 마지막 계산일, 다음 직급, 조건별 current/required/met, 최근 rank history, 최근 `RANK_BONUS`를 표시합니다.
 - 금액은 모두 string/base amount formatter를 사용하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
-- reward 상세는 기존 `/rewards/:rewardId`로 연결되며 BONUS 출금 가능 잔액에도 자동 반영됩니다.
+- 보상 상세는 기존 `/rewards/:rewardId`로 연결되며 보너스 출금 가능 잔액에도 자동 반영됩니다.
 - 내부 qualification snapshot 전체는 노출하지 않고 sanitize된 metadata만 보여줍니다.
 
-## Withdrawals 참고
+## 출금 참고
 
 - 화면은 `GET /api/me/withdrawal-balance`, `POST /api/me/withdrawal-preview`, `POST /api/me/withdrawals`, `GET /api/me/withdrawals`, `GET /api/me/withdrawals/:withdrawalId`, `POST /api/me/withdrawals/:withdrawalId/cancel`을 사용합니다.
 - 상단 카드에서 `DAILY_REWARD`, `BONUS`, 예약 금액, 완료 출금액을 조회합니다.
-- BONUS 출금 가능 잔액에는 현재 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 반영됩니다.
+- 보너스 출금 가능 잔액에는 현재 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 반영됩니다.
 - 미리보기는 참고용이며 실제 신청 시 후보 reward, 수수료, 실수령액을 서버에서 다시 계산합니다.
 - 한 번의 요청에는 `DAILY_REWARD`와 `BONUS`를 혼합하지 않습니다.
 - `REQUESTED` 상태에서만 사용자가 직접 취소할 수 있습니다.

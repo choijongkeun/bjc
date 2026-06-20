@@ -34,8 +34,8 @@ export const WITHDRAWAL_TYPE_OPTIONS: Array<{ value: WithdrawalType; label: stri
 ];
 
 export const WITHDRAWAL_STATUS_OPTIONS: Array<{ value: WithdrawalStatus; label: string }> = [
-  { value: "REQUESTED", label: "요청됨" },
-  { value: "APPROVED", label: "승인됨" },
+  { value: "REQUESTED", label: "신청" },
+  { value: "APPROVED", label: "승인" },
   { value: "PROCESSING", label: "처리 중" },
   { value: "COMPLETED", label: "완료" },
   { value: "REJECTED", label: "거절" },
@@ -58,8 +58,8 @@ const withdrawalTypeLabelMap: Record<WithdrawalType, string> = {
 };
 
 const withdrawalStatusLabelMap: Record<WithdrawalStatus, string> = {
-  REQUESTED: "요청됨",
-  APPROVED: "승인됨",
+  REQUESTED: "신청",
+  APPROVED: "승인",
   PROCESSING: "처리 중",
   COMPLETED: "완료",
   REJECTED: "거절",
@@ -70,7 +70,7 @@ const withdrawalStatusLabelMap: Record<WithdrawalStatus, string> = {
 const summaryCardDefinitions: Array<{ key: keyof AdminWithdrawalSummary; label: string }> = [
   { key: "requested_amount_base", label: "신청 금액" },
   { key: "approved_amount_base", label: "승인 금액" },
-  { key: "processing_amount_base", label: "처리중 금액" },
+  { key: "processing_amount_base", label: "처리 중 금액" },
   { key: "completed_amount_base", label: "완료 금액" },
   { key: "rejected_amount_base", label: "거절 금액" },
   { key: "failed_amount_base", label: "실패 금액" },
@@ -203,7 +203,7 @@ export function validateWithdrawalActionInput(
     return "네트워크를 입력해 주세요.";
   }
   if (mode === "complete" && !payload.tx_hash?.trim()) {
-    return "tx_hash를 입력해 주세요.";
+    return "거래 해시를 입력해 주세요.";
   }
   return null;
 }

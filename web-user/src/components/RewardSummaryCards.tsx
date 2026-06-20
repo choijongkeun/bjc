@@ -16,12 +16,12 @@ export function RewardSummaryCards({
     {
       label: "대기 보상",
       value: summary ? formatRewardAmountBase(summary.pending_reward_amount_base) : "...",
-      note: "정산 대기 중인 보상",
+      note: "정산 전 보상 금액",
     },
     {
       label: "확정 보상",
       value: summary ? formatRewardAmountBase(summary.confirmed_reward_amount_base) : "...",
-      note: "확정 처리된 보상",
+      note: "확정된 보상 금액",
     },
     {
       label: "출금 가능 보상",
@@ -32,16 +32,16 @@ export function RewardSummaryCards({
     {
       label: "출금 완료 보상",
       value: summary ? formatRewardAmountBase(summary.withdrawn_reward_amount_base) : "...",
-      note: "실제 완료된 출금 합계",
+      note: "출금 완료 합계",
       href: withdrawalsHref,
     },
     {
-      label: "DAILY_REWARD 누적",
+      label: "일일 보상 누적",
       value: summary ? formatRewardAmountBase(summary.daily_reward_amount_base) : "...",
       note: "일일 보상 누적 합계",
     },
     {
-      label: "BONUS 누적",
+      label: "보너스 누적",
       value: summary ? formatRewardAmountBase(summary.bonus_reward_amount_base ?? "0") : "...",
       note: "직추천 및 직급 보상 누적 합계",
       href: withdrawalsHref,
@@ -49,7 +49,7 @@ export function RewardSummaryCards({
     {
       label: "총 보상 건수",
       value: summary ? String(summary.reward_count) : "...",
-      note: "전체 reward row 수",
+      note: "전체 보상 건수",
     },
   ];
 

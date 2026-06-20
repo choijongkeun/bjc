@@ -20,7 +20,7 @@ test("회원 상세, 상태 변경, referral/binary/downline 조회를 검증한
   await loginAdminUi(page, fixture.accounts.admin.id);
 
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=accounts&accountId=${fixture.accounts.root_user.id}`);
-  await page.getByRole("textbox", { name: "login_id / display_name / referral_code" }).fill(fixture.credentials.root_user.login_id);
+  await page.getByPlaceholder("아이디 / 이름 / 추천 코드").fill(fixture.credentials.root_user.login_id);
   await page.getByRole("button", { name: "조회" }).click();
   await expect(page.getByRole("heading", { name: "회원 상세" })).toBeVisible();
   await expect(page.getByText(fixture.credentials.root_user.login_id, { exact: true }).first()).toBeVisible();

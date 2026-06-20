@@ -32,15 +32,15 @@ export const REWARD_TYPE_OPTIONS: Array<{ value: RewardType; label: string }> = 
   { value: "RANK_BONUS", label: "직급 보상" },
   { value: "CONTRIBUTION", label: "기여 보상" },
   { value: "WITHDRAWAL_FEE", label: "출금 수수료" },
-  { value: "SIDECAR", label: "사이드카" },
+  { value: "SIDECAR", label: "사이드카 정산" },
   { value: "ADJUSTMENT", label: "조정" },
-  { value: "REVERSAL", label: "역분개" },
+  { value: "REVERSAL", label: "보상 취소" },
 ];
 
 export const REWARD_STATUS_OPTIONS: Array<{ value: RewardStatus; label: string }> = [
   { value: "PENDING", label: "대기" },
   { value: "CONFIRMED", label: "확정" },
-  { value: "REVERSED", label: "역분개 완료" },
+  { value: "REVERSED", label: "취소 반영" },
 ];
 
 export const REWARD_SORT_OPTIONS: Array<{ value: RewardSort; label: string }> = [
@@ -58,15 +58,15 @@ const rewardTypeLabelMap: Record<RewardType, string> = {
   RANK_BONUS: "직급 보상",
   CONTRIBUTION: "기여 보상",
   WITHDRAWAL_FEE: "출금 수수료",
-  SIDECAR: "사이드카",
+  SIDECAR: "사이드카 정산",
   ADJUSTMENT: "조정",
-  REVERSAL: "역분개",
+  REVERSAL: "보상 취소",
 };
 
 const rewardStatusLabelMap: Record<RewardStatus, string> = {
   PENDING: "대기",
   CONFIRMED: "확정",
-  REVERSED: "역분개 완료",
+  REVERSED: "취소 반영",
 };
 
 export function getRewardTypeLabel(type: RewardType): string {
@@ -145,39 +145,39 @@ export function getVisibleRewardMetadataEntries(metadata?: RewardMetadata | null
   if (!metadata) return [];
 
   const items: Array<{ label: string; value: string | number | undefined }> = [
-    { label: "원금 snapshot", value: metadata.principal_amount_base },
-    { label: "bps snapshot", value: metadata.daily_interest_bps_snapshot },
-    { label: "기간 snapshot", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
-    { label: "denominator", value: metadata.denominator },
-    { label: "formula version", value: metadata.formula_version },
-    { label: "organization scope", value: metadata.organization_scope },
-    { label: "source principal", value: metadata.source_principal_amount_base },
-    { label: "direct referral rate", value: metadata.direct_referral_rate_bps ? `${metadata.direct_referral_rate_bps} bps` : undefined },
-    { label: "referral depth", value: metadata.referral_depth },
-    { label: "rank level", value: metadata.rank_level },
-    { label: "effective bonus bps", value: metadata.effective_bonus_bps },
-    { label: "base daily reward", value: metadata.base_daily_reward_amount_base },
-    { label: "qualification calc run", value: metadata.qualification_calc_run_id },
-    { label: "qualification result", value: metadata.qualification_result_id },
-    { label: "rule id", value: metadata.rule_id },
-    { label: "rate bps", value: metadata.rate_bps },
-    { label: "weight bps", value: metadata.weight_bps },
-    { label: "base amount", value: metadata.base_amount_base },
-    { label: "pool amount", value: metadata.pool_amount_base },
-    { label: "total score", value: metadata.total_score },
-    { label: "score amount", value: metadata.score_amount_base },
-    { label: "score ratio", value: metadata.score_ratio_bps ? `${metadata.score_ratio_bps} bps` : undefined },
-    { label: "qualification source", value: metadata.qualification_source },
-    { label: "requested amount", value: metadata.requested_amount_base },
-    { label: "release amount", value: metadata.release_amount_base },
-    { label: "freeze amount", value: metadata.freeze_amount_base },
-    { label: "release bps", value: metadata.release_bps ? `${metadata.release_bps} bps` : undefined },
-    { label: "freeze bps", value: metadata.freeze_bps ? `${metadata.freeze_bps} bps` : undefined },
-    { label: "sidecar status", value: metadata.sidecar_status },
+    { label: "스테이킹 원금", value: metadata.principal_amount_base },
+    { label: "일일 적용 비율", value: metadata.daily_interest_bps_snapshot ? `${metadata.daily_interest_bps_snapshot} bps` : undefined },
+    { label: "적용 기간", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
+    { label: "분모 기준", value: metadata.denominator },
+    { label: "계산 기준", value: metadata.formula_version },
+    { label: "조직 범위", value: metadata.organization_scope },
+    { label: "기준 원금", value: metadata.source_principal_amount_base },
+    { label: "직추천 적용 비율", value: metadata.direct_referral_rate_bps ? `${metadata.direct_referral_rate_bps} bps` : undefined },
+    { label: "추천 단계", value: metadata.referral_depth },
+    { label: "직급 단계", value: metadata.rank_level },
+    { label: "추가 비율", value: metadata.effective_bonus_bps },
+    { label: "기준 일일 보상", value: metadata.base_daily_reward_amount_base },
+    { label: "직급 산정 실행 ID", value: metadata.qualification_calc_run_id },
+    { label: "직급 산정 결과 ID", value: metadata.qualification_result_id },
+    { label: "규칙 ID", value: metadata.rule_id },
+    { label: "적용 비율", value: metadata.rate_bps },
+    { label: "가중치 비율", value: metadata.weight_bps },
+    { label: "기준 금액", value: metadata.base_amount_base },
+    { label: "풀 금액", value: metadata.pool_amount_base },
+    { label: "총 점수", value: metadata.total_score },
+    { label: "점수 반영 금액", value: metadata.score_amount_base },
+    { label: "점수 비율", value: metadata.score_ratio_bps ? `${metadata.score_ratio_bps} bps` : undefined },
+    { label: "직급 산정 기준", value: metadata.qualification_source },
+    { label: "신청 금액", value: metadata.requested_amount_base },
+    { label: "지급 금액", value: metadata.release_amount_base },
+    { label: "동결 금액", value: metadata.freeze_amount_base },
+    { label: "지급 비율", value: metadata.release_bps ? `${metadata.release_bps} bps` : undefined },
+    { label: "동결 비율", value: metadata.freeze_bps ? `${metadata.freeze_bps} bps` : undefined },
+    { label: "사이드카 상태", value: metadata.sidecar_status },
     { label: "원본 보상 ID", value: metadata.original_reward_id },
     { label: "원본 source", value: metadata.original_source_reference },
     { label: "사유", value: metadata.reason },
-    { label: "metadata reward_type", value: metadata.reward_type },
+    { label: "메타데이터 보상 구분", value: metadata.reward_type },
   ];
 
   return items
@@ -216,14 +216,14 @@ export function getDefaultKstRewardDate(baseDate = new Date()): string {
 
 export function getDailyRewardRunResultItems(result: DailyRewardRunResponse): Array<{ label: string; value: string }> {
   return [
-    { label: "calc_run_id", value: result.calc_run.id },
-    { label: "target_count", value: String(result.target_count) },
-    { label: "created_count", value: String(result.created_count) },
-    { label: "zero_reward_skip_count", value: String(result.zero_reward_skip_count) },
-    { label: "duplicate_skip_count", value: String(result.duplicate_skip_count) },
-    { label: "failed_count", value: String(result.failed_count) },
-    { label: "total_reward_amount_base", value: formatRewardAmountBase(result.total_reward_amount_base) },
-    { label: "status", value: result.calc_run.status },
+    { label: "계산 실행 ID", value: result.calc_run.id },
+    { label: "대상 건수", value: String(result.target_count) },
+    { label: "생성 건수", value: String(result.created_count) },
+    { label: "0원 제외 건수", value: String(result.zero_reward_skip_count) },
+    { label: "중복 건수", value: String(result.duplicate_skip_count) },
+    { label: "실패 건수", value: String(result.failed_count) },
+    { label: "총 보상 금액", value: formatRewardAmountBase(result.total_reward_amount_base) },
+    { label: "상태", value: result.calc_run.status },
   ];
 }
 
@@ -237,13 +237,13 @@ export function validateDirectReferralRunInput(input: {
   activated_to: string;
 }): string | null {
   if (!input.policy_version_id.trim()) {
-    return "policy_version_id를 입력해 주세요.";
+    return "정책 버전을 입력해 주세요.";
   }
   if (!input.activated_from.trim() || !input.activated_to.trim()) {
     return "활성화 날짜 범위를 모두 입력해 주세요.";
   }
   if (input.activated_from > input.activated_to) {
-    return "activated_from은 activated_to보다 클 수 없습니다.";
+    return "시작일은 종료일보다 늦을 수 없습니다.";
   }
   return null;
 }
@@ -259,7 +259,7 @@ export function getDirectReferralRunStatusLabel(status: string): string {
     case "PENDING":
       return "대기";
     case "FINALIZED":
-      return "확정";
+      return "확정 완료";
     default:
       return status;
   }
@@ -304,17 +304,17 @@ export function getDirectReferralResultTone(input: {
 
 export function formatDirectReferralRunSummary(result: DirectReferralRunResponse): Array<{ label: string; value: string }> {
   return [
-    { label: "calc_run_id", value: result.calc_run_id },
-    { label: "target_count", value: String(result.target_count) },
-    { label: "created_count", value: String(result.created_count) },
-    { label: "no_sponsor_skip_count", value: String(result.no_sponsor_skip_count) },
-    { label: "inactive_sponsor_skip_count", value: String(result.inactive_sponsor_skip_count) },
-    { label: "zero_reward_skip_count", value: String(result.zero_reward_skip_count) },
-    { label: "duplicate_skip_count", value: String(result.duplicate_skip_count) },
-    { label: "conflict_count", value: String(result.conflict_count) },
-    { label: "failed_count", value: String(result.failed_count) },
-    { label: "total_reward_amount_base", value: formatRewardAmountBase(result.total_reward_amount_base) },
-    { label: "status", value: getDirectReferralRunStatusLabel(result.status) },
+    { label: "계산 실행 ID", value: result.calc_run_id },
+    { label: "대상 건수", value: String(result.target_count) },
+    { label: "생성 건수", value: String(result.created_count) },
+    { label: "추천인 없음", value: String(result.no_sponsor_skip_count) },
+    { label: "비활성 추천인", value: String(result.inactive_sponsor_skip_count) },
+    { label: "0원 제외", value: String(result.zero_reward_skip_count) },
+    { label: "중복 건수", value: String(result.duplicate_skip_count) },
+    { label: "충돌 건수", value: String(result.conflict_count) },
+    { label: "실패 건수", value: String(result.failed_count) },
+    { label: "총 보상 금액", value: formatRewardAmountBase(result.total_reward_amount_base) },
+    { label: "상태", value: getDirectReferralRunStatusLabel(result.status) },
   ];
 }
 

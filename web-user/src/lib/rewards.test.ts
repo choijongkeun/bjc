@@ -10,9 +10,9 @@ import {
 describe("reward helpers", () => {
   it("maps reward type and status labels", () => {
     expect(getRewardTypeLabel("DAILY_REWARD")).toBe("일일 보상");
-    expect(getRewardTypeLabel("REVERSAL")).toBe("역분개");
+    expect(getRewardTypeLabel("REVERSAL")).toBe("보상 취소");
     expect(getRewardStatusLabel("PENDING")).toBe("대기");
-    expect(getRewardStatusLabel("REVERSED")).toBe("역분개 완료");
+    expect(getRewardStatusLabel("REVERSED")).toBe("취소 반영");
   });
 
   it("builds reward list query without empty values", () => {
@@ -55,10 +55,9 @@ describe("reward helpers", () => {
         reason: "hidden",
       })
     ).toEqual([
-      { label: "원금 snapshot", value: "1000000" },
-      { label: "bps snapshot", value: "25" },
-      { label: "기간 snapshot", value: "30일" },
-      { label: "denominator", value: "10000" },
+      { label: "스테이킹 원금", value: "1000000" },
+      { label: "일일 적용 비율", value: "25 bps" },
+      { label: "적용 기간", value: "30일" },
     ]);
   });
 
@@ -76,15 +75,12 @@ describe("reward helpers", () => {
         qualification_source: "referral_edges",
       })
     ).toEqual([
-      { label: "formula version", value: "contribution_v1" },
-      { label: "rule id", value: "rule-1" },
-      { label: "weight bps", value: "500" },
-      { label: "base amount", value: "1000" },
-      { label: "pool amount", value: "200" },
-      { label: "total score", value: "5000" },
-      { label: "score amount", value: "50" },
-      { label: "score ratio", value: "100 bps" },
-      { label: "qualification source", value: "referral_edges" },
+      { label: "가중치 비율", value: "500 bps" },
+      { label: "기준 금액", value: "1000" },
+      { label: "풀 금액", value: "200" },
+      { label: "총 점수", value: "5000" },
+      { label: "점수 반영 금액", value: "50" },
+      { label: "점수 비율", value: "100 bps" },
     ]);
 
     expect(
@@ -97,12 +93,11 @@ describe("reward helpers", () => {
         sidecar_status: "SIDECAR_ACTIVE",
       })
     ).toEqual([
-      { label: "requested amount", value: "300" },
-      { label: "release amount", value: "210" },
-      { label: "freeze amount", value: "90" },
-      { label: "release bps", value: "7000 bps" },
-      { label: "freeze bps", value: "3000 bps" },
-      { label: "sidecar status", value: "SIDECAR_ACTIVE" },
+      { label: "신청 금액", value: "300" },
+      { label: "지급 금액", value: "210" },
+      { label: "동결 금액", value: "90" },
+      { label: "지급 비율", value: "7000 bps" },
+      { label: "동결 비율", value: "3000 bps" },
     ]);
   });
 });

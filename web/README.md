@@ -150,21 +150,21 @@ npm run build
 - `Accounts` 탭에서 회원별 최근 스테이킹 표시 및 `stakings` 탭 이동
 - reward 지급, principal 실제 차감/반환, maturity 자동 처리 미구현
 
-## Rewards UI 범위
+## 보상 실행 관리 UI 범위
 
 - `rewards` 탭에서 전체 보상 목록/필터/상세 패널 조회
 - `Accounts` 탭에서 회원별 최근 보상 표시 및 `/admin?tab=rewards&accountId=<id>` 이동
-- `Calc` 탭에서 `DAILY_REWARD` run에 대해 rewards 탭 이동
+- `Calc` 탭에서 `DAILY_REWARD` 실행 내역에 대해 보상 탭 이동
 - `ADMIN` 전용 수동 `DAILY_REWARD` 실행 모달
 - `ADMIN` 전용 `DIRECT_REFERRAL` 배치 실행 모달
 - `ADMIN` 전용 `CONTRIBUTION` 배치 실행 모달
 - `ADMIN` 전용 `SIDECAR` 배치 실행 모달
-- `DIRECT_REFERRAL` 실행 결과 summary, duplicate/skip/conflict/failed 집계 표시
-- `CONTRIBUTION` / `SIDECAR` 실행 결과 summary, duplicate/skip/conflict/failed 집계 표시
+- `DIRECT_REFERRAL` 실행 결과 요약, 중복/제외/충돌/실패 집계 표시
+- `CONTRIBUTION` / `SIDECAR` 실행 결과 요약, 중복/제외/충돌/실패 집계 표시
 - 실행 성공 후 `calc_run_id`와 `reward_type=DIRECT_REFERRAL` 기준 rewards 목록 이동 지원
 - 실행 성공 후 `calc_run_id` 기준 calc summary / rewards drill-down / CSV 다운로드 지원
-- `Reward` 상세 패널에서 `DIRECT_REFERRAL` source account/source staking/source principal/rate/formula 표시
-- `Reward` 상세 패널에서 `CONTRIBUTION` metadata allowlist와 `SIDECAR` metadata allowlist를 표시
+- `Reward` 상세 패널에서 `DIRECT_REFERRAL` 발생 회원/발생 스테이킹/기준 원금/비율/계산식 표시
+- `Reward` 상세 패널에서 `CONTRIBUTION`과 `SIDECAR` 계산 정보 allowlist를 표시
 - `ADMIN` 전용 `CONFIRMED` 일반 보상 reversal
 - `READER`는 조회 전용이며 실행/reversal 버튼이 노출되지 않음
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급
@@ -185,30 +185,30 @@ npm run build
 - `Calc` 탭에서는 `RANK_QUALIFICATION`, `RANK_BONUS` run summary를 직접 표시하고 rank/rewards drill-down으로 연결합니다.
 - `Calc` 탭에서는 `DAILY_REWARD`, `DIRECT_REFERRAL`, `RANK_QUALIFICATION`, `RANK_BONUS`, `CONTRIBUTION`, `SIDECAR` 공통 summary를 표시합니다.
 - `Accounts` 탭에서는 `직급 보기` 액션으로 `Ranks` 탭 상세 패널로 이동할 수 있습니다.
-- `Accounts` 탭에서는 `policy_version_id` + `calculation_date` 입력으로 선택 회원의 `CONTRIBUTION` / `SIDECAR` 단건 실행이 가능합니다.
+- `Accounts` 탭에서는 `정책 버전 ID` + `계산 기준일` 입력으로 선택 회원의 `CONTRIBUTION` / `SIDECAR` 단건 실행이 가능합니다.
 - `Reward` 상세 패널은 `RANK_BONUS` metadata를 sanitize된 allowlist 기준으로 표시합니다.
 
-## Contribution / Sidecar Admin Guide
+## Contribution / Sidecar 운영 안내
 
 - 배치 실행:
-  - `Rewards` 탭에서 `CONTRIBUTION 실행`, `SIDECAR 실행`
-  - 입력값: `policy_version_id`, `calculation_date`
+  - `Rewards` 탭에서 `기여 보상 실행`, `사이드카 정산 실행`
+  - 입력값: `정책 버전 ID`, `계산 기준일`
 - 단건 실행:
   - `Accounts` 탭 상세에서 `보너스 단건 실행`
   - `ADMIN`만 실행 가능, `READER`는 조회 전용
 - 운영 통계:
-  - `Reports` 탭에서 `reward-summary`, `reward-by-type`, `calc-run-summary`, CSV 다운로드를 제공합니다.
+  - `Reports` 탭에서 보상 집계, 보상 구분별 집계, 계산 실행 집계, CSV 다운로드를 제공합니다.
 - 현재 확정 정책:
   - `CONTRIBUTION`은 reward/ledger/account_rewards까지 생성됩니다.
   - `SIDECAR`는 repository design 기준으로 withdrawal split ledger/settlement만 생성합니다.
 - 현재 명시적 제한:
   - `SIDECAR` reward row는 현재 V1에서 생성하지 않습니다.
 
-## Direct Referral Admin Guide
+## Direct Referral 운영 안내
 
 - 배치 실행:
   - `Rewards` 탭에서 `직추천 보상 실행`
-  - 입력값: `policy_version_id`, `activated_from`, `activated_to`
+  - 입력값: `정책 버전 ID`, `activated_from`, `activated_to`
   - 날짜 범위는 `from <= to`여야 합니다.
 - 단건 실행:
   - `Stakings` 상세에서 eligible ACTIVE staking에만 `직추천 보상 계산` 버튼 표시
@@ -225,7 +225,7 @@ npm run build
   - `ADMIN`만 batch/single 실행 가능
   - `READER`는 조회 전용이며 실행 버튼이 노출되지 않음
 
-## Withdrawals UI 범위
+## 출금 관리 UI 범위
 
 - `withdrawals` 탭에서 전체 출금 목록/필터/상세 패널/통계 카드를 조회
 - `Accounts` 탭에서 회원별 최근 출금 5건 표시 및 `/admin?tab=withdrawals&accountId=<id>` 이동

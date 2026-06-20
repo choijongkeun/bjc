@@ -90,8 +90,8 @@ describe("admin reward helpers", () => {
         duplicate_skip_count: 1,
         failed_count: 0,
         total_reward_amount_base: "12345",
-      }).find((item) => item.label === "status")
-    ).toEqual({ label: "status", value: "SUCCEEDED" });
+      }).find((item) => item.label === "상태")
+    ).toEqual({ label: "상태", value: "SUCCEEDED" });
   });
 
   it("uses previous Asia/Seoul business date by default", () => {
@@ -105,7 +105,7 @@ describe("admin reward helpers", () => {
         activated_from: "2026-06-01",
         activated_to: "2026-06-30",
       })
-    ).toBe("policy_version_id를 입력해 주세요.");
+    ).toBe("정책 버전을 입력해 주세요.");
 
     expect(
       validateDirectReferralRunInput({
@@ -113,7 +113,7 @@ describe("admin reward helpers", () => {
         activated_from: "2026-07-01",
         activated_to: "2026-06-30",
       })
-    ).toBe("activated_from은 activated_to보다 클 수 없습니다.");
+    ).toBe("시작일은 종료일보다 늦을 수 없습니다.");
   });
 
   it("formats direct referral run result items", () => {
@@ -130,9 +130,9 @@ describe("admin reward helpers", () => {
         failed_count: 0,
         total_reward_amount_base: "150000",
         status: "SUCCEEDED",
-      }).find((item) => item.label === "total_reward_amount_base")
+      }).find((item) => item.label === "총 보상 금액")
     ).toEqual({
-      label: "total_reward_amount_base",
+      label: "총 보상 금액",
       value: "150,000",
     });
   });
@@ -171,7 +171,7 @@ describe("admin reward helpers", () => {
         direct_referral_rate_bps: "1500",
         referral_depth: 1,
       }).map((item) => item.label)
-    ).toEqual(["formula version", "source principal", "direct referral rate", "referral depth"]);
+    ).toEqual(["계산 기준", "기준 원금", "직추천 적용 비율", "추천 단계"]);
   });
 
   it("shows contribution and sidecar metadata fields", () => {
@@ -188,15 +188,15 @@ describe("admin reward helpers", () => {
         qualification_source: "referral_edges",
       }).map((item) => item.label)
     ).toEqual([
-      "formula version",
-      "rule id",
-      "weight bps",
-      "base amount",
-      "pool amount",
-      "total score",
-      "score amount",
-      "score ratio",
-      "qualification source",
+      "계산 기준",
+      "규칙 ID",
+      "가중치 비율",
+      "기준 금액",
+      "풀 금액",
+      "총 점수",
+      "점수 반영 금액",
+      "점수 비율",
+      "직급 산정 기준",
     ]);
 
     expect(
@@ -209,12 +209,12 @@ describe("admin reward helpers", () => {
         sidecar_status: "SIDECAR_ACTIVE",
       }).map((item) => item.label)
     ).toEqual([
-      "requested amount",
-      "release amount",
-      "freeze amount",
-      "release bps",
-      "freeze bps",
-      "sidecar status",
+      "신청 금액",
+      "지급 금액",
+      "동결 금액",
+      "지급 비율",
+      "동결 비율",
+      "사이드카 상태",
     ]);
   });
 });

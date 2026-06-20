@@ -110,9 +110,9 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
   }, []);
 
   const cards = [
-    ["TVL(base)", summary.total_stake_amount_base],
-    ["보상 총액(base)", summary.total_reward_amount_base],
-    ["수수료 총액(base)", summary.total_fee_amount_base],
+    ["총 스테이킹 원금", summary.total_stake_amount_base],
+    ["총 보상 금액", summary.total_reward_amount_base],
+    ["총 수수료 금액", summary.total_fee_amount_base],
     ["계정 수", summary.total_accounts],
     ["원장 이벤트 수", summary.total_ledger_events],
     ["정산 실행 수", summary.total_calc_runs],
@@ -135,25 +135,25 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <div className="grid flex-1 gap-3 md:grid-cols-4 xl:grid-cols-7">
-            <input type="date" className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="from" value={filters.from} onChange={(e) => setFilters((v) => ({ ...v, from: e.target.value }))} />
-            <input type="date" className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="to" value={filters.to} onChange={(e) => setFilters((v) => ({ ...v, to: e.target.value }))} />
-            <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="policy_id" value={filters.policy_id} onChange={(e) => setFilters((v) => ({ ...v, policy_id: e.target.value }))} />
+            <input type="date" className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="시작일" value={filters.from} onChange={(e) => setFilters((v) => ({ ...v, from: e.target.value }))} />
+            <input type="date" className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="종료일" value={filters.to} onChange={(e) => setFilters((v) => ({ ...v, to: e.target.value }))} />
+            <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="정책 ID" value={filters.policy_id} onChange={(e) => setFilters((v) => ({ ...v, policy_id: e.target.value }))} />
             <select className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={filters.reward_type} onChange={(e) => setFilters((v) => ({ ...v, reward_type: e.target.value }))}>
-              <option value="">전체 reward_type</option>
+              <option value="">전체 보상 구분</option>
               {REWARD_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <select className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={filters.reward_status} onChange={(e) => setFilters((v) => ({ ...v, reward_status: e.target.value }))}>
-              <option value="">전체 reward status</option>
+              <option value="">전체 보상 상태</option>
               {REWARD_STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <select className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={filters.run_type} onChange={(e) => setFilters((v) => ({ ...v, run_type: e.target.value }))}>
-              <option value="">전체 run_type</option>
+              <option value="">전체 실행 구분</option>
               {["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_QUALIFICATION", "RANK_BONUS", "CONTRIBUTION", "SIDECAR"].map((item) => (
                 <option key={item} value={item}>{item}</option>
               ))}
             </select>
             <select className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={filters.run_status} onChange={(e) => setFilters((v) => ({ ...v, run_status: e.target.value }))}>
-              <option value="">전체 run status</option>
+              <option value="">전체 실행 상태</option>
               {["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "FINALIZED"].map((item) => (
                 <option key={item} value={item}>{item}</option>
               ))}
@@ -164,13 +164,13 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => void download("rewards")} disabled={downloading !== ""}>
                 <Download className="mr-2 h-4 w-4" />
-                rewards.csv
+                보상 CSV 다운로드
               </Button>
             ) : null}
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => void download("calc-runs")} disabled={downloading !== ""}>
                 <Download className="mr-2 h-4 w-4" />
-                calc-runs.csv
+                계산 실행 CSV 다운로드
               </Button>
             ) : null}
           </div>
@@ -182,7 +182,6 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
           <Card key={label} className="overflow-hidden">
             <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
             <div className="mt-4 text-3xl font-extrabold tabular text-slate-50">{value}</div>
-            <div className="mt-2 text-xs text-slate-500">리포트 API 기준 원본 값</div>
           </Card>
         ))}
       </div>
@@ -198,17 +197,17 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
       ) : null}
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <div className="mb-4 text-lg font-bold text-slate-50">Reward By Type</div>
+          <div className="mb-4 text-lg font-bold text-slate-50">보상 구분별 집계</div>
           <TableShell height="max-h-[360px]">
             <table className="data-table min-w-full">
               <thead>
                 <tr>
-                  <th>reward_type</th>
-                  <th>amount</th>
-                  <th>count</th>
-                  <th>reversal</th>
-                  <th>reserved</th>
-                  <th>completed</th>
+                  <th>보상 구분</th>
+                  <th>금액</th>
+                  <th>건수</th>
+                  <th>취소 금액</th>
+                  <th>출금 예약액</th>
+                  <th>출금 완료액</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,18 +226,18 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
           </TableShell>
         </Card>
         <Card>
-          <div className="mb-4 text-lg font-bold text-slate-50">Calc Run Summary</div>
+          <div className="mb-4 text-lg font-bold text-slate-50">계산 실행 집계</div>
           <TableShell height="max-h-[360px]">
             <table className="data-table min-w-full">
               <thead>
                 <tr>
-                  <th>run_type</th>
-                  <th>runs</th>
-                  <th>succeeded</th>
-                  <th>failed</th>
-                  <th>created</th>
-                  <th>duplicate</th>
-                  <th>conflict</th>
+                  <th>실행 구분</th>
+                  <th>실행 수</th>
+                  <th>성공</th>
+                  <th>실패</th>
+                  <th>생성</th>
+                  <th>중복</th>
+                  <th>충돌</th>
                 </tr>
               </thead>
               <tbody>

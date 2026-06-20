@@ -20,13 +20,13 @@ test("READER는 조회만 가능하고 mutation 및 CSV export가 차단된다",
   await loginAdminUi(page, fixture.accounts.reader.id);
 
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=rewards`);
-  await expect(page.getByRole("button", { name: "CONTRIBUTION 실행" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "SIDECAR 실행" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "기여 보상 실행" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "사이드카 정산 실행" })).toHaveCount(0);
 
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=accounts&accountId=${fixture.accounts.root_user.id}`);
   await expect(page.getByText("READER는 상태 변경을 수행할 수 없습니다.")).toBeVisible();
   await expect(page.getByRole("button", { name: "상태 변경" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "단건 CONTRIBUTION" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "기여 보상 단건 실행" })).toHaveCount(0);
 
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=withdrawals`);
   await expect(page.getByText("선택된 출금 없음")).toBeVisible();

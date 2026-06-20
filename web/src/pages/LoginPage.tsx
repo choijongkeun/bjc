@@ -35,24 +35,23 @@ export default function LoginPage() {
                 <Shield className="h-7 w-7" />
               </div>
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">BJC Staking Admin</div>
-                <h1 className="mt-1 text-2xl font-extrabold text-slate-50">헤더 기반 로그인</h1>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">BJC ADMIN</div>
+                <h1 className="mt-1 text-2xl font-extrabold text-slate-50">운영 관리자 로그인</h1>
               </div>
             </div>
           </div>
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-300" htmlFor="actor-account-id">
-                Actor Account ID
+                운영 계정 ID
               </label>
               <input
                 id="actor-account-id"
                 className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 font-mono text-sm text-slate-100"
-                placeholder="UUID"
+                placeholder="계정 ID"
                 value={actorId}
                 onChange={(event) => setActorId(event.target.value)}
               />
-              <p className="mt-2 text-xs text-slate-500">백엔드가 `x-actor-account-id` 헤더로 권한을 판정합니다. 로그인 시 ADMIN/READER를 자동 추론합니다.</p>
             </div>
             {error || storedError ? <FeedbackState title="로그인 오류" description={error ?? storedError ?? ""} tone="error" /> : null}
             <Button className="w-full" type="submit" disabled={!actorId.trim() || status === "loading"}>

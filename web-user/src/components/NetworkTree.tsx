@@ -1,4 +1,5 @@
 import type { BinaryPosition, BinaryTreeNode, BinaryTreeResponse, ReferralTreeNode, ReferralTreeResponse } from "@/lib/api";
+import { getBinaryPositionLabel } from "@/lib/display";
 import { Badge, cn } from "@/components/ui";
 
 export type NetworkDisplayNode = {
@@ -82,11 +83,11 @@ export function NetworkTree({
   return (
     <div className="space-y-4">
       <div className="rounded-[24px] border border-blue-400/20 bg-blue-500/10 p-4">
-        <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">{title}</div>
+        <div className="text-xs tracking-[0.18em] text-blue-200/80">{title}</div>
         <div className="mt-2 text-base font-semibold text-slate-50">{formatAccountLabel(node.loginId, node.displayName)}</div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge tone="slate">depth {node.depth}</Badge>
-          {variant === "binary" ? <Badge tone="slate">{node.position ?? "ROOT"}</Badge> : null}
+          <Badge tone="slate">{node.depth}단계</Badge>
+          {variant === "binary" ? <Badge tone="slate">{node.position ? getBinaryPositionLabel(node.position) : "최상위"}</Badge> : null}
         </div>
       </div>
       <div className="space-y-3">
@@ -110,21 +111,20 @@ function RecursiveNode({
       <div className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4 shadow-[0_18px_40px_rgba(2,6,23,0.26)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{variant === "binary" ? "Binary Node" : "Referral Node"}</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">{variant === "binary" ? "바이너리 회원" : "추천 회원"}</div>
             <div className="mt-2 text-sm font-semibold text-slate-100">{formatAccountLabel(node.loginId, node.displayName)}</div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
-              <Badge tone="slate">depth {node.depth}</Badge>
+              <Badge tone="slate">{node.depth}단계</Badge>
               {variant === "binary" ? (
                 <>
                   <Badge tone={node.position === "LEFT" ? "blue" : node.position === "RIGHT" ? "emerald" : "slate"}>
-                    {node.position ?? "ROOT"}
+                    {node.position ? getBinaryPositionLabel(node.position) : "최상위"}
                   </Badge>
-                  <Badge tone="slate">root_leg {node.rootLeg ?? "-"}</Badge>
+                  <Badge tone="slate">기준 레그 {getBinaryPositionLabel(node.rootLeg)}</Badge>
                 </>
               ) : null}
             </div>
           </div>
-          <div className="font-mono text-xs text-slate-500">{node.accountId.slice(0, 8)}</div>
         </div>
       </div>
       {node.children.length > 0 ? (

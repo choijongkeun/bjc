@@ -6,6 +6,7 @@ import { api, getErrorMessage, type BinaryLegsResponse, type MyRankResponse, typ
 import { formatBaseAmount } from "@/lib/amount";
 import { formatRewardAmountBase } from "@/lib/rewards";
 import { formatWithdrawalAmountBase } from "@/lib/withdrawals";
+import { getAccountStatusLabel, getBinaryPositionLabel } from "@/lib/display";
 import { useSessionStore } from "@/store/sessionStore";
 import { BinaryLegsCard } from "@/components/BinaryLegsCard";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -78,9 +79,9 @@ export default function DashboardPage() {
 
   return (
     <UserShell
-      title="Dashboard"
-      subtitle="내 계정, 추천 코드, 바이너리 레그 요약을 한 화면에서 확인합니다."
-      actions={<Badge tone="blue">{account?.status ?? "ACTIVE"}</Badge>}
+      title="대시보드"
+      subtitle="내 계정과 조직 현황을 한눈에 확인합니다."
+      actions={<Badge tone="blue">{getAccountStatusLabel(account?.status)}</Badge>}
     >
       <div className="space-y-6">
         {error ? <FeedbackState title="대시보드 로드 오류" description={error} tone="error" /> : null}
@@ -90,9 +91,8 @@ export default function DashboardPage() {
             <div className="soft-grid absolute inset-0 opacity-40" />
             <div className="relative">
               <SectionTitle
-                eyebrow="Member Dashboard"
+                eyebrow="회원 현황"
                 title={`${account?.display_name ?? account?.login_id ?? "회원"} 님, 네트워크 현황입니다.`}
-                description="스테이킹 summary와 rewards summary API를 연결해 실제 원금/보상 지표를 표시합니다."
               />
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {[
@@ -123,12 +123,12 @@ export default function DashboardPage() {
                     accent: "text-violet-200",
                   },
                   {
-                    label: "DAILY_REWARD 누적",
+                    label: "일일 보상 누적",
                     value: rewardSummary ? formatRewardAmountBase(rewardSummary.daily_reward_amount_base) : "...",
                     accent: "text-amber-200",
                   },
                   {
-                    label: "BONUS 누적",
+                    label: "보너스 누적",
                     value: rewardSummary ? formatRewardAmountBase(rewardSummary.bonus_reward_amount_base ?? "0") : "...",
                     accent: "text-emerald-200",
                   },
@@ -156,14 +156,12 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="p-6">
-            <SectionTitle eyebrow="Account Snapshot" title="내 계정 요약" description="회원가입과 로그인으로 만들어진 현재 세션 정보를 표시합니다." />
+            <SectionTitle eyebrow="내 계정" title="내 계정 요약" />
             <div className="mt-6 space-y-4 text-sm text-slate-300">
-              <InfoRow label="display_name" value={account?.display_name ?? "-"} />
-              <InfoRow label="login_id" value={account?.login_id ?? "-"} />
-              <InfoRow label="referral_code" value={account?.referral_code ?? "-"} />
-              <InfoRow label="sponsor_account_id" value={account?.sponsor_account_id ?? "-"} mono />
-              <InfoRow label="binary_parent_account_id" value={account?.binary_parent_account_id ?? "-"} mono />
-              <InfoRow label="binary_position" value={account?.binary_position ?? "ROOT"} />
+              <InfoRow label="이름" value={account?.display_name ?? "-"} />
+              <InfoRow label="아이디" value={account?.login_id ?? "-"} />
+              <InfoRow label="추천 코드" value={account?.referral_code ?? "-"} />
+              <InfoRow label="바이너리 위치" value={getBinaryPositionLabel(account?.binary_position)} />
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button onClick={() => void copyReferralCode()} disabled={!account?.referral_code}>
@@ -216,7 +214,7 @@ export default function DashboardPage() {
             title="출금 관리"
             description={
               withdrawalBalance
-                ? `DAILY ${formatWithdrawalAmountBase(withdrawalBalance.daily_reward.available_amount_base)} / BONUS ${formatWithdrawalAmountBase(withdrawalBalance.bonus.available_amount_base)}`
+                ? `일일 보상 ${formatWithdrawalAmountBase(withdrawalBalance.daily_reward.available_amount_base)} / 보너스 ${formatWithdrawalAmountBase(withdrawalBalance.bonus.available_amount_base)}`
                 : "출금 가능 잔액과 출금 이력으로 이동합니다."
             }
             icon={<Wallet className="h-5 w-5" />}
@@ -224,7 +222,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        {loading ? <FeedbackState title="데이터 로딩 중" description="계정, 바이너리 레그, 스테이킹/보상 summary를 불러오고 있습니다." /> : null}
+        {loading ? <FeedbackState title="불러오는 중" description="대시보드 정보를 불러오고 있습니다." /> : null}
       </div>
     </UserShell>
   );
@@ -233,7 +231,7 @@ export default function DashboardPage() {
 function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-1 rounded-[22px] border border-slate-800 bg-slate-950/45 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
       <div className={mono ? "break-all font-mono text-slate-100" : "text-slate-100"}>{value}</div>
     </div>
   );
@@ -258,7 +256,7 @@ function ActionCard({
       <div className="mt-4 text-lg font-semibold text-slate-50">{title}</div>
       <div className="mt-2 text-sm text-slate-400">{description}</div>
       <div className="mt-4">
-        {disabled ? <Badge tone="slate">Coming Soon</Badge> : <Badge tone="blue">Open</Badge>}
+        {disabled ? <Badge tone="slate">준비 중</Badge> : <Badge tone="blue">바로가기</Badge>}
       </div>
     </Card>
   );

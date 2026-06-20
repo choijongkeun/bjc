@@ -13,6 +13,7 @@ import {
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getDisplayLabel } from "@/lib/display";
 import { formatRewardAmountBase, formatRewardDate } from "@/lib/rewards";
 import { formatWithdrawalAmountBase, formatWithdrawalDateTime, shortenTxHash } from "@/lib/withdrawals";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
@@ -206,7 +207,7 @@ export function AccountsTab({
       setSelected(result.account);
       setStatusError(null);
       setStatusSuccess(
-        `상태가 ${result.previous_status} -> ${result.account.status} 로 변경되었습니다. revoke 세션 ${result.revoked_session_count}건`
+        `상태가 ${getDisplayLabel(result.previous_status)}에서 ${getDisplayLabel(result.account.status)}(으)로 변경되었습니다. 세션 ${result.revoked_session_count}건이 종료되었습니다.`
       );
       await loadAccounts(page, limit, appliedFilters, sort);
     } catch (updateError: any) {
@@ -223,7 +224,7 @@ export function AccountsTab({
     }
     if (!singleRunPolicyVersionId.trim() || !singleRunCalculationDate.trim()) {
       setSingleRunNotice(null);
-      setSingleRunError("policy_version_id와 calculation_date를 모두 입력해 주세요.");
+      setSingleRunError("정책 버전과 계산 기준일을 모두 입력해 주세요.");
       return;
     }
 
@@ -241,7 +242,7 @@ export function AccountsTab({
               calculation_date: singleRunCalculationDate.trim(),
             });
       setSingleRunNotice(
-        `${kind} 단건 실행 완료: calc_run=${result.calc_run_id}, result_type=${result.result_type}, status=${result.status}`
+        `${kind === "CONTRIBUTION" ? "기여 보상" : "사이드카 정산"} 단건 실행이 완료되었습니다. 계산 실행 ID ${result.calc_run_id}, 결과 ${getDisplayLabel(result.status)}`
       );
       await loadAccountDetail(selected.id);
     } catch (runError: unknown) {
@@ -258,7 +259,6 @@ export function AccountsTab({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-50">회원 목록</h2>
-            <p className="text-sm text-slate-400">회원 검색, 역할/상태 필터, sponsor/binary 관계를 조회합니다.</p>
           </div>
           <Button variant="secondary" onClick={() => void loadAccounts()}>
             <RefreshCcw className="mr-2 h-4 w-4" />
@@ -270,7 +270,7 @@ export function AccountsTab({
           <div className="xl:col-span-2">
             <input
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-              placeholder="login_id / display_name / referral_code"
+              placeholder="아이디 / 이름 / 추천 코드"
               value={draftFilters.q}
               onChange={(e) => setDraftFilters((current) => ({ ...current, q: e.target.value }))}
             />
@@ -280,29 +280,29 @@ export function AccountsTab({
             value={draftFilters.role}
             onChange={(e) => setDraftFilters((current) => ({ ...current, role: e.target.value as AccountFilters["role"] }))}
           >
-            <option value="">전체 role</option>
-            <option value="ADMIN">ADMIN</option>
-            <option value="READER">READER</option>
-            <option value="USER">USER</option>
+            <option value="">전체 권한</option>
+            <option value="ADMIN">관리자</option>
+            <option value="READER">조회 관리자</option>
+            <option value="USER">일반 회원</option>
           </select>
           <select
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.status}
             onChange={(e) => setDraftFilters((current) => ({ ...current, status: e.target.value as AccountFilters["status"] }))}
           >
-            <option value="">전체 status</option>
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="BLOCKED">BLOCKED</option>
-            <option value="WITHDRAWN">WITHDRAWN</option>
+            <option value="">전체 상태</option>
+            <option value="ACTIVE">활성</option>
+            <option value="BLOCKED">차단</option>
+            <option value="WITHDRAWN">탈퇴</option>
           </select>
           <select
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.binary_position}
             onChange={(e) => setDraftFilters((current) => ({ ...current, binary_position: e.target.value as AccountFilters["binary_position"] }))}
           >
-            <option value="">전체 binary_position</option>
-            <option value="LEFT">LEFT</option>
-            <option value="RIGHT">RIGHT</option>
+            <option value="">전체 위치</option>
+            <option value="LEFT">좌측</option>
+            <option value="RIGHT">우측</option>
           </select>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={applyFilters}>
@@ -331,10 +331,10 @@ export function AccountsTab({
               value={sort}
               onChange={(e) => setSort(e.target.value as AdminAccountSort)}
             >
-              <option value="joined_at_desc">joined_at desc</option>
-              <option value="joined_at_asc">joined_at asc</option>
-              <option value="login_id_asc">login_id asc</option>
-              <option value="total_stake_desc">total_stake desc</option>
+              <option value="joined_at_desc">가입일 최신순</option>
+              <option value="joined_at_asc">가입일 오래된순</option>
+              <option value="login_id_asc">아이디 오름차순</option>
+              <option value="total_stake_desc">스테이킹 금액 높은순</option>
             </select>
             <select
               className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
@@ -354,19 +354,19 @@ export function AccountsTab({
           <table className="data-table min-w-full">
             <thead>
               <tr>
-                <th>login_id</th>
-                <th>display_name</th>
-                <th>role</th>
-                <th>status</th>
-                <th>referral_code</th>
-                <th>sponsor</th>
-                <th>binary parent</th>
-                <th>pos</th>
-                <th>stake(base)</th>
-                <th>reward(base)</th>
-                <th>rank</th>
-                <th>joined_at</th>
-                <th>last_login_at</th>
+                <th>아이디</th>
+                <th>이름</th>
+                <th>권한</th>
+                <th>상태</th>
+                <th>추천 코드</th>
+                <th>추천인</th>
+                <th>바이너리 상위</th>
+                <th>위치</th>
+                <th>총 스테이킹</th>
+                <th>총 보상</th>
+                <th>직급</th>
+                <th>가입일</th>
+                <th>최근 로그인</th>
               </tr>
             </thead>
             <tbody>
@@ -385,7 +385,7 @@ export function AccountsTab({
                     <td className="font-mono text-xs text-slate-400">{item.referral_code ?? "-"}</td>
                     <td>{item.sponsor_login_id ?? "-"}</td>
                     <td>{item.binary_parent_login_id ?? "-"}</td>
-                    <td>{item.binary_position ?? "-"}</td>
+                    <td>{item.binary_position ? getDisplayLabel(item.binary_position) : "-"}</td>
                     <td className="tabular text-right">{formatBaseMetric(item.total_stake_amount_base)}</td>
                     <td className="tabular text-right">{formatBaseMetric(item.total_reward_amount_base)}</td>
                     <td className="tabular text-right">{item.rank_level}</td>
@@ -407,7 +407,6 @@ export function AccountsTab({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-slate-50">회원 상세</h3>
-              <p className="text-sm text-slate-400">선택한 회원의 sponsor/binary 관계를 확인합니다.</p>
             </div>
             {selected ? (
               <div className="flex gap-2">
@@ -424,7 +423,7 @@ export function AccountsTab({
                   출금 내역 보기
                 </Button>
                 <Button variant="secondary" onClick={() => onOpenNetwork(selected.id)}>
-                  네트워크 보기
+                  추천 조직 보기
                   <ArrowRightCircle className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -436,42 +435,42 @@ export function AccountsTab({
             ) : selected ? (
               <div className="space-y-4 text-sm text-slate-300">
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Account ID</div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">회원 ID</div>
                   <div className="mt-2 break-all font-mono text-xs text-slate-300">{selected.id}</div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">기본 정보</div>
                     <dl className="mt-3 space-y-2">
-                      <div><dt className="text-slate-500">login_id</dt><dd>{selected.login_id ?? "-"}</dd></div>
-                      <div><dt className="text-slate-500">display_name</dt><dd>{selected.display_name ?? "-"}</dd></div>
-                      <div><dt className="text-slate-500">role</dt><dd className="mt-1"><StatusBadge value={selected.role} /></dd></div>
-                      <div><dt className="text-slate-500">status</dt><dd className="mt-1"><StatusBadge value={selected.status} /></dd></div>
-                      <div><dt className="text-slate-500">referral_code</dt><dd className="font-mono text-xs">{selected.referral_code ?? "-"}</dd></div>
+                      <div><dt className="text-slate-500">아이디</dt><dd>{selected.login_id ?? "-"}</dd></div>
+                      <div><dt className="text-slate-500">이름</dt><dd>{selected.display_name ?? "-"}</dd></div>
+                      <div><dt className="text-slate-500">권한</dt><dd className="mt-1"><StatusBadge value={selected.role} /></dd></div>
+                      <div><dt className="text-slate-500">상태</dt><dd className="mt-1"><StatusBadge value={selected.status} /></dd></div>
+                      <div><dt className="text-slate-500">추천 코드</dt><dd className="font-mono text-xs">{selected.referral_code ?? "-"}</dd></div>
                     </dl>
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">관계 정보</div>
                     <dl className="mt-3 space-y-2">
-                      <div><dt className="text-slate-500">sponsor</dt><dd>{selected.sponsor_login_id ?? "-"} / {selected.sponsor_display_name ?? "-"}</dd></div>
-                      <div><dt className="text-slate-500">binary parent</dt><dd>{selected.binary_parent_login_id ?? "-"} / {selected.binary_parent_display_name ?? "-"}</dd></div>
-                      <div><dt className="text-slate-500">binary_position</dt><dd>{selected.binary_position ?? "-"}</dd></div>
-                      <div><dt className="text-slate-500">joined_at</dt><dd>{formatDateTime(selected.joined_at)}</dd></div>
-                      <div><dt className="text-slate-500">last_login_at</dt><dd>{formatDateTime(selected.last_login_at)}</dd></div>
+                      <div><dt className="text-slate-500">추천인</dt><dd>{selected.sponsor_login_id ?? "-"} / {selected.sponsor_display_name ?? "-"}</dd></div>
+                      <div><dt className="text-slate-500">바이너리 상위</dt><dd>{selected.binary_parent_login_id ?? "-"} / {selected.binary_parent_display_name ?? "-"}</dd></div>
+                      <div><dt className="text-slate-500">바이너리 위치</dt><dd>{selected.binary_position ? getDisplayLabel(selected.binary_position) : "-"}</dd></div>
+                      <div><dt className="text-slate-500">가입일</dt><dd>{formatDateTime(selected.joined_at)}</dd></div>
+                      <div><dt className="text-slate-500">최근 로그인</dt><dd>{formatDateTime(selected.last_login_at)}</dd></div>
                     </dl>
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Stake(base)</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">총 스테이킹</div>
                     <div className="mt-2 tabular text-xl font-bold text-slate-50">{formatBaseMetric(selected.total_stake_amount_base)}</div>
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Reward(base)</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">총 보상</div>
                     <div className="mt-2 tabular text-xl font-bold text-slate-50">{formatBaseMetric(selected.total_reward_amount_base)}</div>
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Rank Level</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">직급 단계</div>
                     <div className="mt-2 tabular text-xl font-bold text-slate-50">{selected.rank_level}</div>
                   </div>
                 </div>
@@ -479,9 +478,6 @@ export function AccountsTab({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-500">회원 상태 변경</div>
-                      <p className="mt-2 text-sm text-slate-400">
-                        `ADMIN`만 변경할 수 있으며 현재 범위에서는 `USER` 회원만 변경 가능합니다.
-                      </p>
                     </div>
                     <StatusBadge value={selected.status} />
                   </div>
@@ -491,12 +487,12 @@ export function AccountsTab({
                     ) : selected.role !== "USER" ? (
                       <FeedbackState
                         title="변경 제한"
-                        description="운영 계정 보호를 위해 현재는 USER 역할 계정만 상태 변경을 허용합니다."
+                        description="일반 회원만 상태를 변경할 수 있습니다."
                       />
                     ) : nextStatusOptions[selected.status].length === 0 ? (
                       <FeedbackState
                         title="변경 불가"
-                        description="WITHDRAWN 상태는 종료 상태로 취급하며 이번 범위에서는 재활성화를 허용하지 않습니다."
+                        description="현재 상태에서는 변경할 수 없습니다."
                       />
                     ) : (
                       <div className="space-y-3">
@@ -511,7 +507,7 @@ export function AccountsTab({
                           >
                             {nextStatusOptions[selected.status].map((nextStatus) => (
                               <option key={nextStatus} value={nextStatus}>
-                                {nextStatus}
+                                {getDisplayLabel(nextStatus)}
                               </option>
                             ))}
                           </select>
@@ -525,7 +521,7 @@ export function AccountsTab({
                           />
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                          <span>BLOCKED/WITHDRAWN 전환 시 활성 세션은 즉시 revoke 됩니다.</span>
+                          <span>차단 또는 탈퇴로 변경하면 현재 로그인 세션이 종료됩니다.</span>
                           <Button onClick={() => void handleStatusUpdate()} disabled={statusBusy || !statusDraft}>
                             {statusBusy ? "처리 중..." : "상태 변경"}
                           </Button>
@@ -538,9 +534,6 @@ export function AccountsTab({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-500">보너스 단건 실행</div>
-                      <p className="mt-2 text-sm text-slate-400">
-                        `CONTRIBUTION`과 `SIDECAR`를 선택 회원 기준으로 즉시 실행합니다. 정책은 `policy_version_id`와 계산일 입력값을 그대로 사용합니다.
-                      </p>
                     </div>
                     <StatusBadge value={selected.role} />
                   </div>
@@ -550,7 +543,7 @@ export function AccountsTab({
                     ) : selected.role !== "USER" ? (
                       <FeedbackState
                         title="실행 제한"
-                        description="운영 계정 보호를 위해 현재는 USER 역할 계정에 대해서만 단건 보너스 실행을 허용합니다."
+                        description="일반 회원만 단건 실행할 수 있습니다."
                       />
                     ) : (
                       <div className="space-y-3">
@@ -559,7 +552,7 @@ export function AccountsTab({
                         <div className="grid gap-3 md:grid-cols-[1fr,220px]">
                           <input
                             className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-                            placeholder="policy_version_id"
+                            placeholder="정책 버전 ID"
                             value={singleRunPolicyVersionId}
                             onChange={(e) => setSingleRunPolicyVersionId(e.target.value)}
                             disabled={singleRunSubmitting !== ""}
@@ -573,7 +566,7 @@ export function AccountsTab({
                           />
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                          <span>동일 snapshot은 duplicate, snapshot 불일치는 conflict로 처리됩니다.</span>
+                          <span>같은 기준으로 다시 실행하면 중복으로 처리될 수 있습니다.</span>
                           <div className="flex flex-wrap gap-2">
                             <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
                               최근 보상 보기
@@ -583,10 +576,10 @@ export function AccountsTab({
                               onClick={() => void handleSingleRun("CONTRIBUTION")}
                               disabled={singleRunSubmitting !== ""}
                             >
-                              {singleRunSubmitting === "CONTRIBUTION" ? "CONTRIBUTION 처리 중..." : "단건 CONTRIBUTION"}
+                              {singleRunSubmitting === "CONTRIBUTION" ? "기여 보상 실행 중..." : "기여 보상 단건 실행"}
                             </Button>
                             <Button onClick={() => void handleSingleRun("SIDECAR")} disabled={singleRunSubmitting !== ""}>
-                              {singleRunSubmitting === "SIDECAR" ? "SIDECAR 처리 중..." : "단건 SIDECAR"}
+                              {singleRunSubmitting === "SIDECAR" ? "사이드카 정산 실행 중..." : "사이드카 단건 실행"}
                             </Button>
                           </div>
                         </div>
@@ -598,7 +591,6 @@ export function AccountsTab({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 출금 내역</div>
-                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며 전체 내역은 Withdrawals 탭으로 이동합니다.</p>
                     </div>
                     <Button variant="secondary" onClick={() => onOpenWithdrawals(selected.id)}>
                       전체 출금 보기
@@ -615,11 +607,11 @@ export function AccountsTab({
                           <thead>
                             <tr>
                               <th>신청일</th>
-                              <th>타입</th>
+                              <th>출금 구분</th>
                               <th>신청 금액</th>
                               <th>상태</th>
-                              <th>network</th>
-                              <th>tx_hash</th>
+                              <th>네트워크</th>
+                              <th>거래 해시</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -643,7 +635,6 @@ export function AccountsTab({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 스테이킹</div>
-                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며, 전체 내역은 스테이킹 관리 탭으로 이동합니다.</p>
                     </div>
                     <Button variant="secondary" onClick={() => onOpenStakings(selected.id)}>
                       전체 스테이킹 보기
@@ -686,7 +677,6 @@ export function AccountsTab({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 보상 내역</div>
-                      <p className="mt-2 text-sm text-slate-400">최근 5건을 표시하며 전체 내역은 Rewards 탭에서 회원 필터로 조회합니다.</p>
                     </div>
                     <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
                       전체 보상 보기
@@ -702,10 +692,10 @@ export function AccountsTab({
                         <table className="data-table min-w-full">
                           <thead>
                             <tr>
-                              <th>reward date</th>
-                              <th>type</th>
-                              <th>amount</th>
-                              <th>status</th>
+                              <th>보상 기준일</th>
+                              <th>보상 구분</th>
+                              <th>보상 금액</th>
+                              <th>상태</th>
                             </tr>
                           </thead>
                           <tbody>

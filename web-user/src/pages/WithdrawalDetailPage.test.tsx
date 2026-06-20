@@ -89,7 +89,7 @@ describe("WithdrawalDetailPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "REQUESTED 출금 취소" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "출금 신청 취소" })).toBeInTheDocument();
     });
   });
 
@@ -108,6 +108,6 @@ describe("WithdrawalDetailPage", () => {
       expect(screen.getByText("취소 불가 상태")).toBeInTheDocument();
     });
 
-    expect(screen.queryByRole("button", { name: "REQUESTED 출금 취소" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "출금 신청 취소" })).not.toBeInTheDocument();
   });
 });

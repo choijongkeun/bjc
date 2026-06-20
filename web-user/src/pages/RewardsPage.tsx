@@ -125,13 +125,12 @@ export default function RewardsPage() {
 
   return (
     <UserShell
-      title="Rewards"
-      subtitle="보상 요약, 필터, 상세 조회를 통해 내 reward 흐름을 확인합니다."
+      title="보상 내역"
+      subtitle="보상 요약과 상세 내역을 확인합니다."
       actions={
         <div className="flex items-center gap-2">
-          <Badge tone="blue">Rewards API 연결</Badge>
           <Link to="/withdrawals">
-            <Button variant="secondary">출금 화면 이동</Button>
+            <Button variant="secondary">내 출금 보기</Button>
           </Link>
           <Button
             variant="secondary"
@@ -150,27 +149,24 @@ export default function RewardsPage() {
 
         <Card className="p-6">
           <SectionTitle
-            eyebrow="Rewards Overview"
+            eyebrow="보상 요약"
             title="내 보상 요약"
-            description="출금 가능 보상과 출금 완료 보상은 실제 withdrawal allocation 집계와 연결됩니다."
           />
           <div className="mt-6">
             <RewardSummaryCards summary={summary} loading={summaryLoading} withdrawalsHref="/withdrawals" />
           </div>
           <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-400">
             <Link to="/withdrawals" className="font-semibold text-blue-200 hover:text-blue-100">
-              DAILY_REWARD / BONUS 출금 안내 보기
+              출금 가능 금액 확인하기
             </Link>
-            <span>출금 신청 전 미리보기에서 예상 수수료와 실수령액을 확인할 수 있습니다.</span>
           </div>
         </Card>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SectionTitle
-              eyebrow="Rewards List"
+              eyebrow="보상 목록"
               title="보상 목록"
-              description="보상 유형, 상태, 날짜 범위, 스테이킹 ID 기준으로 조회합니다."
             />
             <div className="text-sm text-slate-400">
               전체 건수 <span className="tabular text-slate-100">{listState?.total ?? 0}</span>
@@ -222,7 +218,7 @@ export default function RewardsPage() {
               />
             </FilterField>
 
-            <FilterField label="staking_id">
+            <FilterField label="스테이킹 ID">
               <TextField
                 placeholder="스테이킹 ID 입력"
                 value={draftFilters.staking_id ?? ""}
@@ -269,7 +265,7 @@ export default function RewardsPage() {
           </div>
 
           <div className="mt-5">
-            {listLoading ? <FeedbackState title="보상 목록 로딩 중" description="내 rewards 목록을 불러오고 있습니다." /> : null}
+            {listLoading ? <FeedbackState title="불러오는 중" description="보상 내역을 불러오고 있습니다." /> : null}
             {!listLoading && !listError && (listState?.items.length ?? 0) === 0 ? (
               <FeedbackState title="보상 내역 없음" description="현재 필터 조건에 맞는 보상이 없습니다." />
             ) : null}
@@ -279,13 +275,13 @@ export default function RewardsPage() {
                   <table className="min-w-full text-left text-sm text-slate-300">
                     <thead className="sticky top-0 bg-slate-950/95 text-xs uppercase tracking-[0.16em] text-slate-500">
                       <tr>
-                        <th className="px-4 py-3">reward_date</th>
-                        <th className="px-4 py-3">reward_type</th>
-                        <th className="px-4 py-3">amount_base</th>
-                        <th className="px-4 py-3">status</th>
-                        <th className="px-4 py-3">staking / product</th>
-                        <th className="px-4 py-3">available_at</th>
-                        <th className="px-4 py-3">confirmed_at</th>
+                        <th className="px-4 py-3">보상 기준일</th>
+                        <th className="px-4 py-3">보상 구분</th>
+                        <th className="px-4 py-3">보상 금액</th>
+                        <th className="px-4 py-3">상태</th>
+                        <th className="px-4 py-3">상품</th>
+                        <th className="px-4 py-3">출금 가능 일시</th>
+                        <th className="px-4 py-3">확정 일시</th>
                         <th className="px-4 py-3 text-right">상세</th>
                       </tr>
                     </thead>
@@ -300,7 +296,7 @@ export default function RewardsPage() {
                             </td>
                             <td className={`tabular px-4 py-3 font-semibold ${negative ? "text-rose-200" : "text-slate-100"}`}>
                               {formatRewardAmountBase(reward.amount_base)}
-                              {negative ? <div className="mt-1 text-xs text-rose-300">역분개 음수 금액</div> : null}
+                              {negative ? <div className="mt-1 text-xs text-rose-300">보상 취소 금액</div> : null}
                             </td>
                             <td className="px-4 py-3">
                               <RewardStatusBadge status={reward.status} />
@@ -308,7 +304,7 @@ export default function RewardsPage() {
                             <td className="px-4 py-3">
                               <div className="font-semibold text-slate-100">{reward.product?.name ?? "상품 정보 없음"}</div>
                               <div className="text-xs text-slate-500">
-                                {reward.account_staking_id ? `staking ${reward.account_staking_id}` : "staking 연결 없음"}
+                                {reward.account_staking_id ? "스테이킹 연결됨" : "연결된 스테이킹 없음"}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-slate-400">{formatRewardDateTime(reward.available_at)}</td>

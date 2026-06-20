@@ -37,6 +37,25 @@ export function getStakingStatusTone(status: AccountStakingStatus): "blue" | "em
   }
 }
 
+export function getStakingStatusLabel(status: AccountStakingStatus): string {
+  switch (status) {
+    case "PENDING":
+      return "대기";
+    case "ACTIVE":
+      return "활성";
+    case "CANCEL_REQUESTED":
+      return "취소 요청";
+    case "CANCELLED":
+      return "취소";
+    case "MATURED":
+      return "만기";
+    case "CLOSED":
+      return "종료";
+    default:
+      return status;
+  }
+}
+
 export function getAvailableUserStakingAction(status: AccountStakingStatus): "cancel" | "cancel_request" | "none" {
   if (status === "PENDING") {
     return "cancel";

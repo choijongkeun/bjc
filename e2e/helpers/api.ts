@@ -68,15 +68,15 @@ export async function loginUserByApi(
 
 export async function loginAdminUi(page: Page, actorId: string) {
   await page.goto(`${E2E_ADMIN_URL}/login`);
-  await page.getByLabel(/Actor Account ID/i).fill(actorId);
+  await page.getByLabel(/운영 계정 ID/i).fill(actorId);
   await page.getByRole("button", { name: "로그인" }).click();
   await expect(page).toHaveURL(/\/admin\?tab=policies/);
 }
 
 export async function loginUserUi(page: Page, credentials: { login_id: string; password: string }) {
   await page.goto(`${E2E_USER_URL}/login`);
-  await page.getByLabel(/Login ID/i).fill(credentials.login_id);
-  await page.getByLabel(/Password/i).fill(credentials.password);
+  await page.getByLabel(/아이디/i).fill(credentials.login_id);
+  await page.getByLabel(/비밀번호/i).fill(credentials.password);
   await page.getByRole("button", { name: /로그인/ }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 }

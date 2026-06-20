@@ -12,6 +12,7 @@ import {
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getDisplayLabel } from "@/lib/display";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell, cn } from "@/components/ui";
 
 function formatDateTime(value: string | null | undefined) {
@@ -43,15 +44,15 @@ function ReferralNodeTree({
           <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 shadow-[0_18px_40px_rgba(2,6,23,0.26)]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Referral Node</div>
+                <div className="text-xs tracking-[0.18em] text-slate-500">추천 회원</div>
                 <div className="mt-2 text-sm font-semibold text-slate-100">{formatAccountLabel(node.login_id, node.display_name)}</div>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
-                  <span className="rounded-full bg-slate-800 px-2.5 py-1">depth {node.depth}</span>
-                  <span className="rounded-full bg-slate-800 px-2.5 py-1">sponsor {node.sponsor_account_id?.slice(0, 8) ?? "-"}</span>
+                  <span className="rounded-full bg-slate-800 px-2.5 py-1">{node.depth}단계</span>
+                  <span className="rounded-full bg-slate-800 px-2.5 py-1">추천인 ID {node.sponsor_account_id?.slice(0, 8) ?? "-"}</span>
                 </div>
               </div>
               <div className="grid gap-2 text-right">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Reward(base)</div>
+                <div className="text-xs tracking-[0.18em] text-slate-500">누적 보상</div>
                 <div className="tabular text-sm font-semibold text-slate-100">{formatBaseMetric(node.total_reward_amount_base)}</div>
               </div>
             </div>
@@ -75,18 +76,18 @@ function BinaryNodeTree({
       <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 shadow-[0_18px_40px_rgba(2,6,23,0.26)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Binary Node</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">바이너리 회원</div>
             <div className="mt-2 text-sm font-semibold text-slate-100">{formatAccountLabel(node.login_id, node.display_name)}</div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
-              <span className="rounded-full bg-slate-800 px-2.5 py-1">depth {node.depth}</span>
+              <span className="rounded-full bg-slate-800 px-2.5 py-1">{node.depth}단계</span>
               <span className={cn("rounded-full px-2.5 py-1", node.binary_position === "LEFT" ? "bg-blue-500/15 text-blue-200" : node.binary_position === "RIGHT" ? "bg-emerald-500/15 text-emerald-200" : "bg-slate-800 text-slate-300")}>
-                {node.binary_position ?? "ROOT"}
+                {node.binary_position ? getDisplayLabel(node.binary_position) : "최상위"}
               </span>
-              <span className="rounded-full bg-slate-800 px-2.5 py-1">root_leg {node.root_leg ?? "-"}</span>
+              <span className="rounded-full bg-slate-800 px-2.5 py-1">기준 레그 {node.root_leg ? getDisplayLabel(node.root_leg) : "-"}</span>
             </div>
           </div>
           <div className="grid gap-2 text-right">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Sales(base)</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">누적 매출</div>
             <div className="tabular text-sm font-semibold text-slate-100">{formatBaseMetric(node.total_sales_amount_base)}</div>
           </div>
         </div>
@@ -239,11 +240,11 @@ export function NetworkTab({
         </div>
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
           <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Account Selector</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">회원 선택</div>
             <div className="flex flex-wrap gap-2">
               <input
                 className="min-w-[260px] flex-1 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono text-sm"
-                placeholder="accountId 입력"
+                placeholder="회원 ID 입력"
                 value={accountInput}
                 onChange={(e) => setAccountInput(e.target.value)}
               />
@@ -255,7 +256,7 @@ export function NetworkTab({
             <div className="flex flex-wrap gap-2">
               <input
                 className="min-w-[260px] flex-1 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm"
-                placeholder="login_id / display_name 검색"
+                placeholder="아이디 / 이름 검색"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -279,14 +280,14 @@ export function NetworkTab({
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-slate-500">login_id 또는 display_name으로 회원을 검색하거나 accountId를 직접 입력해 주세요.</div>
+              <div className="text-sm text-slate-500">아이디 또는 이름으로 회원을 검색하거나 회원 ID를 직접 입력해 주세요.</div>
             )}
           </div>
           <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">View Controls</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">조회 설정</div>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-2 text-sm text-slate-400">
-                <span>depth</span>
+                <span>조회 단계</span>
                 <select className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={depth} onChange={(e) => setDepth(Number(e.target.value))}>
                   {[1, 2, 3, 4, 5, 10].map((value) => (
                     <option key={value} value={value}>
@@ -296,14 +297,14 @@ export function NetworkTab({
                 </select>
               </label>
               <label className="space-y-2 text-sm text-slate-400">
-                <span>downlines type</span>
+                <span>조직 구분</span>
                 <select className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={downlineType} onChange={(e) => setDownlineType(e.target.value as "referral" | "binary")}>
-                  <option value="referral">referral</option>
-                  <option value="binary">binary</option>
+                  <option value="referral">추천 조직</option>
+                  <option value="binary">바이너리 조직</option>
                 </select>
               </label>
               <label className="space-y-2 text-sm text-slate-400">
-                <span>limit</span>
+                <span>페이지 크기</span>
                 <select className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" value={downlineLimit} onChange={(e) => setDownlineLimit(Number(e.target.value))}>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
@@ -311,7 +312,7 @@ export function NetworkTab({
                 </select>
               </label>
             </div>
-            <FeedbackState title={role === "ADMIN" ? "조회 전용 화면" : "READER 조회 화면"} description="이번 범위에는 상태 변경, 바이너리 수동 배치, write 버튼을 포함하지 않았습니다." />
+            <FeedbackState title={role === "ADMIN" ? "조회 화면" : "조회 전용"} description="조직도와 하위 회원 현황을 확인할 수 있습니다." />
           </div>
         </div>
       </Card>
@@ -320,24 +321,24 @@ export function NetworkTab({
 
       {!selectedAccount ? (
         <Card>
-          <FeedbackState title="선택된 회원 없음" description="Accounts 탭에서 회원을 선택하거나 위의 accountId 입력/검색으로 조회 대상을 지정해 주세요." />
+          <FeedbackState title="선택된 회원 없음" description="회원 관리에서 회원을 선택하거나 위에서 회원을 검색해 주세요." />
         </Card>
       ) : (
         <>
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Selected Account</div>
+                <div className="text-xs tracking-[0.18em] text-slate-500">선택한 회원</div>
                 <h3 className="mt-2 text-xl font-bold text-slate-50">{formatAccountLabel(selectedAccount.login_id, selectedAccount.display_name)}</h3>
                 <div className="mt-2 break-all font-mono text-xs text-slate-500">{selectedAccount.id}</div>
               </div>
               <div className="grid gap-2 text-sm text-slate-300 md:text-right">
-                <div>sponsor: {selectedAccount.sponsor_login_id ?? "-"} / {selectedAccount.sponsor_display_name ?? "-"}</div>
-                <div>binary parent: {selectedAccount.binary_parent_login_id ?? "-"} / {selectedAccount.binary_parent_display_name ?? "-"}</div>
+                <div>추천인: {selectedAccount.sponsor_login_id ?? "-"} / {selectedAccount.sponsor_display_name ?? "-"}</div>
+                <div>바이너리 상위: {selectedAccount.binary_parent_login_id ?? "-"} / {selectedAccount.binary_parent_display_name ?? "-"}</div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
                   <StatusBadge value={selectedAccount.role} />
                   <StatusBadge value={selectedAccount.status} />
-                  <StatusBadge value={selectedAccount.binary_position ?? "ROOT"} />
+                  <StatusBadge value={selectedAccount.binary_position ?? "최상위"} />
                 </div>
               </div>
             </div>
@@ -348,34 +349,34 @@ export function NetworkTab({
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-blue-500/15 p-3 text-blue-200"><GitBranch className="h-5 w-5" /></div>
                 <div>
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Left Leg</div>
+                  <div className="text-xs tracking-[0.16em] text-slate-500">좌측 레그</div>
                   <div className="mt-1 tabular text-2xl font-bold text-slate-50">{legs?.left.member_count ?? 0}명</div>
                 </div>
               </div>
               <div className="mt-4 space-y-2 text-sm text-slate-400">
-                <div>stake(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_stake_amount_base ?? "0")}</span></div>
-                <div>sales(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_sales_amount_base ?? "0")}</span></div>
-                <div>reward(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_reward_amount_base ?? "0")}</span></div>
+                <div>스테이킹 금액: <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_stake_amount_base ?? "0")}</span></div>
+                <div>누적 매출: <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_sales_amount_base ?? "0")}</span></div>
+                <div>누적 보상: <span className="tabular text-slate-200">{formatBaseMetric(legs?.left.total_reward_amount_base ?? "0")}</span></div>
               </div>
             </Card>
             <Card className="xl:col-span-2">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-200"><Users className="h-5 w-5" /></div>
                 <div>
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Right Leg</div>
+                  <div className="text-xs tracking-[0.16em] text-slate-500">우측 레그</div>
                   <div className="mt-1 tabular text-2xl font-bold text-slate-50">{legs?.right.member_count ?? 0}명</div>
                 </div>
               </div>
               <div className="mt-4 space-y-2 text-sm text-slate-400">
-                <div>stake(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_stake_amount_base ?? "0")}</span></div>
-                <div>sales(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_sales_amount_base ?? "0")}</span></div>
-                <div>reward(base): <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_reward_amount_base ?? "0")}</span></div>
+                <div>스테이킹 금액: <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_stake_amount_base ?? "0")}</span></div>
+                <div>누적 매출: <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_sales_amount_base ?? "0")}</span></div>
+                <div>누적 보상: <span className="tabular text-slate-200">{formatBaseMetric(legs?.right.total_reward_amount_base ?? "0")}</span></div>
               </div>
             </Card>
             <Card>
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Weak Leg</div>
+              <div className="text-xs tracking-[0.16em] text-slate-500">약한 레그</div>
               <div className="mt-2"><StatusBadge value={legs?.weak_leg ?? "LEFT"} /></div>
-              <div className="mt-4 text-sm text-slate-400">weak_leg_volume_base</div>
+              <div className="mt-4 text-sm text-slate-400">약한 레그 매출</div>
               <div className="mt-2 tabular text-xl font-bold text-slate-50">{formatBaseMetric(legs?.weak_leg_volume_base ?? "0")}</div>
             </Card>
           </div>
@@ -384,16 +385,16 @@ export function NetworkTab({
             <Card>
               <div className="mb-4">
                 <h3 className="text-lg font-bold text-slate-50">추천 조직도</h3>
-                <p className="text-sm text-slate-400">`template/binary_network.html`의 glass panel 톤을 참고해 nested card로 단순 표현했습니다.</p>
+                <p className="text-sm text-slate-400">선택한 회원 기준의 추천 조직도를 표시합니다.</p>
               </div>
               {referralRoot ? (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">Referral Root</div>
+                    <div className="text-xs tracking-[0.18em] text-blue-200/80">추천 조직 시작점</div>
                     <div className="mt-2 text-base font-semibold text-slate-50">{formatAccountLabel(referralRoot.login_id, referralRoot.display_name)}</div>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
-                      <span className="rounded-full bg-slate-950/60 px-2.5 py-1">depth {referralRoot.depth}</span>
-                      <span className="rounded-full bg-slate-950/60 px-2.5 py-1">referral {referralRoot.referral_code ?? "-"}</span>
+                      <span className="rounded-full bg-slate-950/60 px-2.5 py-1">{referralRoot.depth}단계</span>
+                      <span className="rounded-full bg-slate-950/60 px-2.5 py-1">추천 코드 {referralRoot.referral_code ?? "-"}</span>
                     </div>
                   </div>
                   <ReferralNodeTree nodes={referralRoot.children} />
@@ -406,7 +407,7 @@ export function NetworkTab({
             <Card>
               <div className="mb-4">
                 <h3 className="text-lg font-bold text-slate-50">바이너리 조직도</h3>
-                <p className="text-sm text-slate-400">LEFT/RIGHT badge와 root_leg를 표시하는 단순 nested tree입니다.</p>
+                <p className="text-sm text-slate-400">선택한 회원 기준의 바이너리 조직도를 표시합니다.</p>
               </div>
               {binaryTree?.root ? <BinaryNodeTree node={binaryTree.root} /> : <FeedbackState title="바이너리 조직 없음" description="현재 depth 기준으로 조회된 바이너리 하위 조직이 없습니다." />}
             </Card>
@@ -416,7 +417,7 @@ export function NetworkTab({
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-50">하위 회원 목록</h3>
-                <p className="text-sm text-slate-400">type={downlineType}, depth={depth} 기준으로 pagination을 적용합니다.</p>
+                <p className="text-sm text-slate-400">{downlineType === "referral" ? "추천 조직" : "바이너리 조직"} / {depth}단계 기준</p>
               </div>
               <div className="text-sm text-slate-400">
                 총 <span className="tabular text-slate-100">{downlineTotal}</span>건
@@ -426,16 +427,16 @@ export function NetworkTab({
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
-                    <th>login_id</th>
-                    <th>display_name</th>
-                    <th>depth</th>
-                    <th>sponsor</th>
-                    <th>binary parent</th>
-                    <th>position</th>
-                    <th>root_leg</th>
-                    <th>reward(base)</th>
-                    <th>rank</th>
-                    <th>joined_at</th>
+                    <th>아이디</th>
+                    <th>이름</th>
+                    <th>단계</th>
+                    <th>추천인</th>
+                    <th>바이너리 상위</th>
+                    <th>위치</th>
+                    <th>기준 레그</th>
+                    <th>누적 보상</th>
+                    <th>직급</th>
+                    <th>가입일</th>
                   </tr>
                 </thead>
                 <tbody>

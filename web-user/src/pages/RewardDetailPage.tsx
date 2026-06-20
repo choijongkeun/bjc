@@ -58,11 +58,11 @@ export default function RewardDetailPage() {
 
   return (
     <UserShell
-      title="Reward Detail"
-      subtitle="reward row의 상태, 연결된 스테이킹, 허용된 metadata만 확인합니다."
+      title="보상 상세"
+      subtitle="보상 정보와 처리 일시를 확인합니다."
       actions={
         <div className="flex items-center gap-2">
-          {reward ? <RewardStatusBadge status={reward.status} /> : <Badge tone="slate">Loading</Badge>}
+          {reward ? <RewardStatusBadge status={reward.status} /> : <Badge tone="slate">불러오는 중</Badge>}
           <Button variant="secondary" onClick={() => setRefreshNonce((current) => current + 1)} disabled={loading}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             새로고침
@@ -77,87 +77,83 @@ export default function RewardDetailPage() {
         </Link>
 
         {error ? <FeedbackState title="보상 상세 조회 오류" description={error} tone="error" /> : null}
-        {loading ? <FeedbackState title="보상 상세 로딩 중" description="reward 상세 정보를 불러오고 있습니다." /> : null}
+        {loading ? <FeedbackState title="불러오는 중" description="보상 정보를 불러오고 있습니다." /> : null}
 
         {reward ? (
           <>
             {reward.status === "REVERSED" && reward.reversal ? (
               <FeedbackState
-                title="역분개 처리된 원본 보상"
-                description={`이 원본 보상은 역분개 완료 상태입니다. 연결된 reversal reward ID는 ${reward.reversal.id}입니다.`}
+                title="보상 취소가 반영된 내역"
+                description="이 보상에는 취소 내역이 연결되어 있습니다."
               />
             ) : null}
 
             {reward.reward_type === "REVERSAL" ? (
               <FeedbackState
-                title="REVERSAL 보상"
+                title="보상 취소 내역"
                 description={
                   reward.original_reward
-                    ? `이 row는 원본 보상 ${reward.original_reward.id}를 상쇄하기 위해 생성된 음수 보상입니다.`
-                    : "이 row는 원본 보상을 상쇄하기 위해 생성된 음수 보상입니다."
+                    ? "기존 보상을 취소하기 위해 생성된 내역입니다."
+                    : "기존 보상을 취소하기 위해 생성된 내역입니다."
                 }
               />
             ) : null}
 
             <Card className="p-6">
-              <SectionTitle eyebrow="Reward Summary" title="보상 기본 정보" description="사용자 화면에는 보상 조회에 필요한 항목만 제한적으로 노출합니다." />
+              <SectionTitle eyebrow="보상 정보" title="보상 기본 정보" />
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoTile label="reward id" value={reward.id} mono />
-                <InfoTile label="reward type" value={getRewardTypeLabel(reward.reward_type)} badge={<RewardTypeBadge type={reward.reward_type} />} />
-                <InfoTile label="reward date" value={formatRewardDate(reward.reward_date)} />
+                <InfoTile label="보상 구분" value={getRewardTypeLabel(reward.reward_type)} badge={<RewardTypeBadge type={reward.reward_type} />} />
+                <InfoTile label="보상 기준일" value={formatRewardDate(reward.reward_date)} />
                 <InfoTile
-                  label="amount"
+                  label="금액"
                   value={formatRewardAmountBase(reward.amount_base)}
                   valueClassName={negative ? "text-rose-200" : "text-slate-100"}
-                  description={negative ? "역분개 음수 금액" : undefined}
                 />
-                <InfoTile label="status" value={getRewardStatusLabel(reward.status)} badge={<RewardStatusBadge status={reward.status} />} />
-                <InfoTile label="staking id" value={reward.account_staking_id ?? "-"} mono />
-                <InfoTile label="source_reference" value={reward.source_reference || "-"} mono />
-                <InfoTile label="policy_version_id" value={reward.policy_version_id} mono />
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <SectionTitle eyebrow="Timeline" title="처리 시점" />
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoTile label="available_at" value={formatRewardDateTime(reward.available_at)} />
-                <InfoTile label="confirmed_at" value={formatRewardDateTime(reward.confirmed_at)} />
-                <InfoTile label="reversed_at" value={formatRewardDateTime(reward.reversed_at)} />
-                <InfoTile label="created_at" value={formatRewardDateTime(reward.created_at)} />
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <SectionTitle eyebrow="Relations" title="연결 정보" />
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <InfoTile label="상태" value={getRewardStatusLabel(reward.status)} badge={<RewardStatusBadge status={reward.status} />} />
                 <InfoTile label="상품" value={reward.product ? `${reward.product.name} (${reward.product.symbol})` : "-"} />
-                <InfoTile label="calc_run_id" value={reward.calc_run?.id ?? reward.calc_run_id ?? "-"} mono />
-                <InfoTile label="reversal reward" value={reward.reversal?.id ?? "-"} mono />
-                <InfoTile label="original reward" value={reward.original_reward?.id ?? "-"} mono />
-                <InfoTile label="원본 보상 유형" value={reward.original_reward ? getRewardTypeLabel(reward.original_reward.reward_type) : "-"} />
-                <InfoTile
-                  label="원본 보상 금액"
-                  value={reward.original_reward ? formatRewardAmountBase(reward.original_reward.amount_base) : "-"}
-                />
+                <InfoTile label="스테이킹 원금" value={reward.staking?.principal_amount_base ?? "-"} />
               </div>
             </Card>
+
+            <Card className="p-6">
+              <SectionTitle eyebrow="처리 일시" title="처리 시점" />
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoTile label="출금 가능 일시" value={formatRewardDateTime(reward.available_at)} />
+                <InfoTile label="확정 일시" value={formatRewardDateTime(reward.confirmed_at)} />
+                <InfoTile label="취소 반영 일시" value={formatRewardDateTime(reward.reversed_at)} />
+                <InfoTile label="생성 일시" value={formatRewardDateTime(reward.created_at)} />
+              </div>
+            </Card>
+
+            {reward.original_reward || reward.reversal ? (
+              <Card className="p-6">
+                <SectionTitle eyebrow="연결 정보" title="관련 보상" />
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <InfoTile label="상품" value={reward.product ? `${reward.product.name} (${reward.product.symbol})` : "-"} />
+                  <InfoTile label="취소 보상 여부" value={reward.reversal ? "연결됨" : "-"} />
+                  <InfoTile label="원본 보상 여부" value={reward.original_reward ? "연결됨" : "-"} />
+                  <InfoTile label="원본 보상 유형" value={reward.original_reward ? getRewardTypeLabel(reward.original_reward.reward_type) : "-"} />
+                  <InfoTile
+                    label="원본 보상 금액"
+                    value={reward.original_reward ? formatRewardAmountBase(reward.original_reward.amount_base) : "-"}
+                  />
+                </div>
+              </Card>
+            ) : null}
 
             <Card className="p-6">
               <SectionTitle
-                eyebrow="Metadata"
-                title="허용된 metadata"
-                description="보상 계산과 출금 판단에 필요한 허용 필드만 제한적으로 표시합니다."
+                eyebrow="추가 정보"
+                title="보상 계산 정보"
+                description={undefined}
               />
-              <div className="mt-5">
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {metadataEntries.length === 0 ? (
-                  <FeedbackState title="표시할 metadata 없음" description="현재 reward에는 사용자에게 노출 가능한 metadata가 없습니다." />
+                  <FeedbackState title="추가 정보 없음" description="표시할 보상 계산 정보가 없습니다." />
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {metadataEntries.map((entry) => (
-                      <InfoTile key={entry.label} label={entry.label} value={entry.value} mono={entry.label === "denominator"} />
-                    ))}
-                  </div>
+                  metadataEntries.map((entry) => (
+                    <InfoTile key={entry.label} label={entry.label} value={entry.value} />
+                  ))
                 )}
               </div>
             </Card>
@@ -173,24 +169,21 @@ function InfoTile({
   value,
   mono = false,
   badge,
-  description,
   valueClassName,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   badge?: ReactNode;
-  description?: string;
   valueClassName?: string;
 }) {
   return (
     <div className="rounded-[20px] border border-slate-800 bg-slate-950/50 p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+        <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
         {badge}
       </div>
       <div className={`mt-2 text-sm font-semibold ${mono ? "break-all font-mono" : "tabular"} ${valueClassName ?? "text-slate-100"}`}>{value}</div>
-      {description ? <div className="mt-2 text-xs text-slate-500">{description}</div> : null}
     </div>
   );
 }

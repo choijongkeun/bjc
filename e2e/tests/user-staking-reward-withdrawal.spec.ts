@@ -53,7 +53,7 @@ test("스테이킹 신청, 중복 idempotency, 상세와 취소 요청 흐름을
   await expect(page.getByText("취소 요청 가능")).toBeVisible();
   await page.getByRole("button", { name: "취소 요청" }).click();
   await page.getByRole("button", { name: "취소 요청 실행" }).click();
-  await expect(page.getByText(/취소 요청이 접수되어 CANCEL_REQUESTED 상태로 변경되었습니다\./)).toBeVisible();
+  await expect(page.getByText("취소 요청이 접수되었습니다.").first()).toBeVisible();
 });
 
 test("Rewards summary, 상세 allowlist, 다른 회원 reward 404를 검증한다", async ({ page, request }) => {
@@ -69,14 +69,15 @@ test("Rewards summary, 상세 allowlist, 다른 회원 reward 404를 검증한�
 
   await loginUserUi(page, fixture.credentials.root_user);
   await page.goto(`${E2E_USER_URL}/rewards`);
-  await expect(page.getByRole("heading", { name: "Rewards" })).toBeVisible();
-  await expect(page.getByText("출금 신청 전 미리보기")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "보상 내역" })).toBeVisible();
+  await expect(page.getByText("내 보상 요약")).toBeVisible();
 
   if (contributionReward) {
     await page.goto(`${E2E_USER_URL}/rewards/${contributionReward.id}`);
-    await expect(page.getByText("METADATA")).toBeVisible();
-    await expect(page.getByText("FORMULA VERSION")).toBeVisible();
-    await expect(page.getByText("POOL AMOUNT")).toBeVisible();
+    await expect(page.getByText("보상 계산 정보")).toBeVisible();
+    await expect(page.getByText("풀 금액")).toBeVisible();
+    await expect(page.getByText("FORMULA VERSION")).toHaveCount(0);
+    await expect(page.getByText("source_reference")).toHaveCount(0);
   }
 
   const otherSession = await loginUserByApi(request, fixture.credentials.other_user);
@@ -127,12 +128,12 @@ test("출금 balance, preview, 신청, 취소와 다른 회원 withdrawal 404를
   await loginUserUi(page, fixture.credentials.root_user);
   await page.goto(`${E2E_USER_URL}/withdrawals`);
   await expect(page.getByRole("heading", { name: "출금 가능 잔액" })).toBeVisible();
-  await expect(page.getByText("BONUS 출금 가능", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("보너스 출금 가능", { exact: true }).first()).toBeVisible();
 
   await page.goto(`${E2E_USER_URL}/withdrawals/${withdrawalId}`);
   await expect(page.getByText("출금 기본 정보")).toBeVisible();
-  await page.getByRole("button", { name: "REQUESTED 출금 취소" }).click();
-  await page.getByRole("button", { name: "출금 취소", exact: true }).click();
+  await page.getByRole("button", { name: "출금 신청 취소" }).click();
+  await page.getByRole("button", { name: "출금 신청 취소", exact: true }).last().click();
   await expect(page.getByText("출금 요청이 취소")).toBeVisible();
 
   const otherSession = await loginUserByApi(request, fixture.credentials.other_user);

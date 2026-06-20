@@ -1,5 +1,6 @@
 import type { RankHistoryItem } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getRankChangeTypeLabel } from "@/lib/display";
 import { Card, TableShell } from "@/components/ui";
 
 export function RankHistoryTable({
@@ -11,7 +12,7 @@ export function RankHistoryTable({
     <Card className="p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Rank History</div>
+          <div className="text-xs tracking-[0.16em] text-slate-500">직급 이력</div>
           <h3 className="mt-2 text-lg font-bold text-slate-50">최근 직급 이력</h3>
         </div>
         <div className="text-sm text-slate-400">총 {items.length}건</div>
@@ -24,20 +25,20 @@ export function RankHistoryTable({
             <table className="min-w-full text-left text-sm text-slate-300">
               <thead className="sticky top-0 bg-slate-950/95 text-xs uppercase tracking-[0.16em] text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">effective_date</th>
-                  <th className="px-4 py-3">change_type</th>
-                  <th className="px-4 py-3">previous</th>
-                  <th className="px-4 py-3">calculated</th>
-                  <th className="px-4 py-3">final</th>
-                  <th className="px-4 py-3">direct active</th>
-                  <th className="px-4 py-3">weak volume</th>
+                  <th className="px-4 py-3">적용일</th>
+                  <th className="px-4 py-3">변경 유형</th>
+                  <th className="px-4 py-3">이전 직급</th>
+                  <th className="px-4 py-3">산정 직급</th>
+                  <th className="px-4 py-3">최종 직급</th>
+                  <th className="px-4 py-3">직추천 회원 수</th>
+                  <th className="px-4 py-3">약한 레그 매출</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id} className="border-t border-slate-800/80">
                     <td className="px-4 py-3">{item.effective_date}</td>
-                    <td className="px-4 py-3">{item.change_type}</td>
+                    <td className="px-4 py-3">{getRankChangeTypeLabel(item.change_type)}</td>
                     <td className="px-4 py-3 tabular">{item.previous_rank_level ?? "-"}</td>
                     <td className="px-4 py-3 tabular">{item.calculated_rank_level ?? "-"}</td>
                     <td className="px-4 py-3 tabular">{item.final_rank_level ?? "-"}</td>

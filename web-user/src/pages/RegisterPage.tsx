@@ -71,7 +71,7 @@ export default function RegisterPage() {
     setError(null);
 
     if (!loginId.trim() || !displayName.trim()) {
-      setError("로그인 ID와 표시 이름을 모두 입력해 주세요.");
+      setError("아이디와 이름을 모두 입력해 주세요.");
       return;
     }
     if (password.length < 8) {
@@ -113,40 +113,25 @@ export default function RegisterPage() {
     <div className="app-shell flex min-h-screen items-center justify-center px-6 py-16">
       <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr,0.95fr]">
         <Card className="hidden p-8 lg:block">
-          <div className="text-xs uppercase tracking-[0.22em] text-emerald-300">BJC Onboarding</div>
-          <h1 className="mt-5 max-w-xl text-5xl font-extrabold tracking-tight text-slate-50">추천인 검증 후 바로 가입되는 회원 등록 흐름</h1>
-          <p className="mt-5 max-w-xl text-base leading-7 text-slate-400">
-            `template/signup.html`의 sponsor verification 블록과 단계형 onboarding 레이아웃을 기준으로, 실제 `register` API와 연결되는 가입 화면으로 재구성했습니다.
-          </p>
-          <div className="mt-10 space-y-4">
-            {[
-              "추천인 코드가 바뀌면 기존 확인 상태를 자동으로 초기화합니다.",
-              "가입 성공 시 access_token과 account를 즉시 저장하고 대시보드로 이동합니다.",
-              "preferred_binary_position은 LEFT / RIGHT / 미선택으로만 제한합니다.",
-            ].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-[24px] border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-300">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
+          <div className="text-xs uppercase tracking-[0.22em] text-emerald-300">BJC MEMBER</div>
+          <h1 className="mt-5 max-w-xl text-5xl font-extrabold tracking-tight text-slate-50">추천인을 확인한 뒤 회원가입을 진행하세요</h1>
         </Card>
 
         <Card className="mx-auto w-full max-w-xl overflow-hidden p-0">
           <div className="border-b border-slate-800 bg-slate-950/50 px-8 py-7">
-            <SectionTitle eyebrow="Create Account" title="회원가입" description="추천인 코드를 확인한 뒤 회원가입을 진행합니다." />
+            <SectionTitle eyebrow="회원가입" title="회원가입" description="추천인 코드를 확인한 뒤 회원가입을 진행합니다." />
           </div>
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <div className="grid gap-5 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Login ID</span>
+                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">아이디</span>
                 <div className="relative">
                   <UserRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField className="pl-11" value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="회원 로그인 ID" />
                 </div>
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Display Name</span>
+                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">이름</span>
                 <div className="relative">
                   <BadgeCheck className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField className="pl-11" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="표시 이름" />
@@ -156,7 +141,7 @@ export default function RegisterPage() {
 
             <div className="grid gap-5 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Password</span>
+                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호</span>
                 <div className="relative">
                   <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField
@@ -170,7 +155,7 @@ export default function RegisterPage() {
                 </div>
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Password Confirm</span>
+                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호 확인</span>
                 <div className="relative">
                   <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField
@@ -186,18 +171,18 @@ export default function RegisterPage() {
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Preferred Binary Position</span>
+              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">희망 바이너리 위치</span>
               <SelectField value={preferredBinaryPosition} onChange={(event) => setPreferredBinaryPosition(event.target.value as "" | BinaryPosition)}>
                 <option value="">미선택</option>
-                <option value="LEFT">LEFT</option>
-                <option value="RIGHT">RIGHT</option>
+                <option value="LEFT">좌측</option>
+                <option value="RIGHT">우측</option>
               </SelectField>
             </label>
 
             <div className="rounded-[28px] border border-slate-800 bg-slate-950/45 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Referral Verification</div>
+                  <div className="text-xs tracking-[0.18em] text-slate-500">추천인 확인</div>
                   <div className="mt-2 text-sm text-slate-400">추천인 코드 확인이 완료되어야 가입 버튼이 활성화됩니다.</div>
                 </div>
                 {resolvedReferral ? <FeedbackState title="추천인 확인 완료" description={`${resolvedReferral.sponsor_login_id} / ${resolvedReferral.sponsor_display_name}`} tone="success" /> : null}
@@ -222,8 +207,8 @@ export default function RegisterPage() {
 
               {resolvedReferral ? (
                 <div className="mt-4 rounded-[24px] border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                  <div className="font-semibold">sponsor_login_id: {resolvedReferral.sponsor_login_id}</div>
-                  <div className="mt-1">sponsor_display_name: {resolvedReferral.sponsor_display_name}</div>
+                  <div className="font-semibold">추천인 아이디: {resolvedReferral.sponsor_login_id}</div>
+                  <div className="mt-1">추천인 이름: {resolvedReferral.sponsor_display_name}</div>
                 </div>
               ) : null}
             </div>
@@ -245,7 +230,7 @@ export default function RegisterPage() {
                 !passwordValid
               }
             >
-              {submitLoading ? "가입 중..." : "가입 후 대시보드로 이동"}
+              {submitLoading ? "가입 중..." : "회원가입"}
               {!submitLoading ? <ArrowRight className="ml-2 h-4 w-4" /> : null}
             </Button>
 

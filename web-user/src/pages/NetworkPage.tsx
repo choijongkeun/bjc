@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import { api, getErrorMessage, type BinaryLegsResponse, type BinaryTreeResponse, type DownlineItem, type ReferralTreeResponse } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getBinaryPositionLabel } from "@/lib/display";
 import { useSessionStore } from "@/store/sessionStore";
 import { BinaryLegsCard } from "@/components/BinaryLegsCard";
 import { FeedbackState } from "@/components/FeedbackState";
@@ -72,7 +73,7 @@ export default function NetworkPage() {
 
   return (
     <UserShell
-      title="Network"
+      title="추천 조직"
       subtitle="추천 조직도, 바이너리 조직도, 레그 요약과 하위 회원 목록을 현재 세션 기준으로 조회합니다."
       actions={
         <Button variant="secondary" onClick={() => void load()}>
@@ -85,13 +86,12 @@ export default function NetworkPage() {
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <SectionTitle
-              eyebrow="Network Control"
+              eyebrow="조회 설정"
               title={`${account?.display_name ?? account?.login_id ?? "회원"} 기준 네트워크`}
-              description="depth 기본값은 3이고 최대 10까지 확장됩니다. downlines는 referral / binary 타입 전환과 pagination을 지원합니다."
             />
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-2 text-sm text-slate-400">
-                <span>depth</span>
+                <span>조회 단계</span>
                 <SelectField value={depth} onChange={(event) => setDepth(Number(event.target.value))}>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
                     <option key={value} value={value}>
@@ -101,14 +101,14 @@ export default function NetworkPage() {
                 </SelectField>
               </label>
               <label className="space-y-2 text-sm text-slate-400">
-                <span>type</span>
+                <span>조직 구분</span>
                 <SelectField value={type} onChange={(event) => setType(event.target.value as "referral" | "binary")}>
-                  <option value="referral">referral</option>
-                  <option value="binary">binary</option>
+                  <option value="referral">추천 조직</option>
+                  <option value="binary">바이너리 조직</option>
                 </SelectField>
               </label>
               <label className="space-y-2 text-sm text-slate-400">
-                <span>limit</span>
+                <span>페이지 크기</span>
                 <SelectField value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
@@ -123,11 +123,11 @@ export default function NetworkPage() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">display_name</div>
+            <div className="text-xs tracking-[0.16em] text-slate-500">이름</div>
             <div className="mt-3 text-xl font-bold text-slate-50">{account?.display_name ?? "-"}</div>
           </Card>
           <Card>
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">login_id</div>
+            <div className="text-xs tracking-[0.16em] text-slate-500">아이디</div>
             <div className="mt-3 text-xl font-bold text-slate-50">{account?.login_id ?? "-"}</div>
           </Card>
           <Card>
@@ -144,23 +144,23 @@ export default function NetworkPage() {
 
         <div className="grid gap-6 xl:grid-cols-2">
           <Card>
-            <SectionTitle eyebrow="Referral Tree" title="추천 조직도" description="depth indentation 기반 nested card 구조로 표시합니다." />
+            <SectionTitle eyebrow="추천 조직도" title="추천 조직도" />
             <div className="mt-5">
-              <NetworkTree node={referralDisplay} title="Referral Root" variant="referral" />
+              <NetworkTree node={referralDisplay} title="추천 조직 시작점" variant="referral" />
             </div>
           </Card>
 
           <Card>
-            <SectionTitle eyebrow="Binary Tree" title="바이너리 조직도" description="LEFT / RIGHT와 root_leg badge를 함께 표시합니다." />
+            <SectionTitle eyebrow="바이너리 조직도" title="바이너리 조직도" />
             <div className="mt-5">
-              <NetworkTree node={binaryDisplay} title="Binary Root" variant="binary" />
+              <NetworkTree node={binaryDisplay} title="바이너리 조직 시작점" variant="binary" />
             </div>
           </Card>
         </div>
 
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <SectionTitle eyebrow="Downlines" title="하위 회원 목록" description={`type=${type}, depth=${depth}, page=${page} 기준 결과입니다.`} />
+            <SectionTitle eyebrow="하위 회원" title="하위 회원 목록" description={`${type === "referral" ? "추천 조직" : "바이너리 조직"} / ${depth}단계 기준`} />
             <Badge tone="slate">총 {total}건</Badge>
           </div>
           <div className="mt-5">
@@ -168,16 +168,14 @@ export default function NetworkPage() {
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
-                    <th>login_id</th>
-                    <th>display_name</th>
-                    <th>depth</th>
-                    <th>sponsor</th>
-                    <th>binary parent</th>
-                    <th>position</th>
-                    <th>root_leg</th>
-                    <th>reward(base)</th>
-                    <th>rank</th>
-                    <th>joined_at</th>
+                    <th>아이디</th>
+                    <th>이름</th>
+                    <th>단계</th>
+                    <th>위치</th>
+                    <th>기준 레그</th>
+                    <th>누적 보상</th>
+                    <th>직급</th>
+                    <th>가입일</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,10 +185,8 @@ export default function NetworkPage() {
                         <td className="font-semibold text-slate-100">{item.login_id ?? "-"}</td>
                         <td>{item.display_name ?? "-"}</td>
                         <td className="tabular text-right">{item.depth}</td>
-                        <td className="font-mono text-xs text-slate-500">{item.sponsor_account_id?.slice(0, 8) ?? "-"}</td>
-                        <td className="font-mono text-xs text-slate-500">{item.binary_parent_account_id?.slice(0, 8) ?? "-"}</td>
-                        <td>{item.binary_position ?? "-"}</td>
-                        <td>{item.root_leg ?? "-"}</td>
+                        <td>{getBinaryPositionLabel(item.binary_position)}</td>
+                        <td>{getBinaryPositionLabel(item.root_leg)}</td>
                         <td className="tabular text-right">{formatBaseAmount(item.total_reward_amount_base, 0)}</td>
                         <td className="tabular text-right">{item.rank_level}</td>
                         <td>{item.joined_at ?? "-"}</td>
@@ -198,7 +194,7 @@ export default function NetworkPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={10}>
+                      <td colSpan={8}>
                         <div className="py-6 text-center text-slate-500">현재 조건에서 조회된 하위 회원이 없습니다.</div>
                       </td>
                     </tr>
@@ -212,7 +208,7 @@ export default function NetworkPage() {
           </div>
         </Card>
 
-        {loading ? <FeedbackState title="네트워크 로딩 중" description="referral-tree, binary-tree, binary-legs, downlines를 불러오고 있습니다." /> : null}
+        {loading ? <FeedbackState title="불러오는 중" description="추천 조직 정보를 불러오고 있습니다." /> : null}
       </div>
     </UserShell>
   );

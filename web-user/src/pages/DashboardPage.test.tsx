@@ -146,7 +146,7 @@ describe("DashboardPage", () => {
       expect(screen.getByText("3")).toBeInTheDocument();
       expect(screen.getByText("활성 / 대기 건수")).toBeInTheDocument();
       expect(screen.getByText("3 / 2")).toBeInTheDocument();
-      expect(screen.getByText(/DAILY 150 \/ BONUS 30/)).toBeInTheDocument();
+      expect(screen.getByText(/일일 보상 150 \/ 보너스 30/)).toBeInTheDocument();
     });
   });
 });
