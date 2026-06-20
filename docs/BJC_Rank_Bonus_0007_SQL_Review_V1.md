@@ -1,0 +1,257 @@
+# BJC Rank Bonus 0007 SQL Review V1
+
+## 1. Review Scope
+
+- migration file:
+  - `mysql/migrations/0007_bjc_rank_bonus_mysql.sql`
+- SQL smoke file:
+  - `mysql/smoke/bjc_rank_bonus_smoketest.sql`
+- adjacent schema/runtime fit:
+  - `mysql/migrations/0001_bjc_offchain_core_mysql.sql`
+  - `mysql/migrations/0004_bjc_account_rewards_mysql.sql`
+  - `mysql/migrations/0005_bjc_reward_withdrawals_mysql.sql`
+  - `mysql/migrations/0006_bjc_direct_referral_rewards_mysql.sql`
+  - `src/services/networkService.ts`
+  - `src/services/adminAccountService.ts`
+  - `src/repos/accountRewardsRepo.ts`
+  - `src/repos/accountStakingsRepo.ts`
+
+## 2. Current State Summary
+
+현재 저장소/원격 DB 기준으로 확인된 상태:
+
+- `rank_rules` 테이블은 존재하지만 실제 row는 비어 있다.
+- `RANK_BONUS` enum은 `calc_runs`, `ledger_events`, `settlement_items`, `account_rewards`에 이미 존재한다.
+- `rank_level`은 서비스 응답에서 placeholder `0`으로 채워지는 부분이 많다.
+- `ledger_events.product_id`는 현재 `NOT NULL`이다.
+- qualification snapshot 전용 테이블과 current rank projection 테이블은 아직 없다.
+
+## 3. 0007 Design Summary
+
+0007의 핵심 목적:
+
+- 기존 `rank_rules`를 재사용 가능한 상태로 유지
+- qualification / status / history를 financial reward와 분리
+- `RANK_QUALIFICATION` calc run을 명시적으로 추가
+- `RANK_BONUS` ledger가 특정 staking product에 묶이지 않도록 `ledger_events.product_id` nullable 확장
+
+## 4. Reuse Review
+
+### 4.1 `rank_rules` reuse
+
+재사용 결정:
+
+- 신규 `rank_definitions`를 만들지 않고 기존 `rank_rules`를 유지한다.
+
+사유:
+
+- 저장소에서 검증된 qualification rule이 이미 `rank_rules` shape와 일치한다.
+- 실제 rank name/code는 저장소에 없어서 새로운 naming column을 이번 단계에서 강제하면 임의 설계가 된다.
+
+0007에서 추가하는 최소 보강:
+
+- `updated_at`
+- `required_weak_volume_base >= 0` check
+
+### 4.2 `account_rewards` reuse
+
+재사용 결정:
+
+- `RANK_BONUS`도 기존 `account_rewards`를 그대로 사용한다.
+
+사유:
+
+- `reward_type = 'RANK_BONUS'`가 이미 존재한다.
+- `source_reference` unique가 이미 있어 period-key 기반 중복 방지가 가능하다.
+- rank bonus는 특정 staking 한 건의 source가 아니므로 `account_staking_id`, `source_account_id`, `source_account_staking_id`를 모두 `null`로 둘 수 있다.
+
+### 4.3 `calc_runs` reuse with one additive enum
+
+재사용 + 확장:
+
+- 기존 `RANK_BONUS` run type은 유지
+- 신규 `RANK_QUALIFICATION` run type을 추가
+
+사유:
+
+- qualification run과 bonus reward run은 목적이 다르다.
+- qualification run은 financial settlement가 없어도 독립 감사 대상이다.
+
+## 5. New Tables Review
+
+### 5.1 `account_rank_status`
+
+역할:
+
+- 회원별 latest rank projection
+
+장점:
+
+- `accounts` 핵심 인증/조직 정보와 rank projection을 분리한다.
+- 재계산이나 backfill 시 projection refresh가 쉬워진다.
+
+주요 제약:
+
+- `account_id` PK
+- nullable `current_rank_level`
+- `current_rank_level` range check
+
+### 5.2 `account_rank_qualification_results`
+
+역할:
+
+- 특정 qualification calc run의 immutable snapshot
+
+장점:
+
+- demotion candidate, unqualified 상태를 financial reward 없이도 보존한다.
+- 추후 `RANK_BONUS` run이 qualification snapshot을 재사용할 수 있다.
+
+주요 제약:
+
+- unique `(calc_run_id, account_id)`
+- `period_from <= period_to`
+- metrics non-negative check
+- nullable rank levels with range check
+
+### 5.3 `account_rank_history`
+
+역할:
+
+- 실제 applied rank transition 이력
+
+장점:
+
+- current projection만으로 잃어버리는 “언제 / 왜 / 무엇이 바뀌었는지”를 보존한다.
+- `qualification_result_id`를 통해 계산 근거를 추적할 수 있다.
+
+주요 제약:
+
+- unique `(calc_run_id, account_id)`
+- `change_type` enum
+- qualification metric snapshot column 보유
+
+## 6. `ledger_events.product_id` Review
+
+### 6.1 Problem
+
+현재 `ledger_events.product_id`는 `NOT NULL` + FK다.
+
+이 구조는 다음 reward 유형과 충돌한다.
+
+- `RANK_BONUS`
+- 향후 일부 `CONTRIBUTION`
+- 기타 특정 product 1건과 직접 연결되지 않는 운영형 보상
+
+### 6.2 Rejected alternatives
+
+- 대표 product를 임의 사용:
+  - 감사 추적이 왜곡된다
+- 가장 큰 active staking product 사용:
+  - 정책 근거가 없고 deterministic business rule도 아니다
+- reward 전용 별도 ledger 추가:
+  - 이번 단계 범위를 넘는 구조 확장이다
+
+### 6.3 Chosen solution
+
+0007에서:
+
+- `ledger_events.product_id`를 nullable로 변경한다
+
+장점:
+
+- `RANK_BONUS` 원장이 product-independent fact라는 의미를 정확히 보존한다
+- 기존 row는 모두 non-null이므로 historical compatibility는 유지된다
+
+### 6.4 Risk
+
+기존 TypeScript/runtime 일부는 `product_id`가 항상 존재한다고 암묵적으로 가정할 수 있다.
+
+이번 단계에서 runtime 수정은 하지 않으므로:
+
+- SQL review에 이 risk를 명시한다
+- 실제 `RANK_BONUS` runtime 구현 단계에서 read-model null handling 검토가 필요하다
+
+## 7. Duplicate Prevention Review
+
+`RANK_BONUS` 전용 새 dedupe column은 추가하지 않는다.
+
+이유:
+
+- `account_rewards`에는 이미 `unique (reward_type, source_reference)`가 있다
+- rank bonus는 period-key 기반 `source_reference`만으로 충분히 멱등 처리할 수 있다
+
+권장 포맷:
+
+```text
+rank_bonus:<period_key>:<account_id>:<rank_level>
+```
+
+## 8. Additive Safety Review
+
+0007이 지키는 원칙:
+
+- 기존 table drop 없음
+- 기존 data rewrite 없음
+- trigger/function/procedure 추가 없음
+- 기존 `RANK_BONUS` enum 재사용
+- 신규 table은 qualification/history/projection 용도에만 한정
+
+유일한 기존 table meaning change:
+
+- `ledger_events.product_id`를 `NOT NULL -> NULL`로 완화
+
+이는 destructive change는 아니지만, downstream null handling 영향은 존재한다.
+
+## 9. SQL Smoke Coverage Review
+
+`mysql/smoke/bjc_rank_bonus_smoketest.sql`에서 검증하는 범위:
+
+- valid `rank_rules` insert
+- duplicate `(policy_version_id, rank_level)` 실패
+- negative `required_weak_volume_base` 실패
+- invalid bps range 실패
+- `RANK_QUALIFICATION` calc run enum 동작
+- valid `account_rank_status` insert
+- invalid `account_rank_status` FK 실패
+- valid `account_rank_qualification_results` insert
+- duplicate qualification result unique 실패
+- valid `account_rank_history` insert
+- invalid `change_type` 실패
+- `ledger_events.product_id is null` + `event_type = RANK_BONUS` insert 성공
+- `account_rewards.reward_type = RANK_BONUS` duplicate `source_reference` 실패
+- rollback 후 잔존 count 원복
+
+## 10. Remote DB Validation Status
+
+이번 세션에서 원격 DB에 대해 확인한 사실:
+
+- 연결은 `readonly = true`
+- `DDL`, `DROP`, `DELETE` 권한이 없다
+- 따라서 원격 DB 실제 apply는 이번 세션에서 수행할 수 없다
+
+확인 가능한 범위:
+
+- `SHOW CREATE TABLE rank_rules`
+- `SHOW CREATE TABLE ledger_events`
+- `SELECT * from rank_rules`
+
+확인 결과:
+
+- `rank_rules`는 기존 shape만 존재한다
+- `ledger_events.product_id`는 여전히 `NOT NULL`
+- `rank_rules` row는 비어 있다
+
+## 11. Review Conclusion
+
+- 0007은 기존 `rank_rules`를 버리지 않고 qualification/history/projection을 덧붙이는 방향으로 타당하다.
+- qualification run과 reward run을 분리하기 위해 `RANK_QUALIFICATION` enum 추가가 필요하다.
+- `ledger_events.product_id nullable`은 `RANK_BONUS`에 가장 정합적인 해결책이다.
+- 원격 DB readonly 때문에 실제 apply는 이번 세션에서 불가능하므로, migration 작성과 smoke 검증 범위는 문서/파일/SELECT 기반 검토까지만 완료할 수 있다.
+
+## 12. Follow-up Items
+
+1. 원격 DDL 권한이 있는 환경에서 0007 apply 수행
+2. apply 후 `SHOW CREATE TABLE` 재검증
+3. rank smoke 실행
+4. 이후 runtime 구현 단계에서 `product_id nullable` read-model 영향 확인
