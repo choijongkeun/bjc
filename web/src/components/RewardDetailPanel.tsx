@@ -129,6 +129,24 @@ export function RewardDetailPanel({
           <InfoTile label="original reward" value={reward.original_reward?.id ?? "-"} mono />
         </div>
 
+        {reward.reward_type === "DIRECT_REFERRAL" ? (
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Direct Referral Source</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <InfoTile label="source account id" value={reward.source_account_id ?? reward.source?.account_id ?? "-"} mono />
+              <InfoTile label="source login_id" value={reward.source?.login_id ?? "-"} />
+              <InfoTile label="source display_name" value={reward.source?.display_name ?? "-"} />
+              <InfoTile label="source staking id" value={reward.source_account_staking_id ?? reward.source?.staking?.id ?? "-"} mono />
+              <InfoTile label="source principal amount" value={reward.source?.staking?.principal_amount_base ?? reward.metadata?.source_principal_amount_base ?? "-"} />
+              <InfoTile label="direct referral rate bps" value={reward.source?.direct_referral_rate_bps ?? reward.metadata?.direct_referral_rate_bps ?? "-"} />
+              <InfoTile label="referral depth" value={reward.metadata?.referral_depth === undefined ? "-" : String(reward.metadata.referral_depth)} />
+              <InfoTile label="formula version" value={reward.metadata?.formula_version ?? "-"} />
+              <InfoTile label="calc_run id" value={reward.calc_run?.id ?? reward.calc_run_id ?? "-"} mono />
+              <InfoTile label="source ledger event id" value={reward.source_ledger_event_id ?? "-"} mono />
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

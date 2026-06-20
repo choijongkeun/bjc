@@ -34,11 +34,13 @@ export function StakingsTab({
   role,
   selectedAccountId,
   onSelectAccountId,
+  onOpenReward,
 }: {
   actorId: string;
   role: SessionRole;
   selectedAccountId: string | null;
   onSelectAccountId?: (accountId: string) => void;
+  onOpenReward?: (rewardId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -296,7 +298,7 @@ export function StakingsTab({
 
       <div className="space-y-6">
         {detailError ? <FeedbackState title="상세 조회 오류" description={detailError} tone="error" /> : null}
-        <StakingDetailPanel actorId={actorId} role={role} staking={selected} onUpdated={handleUpdated} />
+        <StakingDetailPanel actorId={actorId} role={role} staking={selected} onUpdated={handleUpdated} onOpenReward={onOpenReward} />
       </div>
     </div>
   );

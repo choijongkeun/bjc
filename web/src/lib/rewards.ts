@@ -1,4 +1,15 @@
-import type { AdminRewardDetail, AdminRewardListItem, DailyRewardRunResponse, RewardMetadata, RewardSort, RewardStatus, RewardType } from "@/lib/api";
+import type {
+  AdminRewardDetail,
+  AdminRewardListItem,
+  AdminStakingDetail,
+  DailyRewardRunResponse,
+  DirectReferralRunResponse,
+  RewardMetadata,
+  RewardSort,
+  RewardStatus,
+  RewardType,
+  SessionRole,
+} from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 
 export type AdminRewardFilters = {
@@ -138,6 +149,10 @@ export function getVisibleRewardMetadataEntries(metadata?: RewardMetadata | null
     { label: "bps snapshot", value: metadata.daily_interest_bps_snapshot },
     { label: "기간 snapshot", value: metadata.duration_days_snapshot === undefined ? undefined : `${metadata.duration_days_snapshot}일` },
     { label: "denominator", value: metadata.denominator },
+    { label: "formula version", value: metadata.formula_version },
+    { label: "source principal", value: metadata.source_principal_amount_base },
+    { label: "direct referral rate", value: metadata.direct_referral_rate_bps ? `${metadata.direct_referral_rate_bps} bps` : undefined },
+    { label: "referral depth", value: metadata.referral_depth },
     { label: "원본 보상 ID", value: metadata.original_reward_id },
     { label: "원본 source", value: metadata.original_source_reference },
     { label: "사유", value: metadata.reason },
@@ -189,4 +204,104 @@ export function getDailyRewardRunResultItems(result: DailyRewardRunResponse): Ar
     { label: "total_reward_amount_base", value: formatRewardAmountBase(result.total_reward_amount_base) },
     { label: "status", value: result.calc_run.status },
   ];
+}
+
+export function canManageDirectReferral(role: SessionRole): boolean {
+  return role === "ADMIN";
+}
+
+export function validateDirectReferralRunInput(input: {
+  policy_version_id: string;
+  activated_from: string;
+  activated_to: string;
+}): string | null {
+  if (!input.policy_version_id.trim()) {
+    return "policy_version_id를 입력해 주세요.";
+  }
+  if (!input.activated_from.trim() || !input.activated_to.trim()) {
+    return "활성화 날짜 범위를 모두 입력해 주세요.";
+  }
+  if (input.activated_from > input.activated_to) {
+    return "activated_from은 activated_to보다 클 수 없습니다.";
+  }
+  return null;
+}
+
+export function getDirectReferralRunStatusLabel(status: string): string {
+  switch (status) {
+    case "SUCCEEDED":
+      return "성공";
+    case "FAILED":
+      return "실패";
+    case "RUNNING":
+      return "실행 중";
+    case "PENDING":
+      return "대기";
+    case "FINALIZED":
+      return "확정";
+    default:
+      return status;
+  }
+}
+
+export function getDirectReferralSingleResultLabel(resultType: string): string {
+  switch (resultType) {
+    case "created":
+      return "보상 생성";
+    case "duplicate":
+      return "중복으로 건너뜀";
+    case "no_sponsor":
+      return "추천인 없음";
+    case "inactive_sponsor":
+      return "비활성 추천인";
+    case "zero_reward":
+      return "0원으로 건너뜀";
+    case "conflict":
+      return "충돌";
+    default:
+      return resultType;
+  }
+}
+
+export function getDirectReferralResultTone(input: {
+  status?: string | null;
+  result_type?: string | null;
+  conflict_count?: number;
+  failed_count?: number;
+}): "default" | "success" | "error" {
+  if ((input.failed_count ?? 0) > 0 || input.status === "FAILED" || input.result_type === "conflict") {
+    return "error";
+  }
+  if ((input.conflict_count ?? 0) > 0) {
+    return "error";
+  }
+  if (input.result_type === "created" || input.result_type === "duplicate" || input.status === "SUCCEEDED") {
+    return "success";
+  }
+  return "default";
+}
+
+export function formatDirectReferralRunSummary(result: DirectReferralRunResponse): Array<{ label: string; value: string }> {
+  return [
+    { label: "calc_run_id", value: result.calc_run_id },
+    { label: "target_count", value: String(result.target_count) },
+    { label: "created_count", value: String(result.created_count) },
+    { label: "no_sponsor_skip_count", value: String(result.no_sponsor_skip_count) },
+    { label: "inactive_sponsor_skip_count", value: String(result.inactive_sponsor_skip_count) },
+    { label: "zero_reward_skip_count", value: String(result.zero_reward_skip_count) },
+    { label: "duplicate_skip_count", value: String(result.duplicate_skip_count) },
+    { label: "conflict_count", value: String(result.conflict_count) },
+    { label: "failed_count", value: String(result.failed_count) },
+    { label: "total_reward_amount_base", value: formatRewardAmountBase(result.total_reward_amount_base) },
+    { label: "status", value: getDirectReferralRunStatusLabel(result.status) },
+  ];
+}
+
+export function canRunDirectReferralForStaking(staking: Pick<AdminStakingDetail, "status" | "activated_at" | "cancel_requested_at"> | null | undefined): boolean {
+  return Boolean(
+    staking &&
+      staking.status === "ACTIVE" &&
+      staking.activated_at &&
+      !staking.cancel_requested_at
+  );
 }

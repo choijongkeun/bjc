@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCcw, Search } from "lucide-react";
-import { api, getErrorMessage, type AdminRewardDetail, type AdminRewardListItem, type SessionRole } from "@/lib/api";
+import { ExternalLink, RefreshCcw, Search } from "lucide-react";
+import {
+  api,
+  getErrorMessage,
+  type AdminRewardDetail,
+  type AdminRewardListItem,
+  type DailyRewardRunResponse,
+  type DirectReferralRunResponse,
+  type SessionRole,
+} from "@/lib/api";
 import {
   buildAdminRewardListQuery,
+  canManageDirectReferral,
   formatRewardAmountBase,
   formatRewardDate,
   formatRewardDateTime,
@@ -14,6 +23,7 @@ import {
   type AdminRewardFilters,
 } from "@/lib/rewards";
 import { DailyRewardRunModal } from "@/components/DailyRewardRunModal";
+import { DirectReferralRunModal, DirectReferralRunSummaryPanel } from "@/components/rewards/DirectReferralRunModal";
 import { RewardDetailPanel } from "@/components/RewardDetailPanel";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
@@ -38,31 +48,41 @@ export function RewardsTab({
   role,
   selectedAccountId,
   selectedCalcRunId,
+  selectedRewardId,
   onSelectAccountId,
   onSelectCalcRunId,
+  onSelectRewardId,
+  onOpenCalcRun,
 }: {
   actorId: string;
   role: SessionRole;
   selectedAccountId: string | null;
   selectedCalcRunId: string | null;
+  selectedRewardId: string | null;
   onSelectAccountId: (accountId: string | null) => void;
   onSelectCalcRunId: (calcRunId: string | null) => void;
+  onSelectRewardId: (rewardId: string | null) => void;
+  onOpenCalcRun: (calcRunId: string) => void;
 }) {
   const [draftFilters, setDraftFilters] = useState<AdminRewardFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<AdminRewardFilters>(DEFAULT_FILTERS);
   const [items, setItems] = useState<AdminRewardListItem[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+  const [activeRewardId, setActiveRewardId] = useState<string | null>(selectedRewardId);
   const [selectedReward, setSelectedReward] = useState<AdminRewardDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [runModalOpen, setRunModalOpen] = useState(false);
-  const [runSubmitting, setRunSubmitting] = useState(false);
-  const [runError, setRunError] = useState<string | null>(null);
-  const [runResult, setRunResult] = useState<Awaited<ReturnType<typeof api.runDailyReward>> | null>(null);
+  const [dailyRunModalOpen, setDailyRunModalOpen] = useState(false);
+  const [dailyRunSubmitting, setDailyRunSubmitting] = useState(false);
+  const [dailyRunError, setDailyRunError] = useState<string | null>(null);
+  const [dailyRunResult, setDailyRunResult] = useState<DailyRewardRunResponse | null>(null);
+  const [directRunModalOpen, setDirectRunModalOpen] = useState(false);
+  const [directRunSubmitting, setDirectRunSubmitting] = useState(false);
+  const [directRunError, setDirectRunError] = useState<string | null>(null);
+  const [directRunResult, setDirectRunResult] = useState<DirectReferralRunResponse | null>(null);
 
   const requestQuery = useMemo(
     () =>
@@ -73,7 +93,7 @@ export function RewardsTab({
     [appliedFilters, page]
   );
 
-  const activeSelectedId = useMemo(() => selectedRewardId ?? items[0]?.id ?? null, [items, selectedRewardId]);
+  const activeSelectedId = useMemo(() => activeRewardId ?? items[0]?.id ?? null, [items, activeRewardId]);
 
   useEffect(() => {
     if (selectedAccountId && draftFilters.account_id !== selectedAccountId) {
@@ -94,6 +114,15 @@ export function RewardsTab({
   }, [draftFilters, selectedCalcRunId]);
 
   useEffect(() => {
+    if (selectedRewardId && selectedRewardId !== activeRewardId) {
+      setActiveRewardId(selectedRewardId);
+    }
+    if (!selectedRewardId && activeRewardId) {
+      setActiveRewardId(null);
+    }
+  }, [activeRewardId, selectedRewardId]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadRewards() {
@@ -112,8 +141,8 @@ export function RewardsTab({
         setItems(result.items);
         setTotal(result.total);
         setError(null);
-        const nextSelectedId = result.items.some((item) => item.id === selectedRewardId) ? selectedRewardId : (result.items[0]?.id ?? null);
-        setSelectedRewardId(nextSelectedId);
+        const nextSelectedId = result.items.some((item) => item.id === activeRewardId) ? activeRewardId : (result.items[0]?.id ?? activeRewardId ?? null);
+        setActiveRewardId(nextSelectedId);
       } catch (loadError) {
         if (cancelled) return;
         setError(getErrorMessage(loadError));
@@ -129,7 +158,7 @@ export function RewardsTab({
     return () => {
       cancelled = true;
     };
-  }, [actorId, requestQuery, selectedRewardId]);
+  }, [actorId, requestQuery, activeRewardId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,24 +215,58 @@ export function RewardsTab({
 
   async function handleRunDailyReward(payload: { policy_version_id: string; reward_date: string }) {
     try {
-      setRunSubmitting(true);
-      setRunError(null);
+      setDailyRunSubmitting(true);
+      setDailyRunError(null);
       const result = await api.runDailyReward(actorId, payload);
-      setRunResult(result);
+      setDailyRunResult(result);
     } catch (error) {
-      setRunError(error instanceof Error ? error.message : "일일 보상 계산 실행에 실패했습니다.");
+      setDailyRunError(error instanceof Error ? error.message : "일일 보상 계산 실행에 실패했습니다.");
     } finally {
-      setRunSubmitting(false);
+      setDailyRunSubmitting(false);
     }
   }
 
-  function openCalcRunRewards(calcRunId: string) {
-    const next = { ...draftFilters, calc_run_id: calcRunId };
+  async function handleRunDirectReferral(payload: { policy_version_id: string; activated_from: string; activated_to: string }) {
+    try {
+      setDirectRunSubmitting(true);
+      setDirectRunError(null);
+      const result = await api.runDirectReferralReward(actorId, payload);
+      setDirectRunResult(result);
+      setDraftFilters((current) => ({
+        ...current,
+        reward_type: "DIRECT_REFERRAL",
+        calc_run_id: result.calc_run_id,
+      }));
+      setAppliedFilters((current) => ({
+        ...current,
+        reward_type: "DIRECT_REFERRAL",
+        calc_run_id: result.calc_run_id,
+      }));
+      setPage(1);
+      onSelectCalcRunId(result.calc_run_id);
+      onSelectRewardId(null);
+      await refreshList();
+    } catch (submitError) {
+      setDirectRunError(getErrorMessage(submitError));
+    } finally {
+      setDirectRunSubmitting(false);
+    }
+  }
+
+  function openCalcRunRewards(calcRunId: string, rewardType?: AdminRewardFilters["reward_type"]) {
+    const next = { ...draftFilters, calc_run_id: calcRunId, reward_type: rewardType ?? draftFilters.reward_type };
     setDraftFilters(next);
     setAppliedFilters(next);
     setPage(1);
     onSelectCalcRunId(calcRunId);
-    setRunModalOpen(false);
+    onSelectRewardId(null);
+    setDailyRunModalOpen(false);
+    setDirectRunModalOpen(false);
+  }
+
+  function openRewardDetail(rewardId: string) {
+    setActiveRewardId(rewardId);
+    onSelectRewardId(rewardId);
   }
 
   async function handleUpdated(nextReward: AdminRewardDetail) {
@@ -221,10 +284,15 @@ export function RewardsTab({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-50">Rewards 관리</h2>
-            <p className="text-sm text-slate-400">전체 보상 조회, 회원별 조회, calc_run별 조회, reversal, 수동 DAILY_REWARD 실행을 관리합니다.</p>
+            <p className="text-sm text-slate-400">전체 보상 조회, 회원별 조회, calc_run별 조회, reversal, 수동 DAILY_REWARD 및 DIRECT_REFERRAL 실행을 관리합니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {role === "ADMIN" ? <Button onClick={() => setRunModalOpen(true)}>일일 보상 계산 실행</Button> : null}
+            {role === "ADMIN" ? <Button onClick={() => setDailyRunModalOpen(true)}>일일 보상 계산 실행</Button> : null}
+            {canManageDirectReferral(role) ? (
+              <Button variant="secondary" onClick={() => setDirectRunModalOpen(true)}>
+                직추천 보상 실행
+              </Button>
+            ) : null}
             <Button variant="secondary" onClick={() => void refreshList()} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               새로고침
@@ -233,6 +301,15 @@ export function RewardsTab({
         </div>
 
         {error ? <FeedbackState title="보상 목록 조회 오류" description={error} tone="error" /> : null}
+        {directRunResult ? (
+          <div className="mb-4">
+            <DirectReferralRunSummaryPanel
+              result={directRunResult}
+              onOpenCalcRunRewards={(calcRunId) => openCalcRunRewards(calcRunId, "DIRECT_REFERRAL")}
+              onOpenCalcRunDetail={onOpenCalcRun}
+            />
+          </div>
+        ) : null}
         {selectedCalcRunId ? (
           <div className="mb-4">
             <FeedbackState title="calc_run 필터 적용" description={`현재 calc_run_id ${selectedCalcRunId} 기준으로 rewards를 조회 중입니다.`} />
@@ -242,7 +319,7 @@ export function RewardsTab({
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="reward id / login_id / source_reference"
+            placeholder="reward id / login_id / source login/display / source_reference"
             value={draftFilters.q ?? ""}
             onChange={(event) => updateDraft("q", event.target.value)}
           />
@@ -254,7 +331,7 @@ export function RewardsTab({
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="staking_id"
+            placeholder="staking_id / source_staking_id"
             value={draftFilters.staking_id ?? ""}
             onChange={(event) => updateDraft("staking_id", event.target.value)}
           />
@@ -363,7 +440,7 @@ export function RewardsTab({
                     <th>reward type</th>
                     <th>amount</th>
                     <th>status</th>
-                    <th>staking / product</th>
+                    <th>staking / source</th>
                     <th>calc_run_id</th>
                     <th>confirmed_at</th>
                     <th>available_at</th>
@@ -378,7 +455,7 @@ export function RewardsTab({
                         key={item.id}
                         className={active ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}
                         onClick={() => {
-                          setSelectedRewardId(item.id);
+                          openRewardDetail(item.id);
                           onSelectAccountId(item.account_id);
                           onSelectCalcRunId(item.calc_run_id);
                         }}
@@ -392,9 +469,29 @@ export function RewardsTab({
                         <td><RewardStatusBadge status={item.status} /></td>
                         <td>
                           <div>{item.product?.name ?? "-"}</div>
-                          <div className="font-mono text-xs text-slate-500">{item.account_staking_id ?? "-"}</div>
+                          <div className="font-mono text-xs text-slate-500">{item.account_staking_id ?? item.source_account_staking_id ?? "-"}</div>
+                          {item.reward_type === "DIRECT_REFERRAL" ? (
+                            <div className="mt-1 text-xs text-slate-400">
+                              source: {item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}
+                            </div>
+                          ) : null}
                         </td>
-                        <td className="font-mono text-xs text-slate-400">{item.calc_run_id ?? "-"}</td>
+                        <td className="font-mono text-xs text-slate-400">
+                          <div>{item.calc_run_id ?? "-"}</div>
+                          {item.calc_run_id ? (
+                            <button
+                              type="button"
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpenCalcRun(item.calc_run_id!);
+                              }}
+                            >
+                              상세
+                              <ExternalLink className="h-3 w-3" />
+                            </button>
+                          ) : null}
+                        </td>
                         <td className="text-slate-400">{formatRewardDateTime(item.confirmed_at)}</td>
                         <td className="text-slate-400">{formatRewardDateTime(item.available_at)}</td>
                       </tr>
@@ -417,13 +514,24 @@ export function RewardsTab({
       </div>
 
       <DailyRewardRunModal
-        open={runModalOpen}
-        submitting={runSubmitting}
-        error={runError}
-        result={runResult}
-        onClose={() => setRunModalOpen(false)}
+        open={dailyRunModalOpen}
+        submitting={dailyRunSubmitting}
+        error={dailyRunError}
+        result={dailyRunResult}
+        onClose={() => setDailyRunModalOpen(false)}
         onSubmit={handleRunDailyReward}
-        onOpenCalcRunRewards={openCalcRunRewards}
+        onOpenCalcRunRewards={(calcRunId) => openCalcRunRewards(calcRunId)}
+      />
+      <DirectReferralRunModal
+        open={directRunModalOpen}
+        role={role}
+        submitting={directRunSubmitting}
+        error={directRunError}
+        result={directRunResult}
+        onClose={() => setDirectRunModalOpen(false)}
+        onSubmit={handleRunDirectReferral}
+        onOpenCalcRunRewards={(calcRunId) => openCalcRunRewards(calcRunId, "DIRECT_REFERRAL")}
+        onOpenCalcRunDetail={onOpenCalcRun}
       />
     </div>
   );

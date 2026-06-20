@@ -160,6 +160,7 @@ export type RewardSummary = {
   withdrawable_reward_amount_base: string;
   withdrawn_reward_amount_base: string;
   daily_reward_amount_base: string;
+  bonus_reward_amount_base?: string;
   reward_count: number;
 };
 
@@ -281,6 +282,10 @@ export type RewardMetadata = Partial<{
   daily_interest_bps_snapshot: string;
   duration_days_snapshot: number;
   denominator: string;
+  formula_version: string;
+  source_principal_amount_base: string;
+  direct_referral_rate_bps: string;
+  referral_depth: number;
   original_reward_id: string;
   original_source_reference: string;
   reason: string;
@@ -295,6 +300,12 @@ export type RewardStakingSummary = {
   status: AccountStakingStatus;
 };
 
+export type RewardSourceStakingSummary = {
+  id: string;
+  principal_amount_base: string | null;
+  status: AccountStakingStatus | null;
+};
+
 export type RewardProductSummary = {
   id: string;
   name: string;
@@ -306,6 +317,14 @@ export type RewardAccountSummary = {
   id: string;
   login_id: string | null;
   display_name: string | null;
+};
+
+export type RewardSourceSummary = {
+  account_id?: string | null;
+  login_id?: string | null;
+  display_name: string | null;
+  direct_referral_rate_bps: string | null;
+  staking: RewardSourceStakingSummary | null;
 };
 
 export type RewardCalcRunSummary = {
@@ -340,6 +359,8 @@ export type AdminRewardListItem = {
   amount_base: string;
   status: RewardStatus;
   account_staking_id: string | null;
+  source_account_id?: string | null;
+  source_account_staking_id?: string | null;
   policy_version_id: string;
   calc_run_id: string | null;
   source_reference: string;
@@ -353,6 +374,7 @@ export type AdminRewardListItem = {
   staking: RewardStakingSummary | null;
   product: RewardProductSummary | null;
   account?: RewardAccountSummary;
+  source?: RewardSourceSummary | null;
   calc_run?: RewardCalcRunSummary | null;
 };
 
@@ -377,6 +399,38 @@ export type DailyRewardRunResponse = {
   duplicate_skip_count: number;
   failed_count: number;
   total_reward_amount_base: string;
+};
+
+export type DirectReferralRunRequest = {
+  policy_version_id: string;
+  activated_from: string;
+  activated_to: string;
+};
+
+export type DirectReferralRunResponse = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  no_sponsor_skip_count: number;
+  inactive_sponsor_skip_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
+  status: "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | "FINALIZED";
+};
+
+export type DirectReferralSingleRunRequest = {
+  policy_version_id?: string;
+};
+
+export type DirectReferralSingleRunResponse = {
+  calc_run_id: string | null;
+  status: string;
+  result_type: "created" | "duplicate" | "no_sponsor" | "inactive_sponsor" | "zero_reward" | "conflict";
+  reward_id: string | null;
+  existing_reward_id: string | null;
 };
 
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
@@ -838,6 +892,18 @@ export const api = {
     ),
   runDailyReward: (actorId: string, body: DailyRewardRunRequest) =>
     request<DailyRewardRunResponse>(`/api/admin/calc-runs/daily-reward`, { method: "POST", actorId, body: JSON.stringify(body) }),
+  runDirectReferralReward: (actorId: string, body: DirectReferralRunRequest) =>
+    request<DirectReferralRunResponse>(`/api/admin/rewards/direct-referral/run`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runDirectReferralForStaking: (actorId: string, stakingId: string, body?: DirectReferralSingleRunRequest) =>
+    request<DirectReferralSingleRunResponse>(`/api/admin/stakings/${stakingId}/direct-referral-calculate`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body ?? {}),
+    }),
   reverseAdminReward: (actorId: string, rewardId: string, body: { reason: string }) =>
     request<{ reward: AdminRewardDetail }>(`/api/admin/rewards/${rewardId}/reverse`, {
       method: "POST",

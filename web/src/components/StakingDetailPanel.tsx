@@ -1,8 +1,20 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { api, ApiError, type AdminStakingDetail, type SessionRole } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  type AdminStakingDetail,
+  type DirectReferralSingleRunResponse,
+  type SessionRole,
+} from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { formatDailyInterestBps, getAdminStakingActionState } from "@/lib/staking";
+import {
+  canManageDirectReferral,
+  canRunDirectReferralForStaking,
+  getDirectReferralResultTone,
+  getDirectReferralSingleResultLabel,
+} from "@/lib/rewards";
 import { Button, Card, FeedbackState } from "@/components/ui";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
 
@@ -13,17 +25,23 @@ export function StakingDetailPanel({
   role,
   staking,
   onUpdated,
+  onOpenReward,
 }: {
   actorId: string;
   role: SessionRole;
   staking: AdminStakingDetail | null;
   onUpdated: (staking: AdminStakingDetail) => void | Promise<void>;
+  onOpenReward?: (rewardId: string) => void;
 }) {
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [directReferralOpen, setDirectReferralOpen] = useState(false);
+  const [directReferralBusy, setDirectReferralBusy] = useState(false);
+  const [directReferralError, setDirectReferralError] = useState<string | null>(null);
+  const [directReferralResult, setDirectReferralResult] = useState<DirectReferralSingleRunResponse | null>(null);
 
   const actionState = useMemo(
     () => (staking ? getAdminStakingActionState(staking.status) : { canActivate: false, canReject: false, canCancel: false }),
@@ -83,6 +101,25 @@ export function StakingDetailPanel({
     }
   }
 
+  async function handleDirectReferralRun() {
+    if (!staking) return;
+
+    try {
+      setDirectReferralBusy(true);
+      setDirectReferralError(null);
+      const result = await api.runDirectReferralForStaking(actorId, staking.id);
+      setDirectReferralResult(result);
+    } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.status === 409) {
+        setDirectReferralError("현재 상태가 변경되었거나 실행 중인 direct referral 계산이 있습니다. 목록을 새로고침해 주세요.");
+      } else {
+        setDirectReferralError(submitError instanceof Error ? submitError.message : "직추천 보상 계산 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setDirectReferralBusy(false);
+    }
+  }
+
   return (
     <Card>
       <div className="flex items-center justify-between gap-3">
@@ -127,6 +164,19 @@ export function StakingDetailPanel({
       <div className="mt-5 space-y-3">
         {error ? <FeedbackState title="상태 처리 실패" description={error} tone="error" /> : null}
         {success ? <FeedbackState title="상태 처리 완료" description={success} /> : null}
+        {directReferralResult ? (
+          <FeedbackState
+            title={`직추천 계산 결과: ${getDirectReferralSingleResultLabel(directReferralResult.result_type)}`}
+            description={
+              directReferralResult.reward_id
+                ? `reward_id ${directReferralResult.reward_id}가 생성되었습니다.`
+                : directReferralResult.existing_reward_id
+                  ? `existing_reward_id ${directReferralResult.existing_reward_id}와 연결됩니다.`
+                  : `status=${directReferralResult.status}`
+            }
+            tone={getDirectReferralResultTone(directReferralResult) === "error" ? "error" : getDirectReferralResultTone(directReferralResult) === "success" ? "success" : "default"}
+          />
+        ) : null}
         {role !== "ADMIN" ? (
           <FeedbackState title="조회 전용" description="READER는 상태 변경 버튼이 노출되지 않고 mutate API도 호출하지 않습니다." />
         ) : (
@@ -142,8 +192,16 @@ export function StakingDetailPanel({
                 관리자 취소
               </Button>
             ) : null}
+            {canManageDirectReferral(role) && canRunDirectReferralForStaking(staking) ? (
+              <Button variant="secondary" onClick={() => setDirectReferralOpen(true)}>
+                직추천 보상 계산
+              </Button>
+            ) : null}
             {!actionState.canActivate && !actionState.canReject && !actionState.canCancel ? (
               <FeedbackState title="추가 상태 변경 없음" description="현재 상태에서는 관리자 액션 버튼을 노출하지 않습니다." />
+            ) : null}
+            {canManageDirectReferral(role) && !canRunDirectReferralForStaking(staking) ? (
+              <FeedbackState title="직추천 계산 비대상" description="ACTIVE + activated_at 존재 + cancel_requested_at 없음 조건일 때만 단건 실행 버튼을 노출합니다." />
             ) : null}
           </div>
         )}
@@ -201,6 +259,60 @@ export function StakingDetailPanel({
               </Button>
               <Button variant={actionMode === "activate" ? "primary" : "danger"} onClick={() => void handleAction()} disabled={busy}>
                 {busy ? "처리 중..." : getActionConfirmLabel(actionMode)}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {directReferralOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">direct-referral</div>
+                <h3 className="mt-2 text-xl font-bold text-slate-50">직추천 보상 계산 확인</h3>
+              </div>
+              <button type="button" className="rounded-2xl border border-slate-800 p-2 text-slate-400 hover:text-slate-100" onClick={() => setDirectReferralOpen(false)}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+              <div>선택한 ACTIVE staking에 대해 DIRECT_REFERRAL 보상을 단건 계산합니다.</div>
+              <div className="mt-2 text-xs text-slate-500">중복 reward가 있으면 duplicate로 반환하고 새 row를 생성하지 않습니다.</div>
+            </div>
+
+            {directReferralError ? <div className="mt-4"><FeedbackState title="실행 실패" description={directReferralError} tone="error" /></div> : null}
+            {directReferralResult ? (
+              <div className="mt-4">
+                <FeedbackState
+                  title={getDirectReferralSingleResultLabel(directReferralResult.result_type)}
+                  description={`calc_run_id=${directReferralResult.calc_run_id ?? "-"} / status=${directReferralResult.status}`}
+                  tone={getDirectReferralResultTone(directReferralResult) === "error" ? "error" : getDirectReferralResultTone(directReferralResult) === "success" ? "success" : "default"}
+                />
+                {directReferralResult.reward_id || directReferralResult.existing_reward_id ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {directReferralResult.reward_id ? (
+                      <Button variant="secondary" onClick={() => onOpenReward?.(directReferralResult.reward_id!)}>
+                        생성된 reward 보기
+                      </Button>
+                    ) : null}
+                    {directReferralResult.existing_reward_id ? (
+                      <Button variant="secondary" onClick={() => onOpenReward?.(directReferralResult.existing_reward_id!)}>
+                        기존 reward 보기
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setDirectReferralOpen(false)} disabled={directReferralBusy}>
+                닫기
+              </Button>
+              <Button onClick={() => void handleDirectReferralRun()} disabled={directReferralBusy}>
+                {directReferralBusy ? "처리 중..." : "직추천 보상 계산 실행"}
               </Button>
             </div>
           </div>

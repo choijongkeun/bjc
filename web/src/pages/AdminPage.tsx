@@ -24,6 +24,7 @@ export default function AdminPage() {
   const currentTab = (searchParams.get("tab") as TabKey | null) ?? "policies";
   const selectedAccountId = searchParams.get("accountId");
   const selectedCalcRunId = searchParams.get("calcRunId");
+  const selectedRewardId = searchParams.get("rewardId");
 
   const safeTab = useMemo<TabKey>(() => {
     if (!allowedTabs.has(currentTab)) {
@@ -35,7 +36,7 @@ export default function AdminPage() {
     return currentTab;
   }, [currentTab, role]);
 
-  function updateParams(next: { tab?: TabKey; accountId?: string | null; calcRunId?: string | null }) {
+  function updateParams(next: { tab?: TabKey; accountId?: string | null; calcRunId?: string | null; rewardId?: string | null }) {
     const params = new URLSearchParams(searchParams);
     if (next.tab) params.set("tab", next.tab);
     if (next.accountId === null) {
@@ -47,6 +48,11 @@ export default function AdminPage() {
       params.delete("calcRunId");
     } else if (next.calcRunId) {
       params.set("calcRunId", next.calcRunId);
+    }
+    if (next.rewardId === null) {
+      params.delete("rewardId");
+    } else if (next.rewardId) {
+      params.set("rewardId", next.rewardId);
     }
     setSearchParams(params);
   }
@@ -64,14 +70,23 @@ export default function AdminPage() {
   }
 
   function openStakings(accountId: string) {
-    updateParams({ tab: "stakings", accountId });
+    updateParams({ tab: "stakings", accountId, rewardId: null });
   }
 
-  function openRewards(target: { accountId?: string | null; calcRunId?: string | null }) {
+  function openRewards(target: { accountId?: string | null; calcRunId?: string | null; rewardId?: string | null }) {
     updateParams({
       tab: "rewards",
       accountId: target.accountId ?? null,
       calcRunId: target.calcRunId ?? null,
+      rewardId: target.rewardId ?? null,
+    });
+  }
+
+  function openCalcRun(calcRunId: string) {
+    updateParams({
+      tab: "calc",
+      calcRunId,
+      rewardId: null,
     });
   }
 
@@ -87,7 +102,13 @@ export default function AdminPage() {
     <AdminShell activeTab={safeTab} onTabChange={changeTab}>
       {safeTab === "policies" ? <PoliciesTab actorId={actorId} role={role} /> : null}
       {safeTab === "stakings" ? (
-        <StakingsTab actorId={actorId} role={role} selectedAccountId={selectedAccountId} onSelectAccountId={selectAccount} />
+        <StakingsTab
+          actorId={actorId}
+          role={role}
+          selectedAccountId={selectedAccountId}
+          onSelectAccountId={selectAccount}
+          onOpenReward={(rewardId) => openRewards({ rewardId })}
+        />
       ) : null}
       {safeTab === "accounts" ? (
         <AccountsTab
@@ -110,15 +131,26 @@ export default function AdminPage() {
         />
       ) : null}
       {safeTab === "ledger" ? <LedgerEventsTab actorId={actorId} role={role} /> : null}
-      {safeTab === "calc" ? <CalcSettlementTab actorId={actorId} role={role} onOpenRewards={(calcRunId) => openRewards({ calcRunId })} /> : null}
+      {safeTab === "calc" ? (
+        <CalcSettlementTab
+          actorId={actorId}
+          role={role}
+          selectedCalcRunId={selectedCalcRunId}
+          onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
+          onOpenRewards={(calcRunId) => openRewards({ calcRunId })}
+        />
+      ) : null}
       {safeTab === "rewards" ? (
         <RewardsTab
           actorId={actorId}
           role={role}
           selectedAccountId={selectedAccountId}
           selectedCalcRunId={selectedCalcRunId}
+          selectedRewardId={selectedRewardId}
           onSelectAccountId={(accountId) => updateParams({ accountId })}
           onSelectCalcRunId={(calcRunId) => updateParams({ calcRunId })}
+          onSelectRewardId={(rewardId) => updateParams({ rewardId })}
+          onOpenCalcRun={openCalcRun}
         />
       ) : null}
       {safeTab === "withdrawals" ? (

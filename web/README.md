@@ -75,7 +75,7 @@ npm run preview -- --host 0.0.0.0 --port 4175
 - `READER`: 조회 전용, staking mutate 버튼 비노출
 - `ADMIN`: staking 조회 + 활성화/거절/관리자 취소 가능
 - `READER`: rewards 조회 가능, `DAILY_REWARD` 실행/`Reward reversal` 버튼 비노출
-- `ADMIN`: rewards 조회 + 수동 `DAILY_REWARD` 실행 + `Reward reversal` 가능
+- `ADMIN`: rewards 조회 + 수동 `DAILY_REWARD` 실행 + `DIRECT_REFERRAL` 실행 + `Reward reversal` 가능
 - `READER`: withdrawals 조회 가능, 승인/거절/처리/완료/실패 버튼 비노출
 - `ADMIN`: withdrawals 조회 + 승인/거절/처리 시작/완료/실패 가능
 
@@ -145,10 +145,41 @@ npm run build
 - `Accounts` 탭에서 회원별 최근 보상 표시 및 `/admin?tab=rewards&accountId=<id>` 이동
 - `Calc` 탭에서 `DAILY_REWARD` run에 대해 rewards 탭 이동
 - `ADMIN` 전용 수동 `DAILY_REWARD` 실행 모달
+- `ADMIN` 전용 `DIRECT_REFERRAL` 배치 실행 모달
+- `DIRECT_REFERRAL` 실행 결과 summary, duplicate/skip/conflict/failed 집계 표시
+- 실행 성공 후 `calc_run_id`와 `reward_type=DIRECT_REFERRAL` 기준 rewards 목록 이동 지원
+- `Reward` 상세 패널에서 `DIRECT_REFERRAL` source account/source staking/source principal/rate/formula 표시
 - `ADMIN` 전용 `CONFIRMED` 일반 보상 reversal
 - `READER`는 조회 전용이며 실행/reversal 버튼이 노출되지 않음
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 조정 가능
+- 현재 V1 `DIRECT_REFERRAL` 정책:
+  - 대상은 `ACTIVE` + `activated_at 존재` + `cancel_requested_at 없음`
+  - sponsor는 `ACTIVE USER`만 허용
+  - 동일 source staking 보상은 duplicate로 처리
+  - `no_sponsor`, `inactive_sponsor`, `zero_reward`, `duplicate`, `conflict`, `failed` 결과를 구분
+  - 자동 reversal은 미구현이며 기존 수동 reward reversal 흐름만 유지
+
+## Direct Referral Admin Guide
+
+- 배치 실행:
+  - `Rewards` 탭에서 `직추천 보상 실행`
+  - 입력값: `policy_version_id`, `activated_from`, `activated_to`
+  - 날짜 범위는 `from <= to`여야 합니다.
+- 단건 실행:
+  - `Stakings` 상세에서 eligible ACTIVE staking에만 `직추천 보상 계산` 버튼 표시
+  - `CANCEL_REQUESTED` staking에는 버튼이 숨겨집니다.
+- 결과 해석:
+  - `created`: 새 reward 생성
+  - `duplicate`: 동일 reward 기존 row 재사용
+  - `no_sponsor`: sponsor 없음
+  - `inactive_sponsor`: sponsor 비활성 또는 부적격
+  - `zero_reward`: 계산 결과 0
+  - `conflict`: 기존 reward snapshot 불일치
+  - `failed`: 실행 중 예외
+- 권한:
+  - `ADMIN`만 batch/single 실행 가능
+  - `READER`는 조회 전용이며 실행 버튼이 노출되지 않음
 
 ## Withdrawals UI 범위
 
