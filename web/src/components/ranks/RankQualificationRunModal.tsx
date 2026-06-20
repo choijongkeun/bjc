@@ -37,7 +37,7 @@ export function RankQualificationRunModal({
 
   async function handleSubmit() {
     if (!policyVersionId.trim() || !calculationDate.trim()) {
-      setLocalError("policy_version_id와 calculation_date를 모두 입력해 주세요.");
+      setLocalError("정책 버전과 계산 기준일을 모두 입력해 주세요.");
       return;
     }
     setLocalError(null);
@@ -52,7 +52,7 @@ export function RankQualificationRunModal({
       <div className="w-full max-w-3xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Rank Qualification</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">직급 산정 실행</div>
             <h3 className="mt-2 text-xl font-bold text-slate-50">직급 산정 실행</h3>
           </div>
           <button type="button" className="rounded-2xl border border-slate-800 p-2 text-slate-400 hover:text-slate-100" onClick={onClose}>
@@ -61,11 +61,10 @@ export function RankQualificationRunModal({
         </div>
 
         <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
-          <div className="font-semibold text-slate-100">V1 정책</div>
+          <div className="font-semibold text-slate-100">실행 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
-            <li>직급 조건과 보상률은 모두 `rank_rules`를 source of truth로 사용합니다.</li>
-            <li>자동 demotion, carry-over, strong leg cap은 이번 범위에 포함하지 않습니다.</li>
-            <li>동일 날짜 재실행 시 기존 calc_run 재사용 또는 중복 거절 규칙이 적용됩니다.</li>
+            <li>정책 버전과 계산 기준일에 따라 직급을 산정합니다.</li>
+            <li>같은 기준으로 재실행하면 기존 결과와 중복 여부를 확인합니다.</li>
           </ul>
         </div>
 
@@ -74,7 +73,7 @@ export function RankQualificationRunModal({
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">policy_version_id</div>
+            <div className="mb-2 text-sm font-semibold text-slate-200">정책 버전</div>
             <input
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={policyVersionId}
@@ -84,7 +83,7 @@ export function RankQualificationRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">calculation_date</div>
+            <div className="mb-2 text-sm font-semibold text-slate-200">계산 기준일</div>
             <input
               type="date"
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"

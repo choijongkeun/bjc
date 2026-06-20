@@ -141,19 +141,19 @@ export function StakingsTab({
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="staking id / login_id / display_name"
+            placeholder="스테이킹 ID / 아이디 / 이름"
             value={draftFilters.q}
             onChange={(event) => setDraftFilters((current) => ({ ...current, q: event.target.value }))}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="account_id"
+            placeholder="회원 ID"
             value={draftFilters.account_id}
             onChange={(event) => setDraftFilters((current) => ({ ...current, account_id: event.target.value }))}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="product_id"
+            placeholder="상품 ID"
             value={draftFilters.product_id}
             onChange={(event) => setDraftFilters((current) => ({ ...current, product_id: event.target.value }))}
           />
@@ -162,13 +162,13 @@ export function StakingsTab({
             value={draftFilters.status}
             onChange={(event) => setDraftFilters((current) => ({ ...current, status: event.target.value as Filters["status"] }))}
           >
-            <option value="">전체 status</option>
-            <option value="PENDING">PENDING</option>
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="CANCEL_REQUESTED">CANCEL_REQUESTED</option>
-            <option value="CANCELLED">CANCELLED</option>
-            <option value="MATURED">MATURED</option>
-            <option value="CLOSED">CLOSED</option>
+            <option value="">전체 상태</option>
+            <option value="PENDING">대기</option>
+            <option value="ACTIVE">활성</option>
+            <option value="CANCEL_REQUESTED">취소 요청</option>
+            <option value="CANCELLED">취소</option>
+            <option value="MATURED">만기</option>
+            <option value="CLOSED">종료</option>
           </select>
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
@@ -221,10 +221,10 @@ export function StakingsTab({
               value={sort}
               onChange={(event) => setSort(event.target.value as AccountStakingSort)}
             >
-              <option value="created_at_desc">created_at desc</option>
-              <option value="created_at_asc">created_at asc</option>
-              <option value="matures_at_asc">matures_at asc</option>
-              <option value="matures_at_desc">matures_at desc</option>
+              <option value="created_at_desc">생성일 최신순</option>
+              <option value="created_at_asc">생성일 오래된순</option>
+              <option value="matures_at_asc">만기일 빠른순</option>
+              <option value="matures_at_desc">만기일 늦은순</option>
             </select>
             <select
               className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
@@ -249,17 +249,17 @@ export function StakingsTab({
           <table className="data-table min-w-full">
             <thead>
               <tr>
-                <th>staking id</th>
-                <th>login_id</th>
-                <th>display_name</th>
+                <th>스테이킹 ID</th>
+                <th>아이디</th>
+                <th>이름</th>
                 <th>상품명</th>
                 <th>원금</th>
-                <th>snapshot 이율</th>
-                <th>snapshot 기간</th>
-                <th>status</th>
-                <th>created_at</th>
-                <th>started_at</th>
-                <th>matures_at</th>
+                <th>적용 이율</th>
+                <th>적용 기간</th>
+                <th>상태</th>
+                <th>생성 일시</th>
+                <th>시작 일시</th>
+                <th>만기 일시</th>
               </tr>
             </thead>
             <tbody>

@@ -10,6 +10,7 @@ import {
   type SessionRole,
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getDisplayLabel } from "@/lib/display";
 import { formatRewardAmountBase, formatRewardDate } from "@/lib/rewards";
 import { Button, Card, FeedbackState, TableShell } from "@/components/ui";
 
@@ -138,16 +139,16 @@ export function AccountRankDetailPanel({
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Account Rank Detail</div>
+          <div className="text-xs tracking-[0.16em] text-slate-500">회원 직급 상세</div>
           <h3 className="mt-2 text-lg font-bold text-slate-50">{rank?.account.display_name ?? rank?.account.login_id ?? accountId}</h3>
         </div>
         {role === "ADMIN" ? (
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => void runQualificationForAccount()} disabled={qualificationSubmitting}>
-              {qualificationSubmitting ? "실행 중..." : "단건 Qualification"}
+              {qualificationSubmitting ? "실행 중..." : "직급 산정 단건 실행"}
             </Button>
             <Button onClick={() => void runBonusForAccount()} disabled={bonusSubmitting}>
-              {bonusSubmitting ? "실행 중..." : "단건 Rank Bonus"}
+              {bonusSubmitting ? "실행 중..." : "직급 보상 단건 실행"}
             </Button>
           </div>
         ) : null}
@@ -158,8 +159,8 @@ export function AccountRankDetailPanel({
       {qualificationResult ? (
         <div className="mt-4">
           <FeedbackState
-            title="Qualification 완료"
-            description={`result_status=${qualificationResult.result_status}, applied_rank_level=${qualificationResult.applied_rank_level ?? "-"}`}
+            title="직급 산정 완료"
+            description={`상태 ${getDisplayLabel(qualificationResult.result_status)}, 적용 직급 ${qualificationResult.applied_rank_level ?? "-"}`}
             tone="success"
           />
         </div>
@@ -167,8 +168,8 @@ export function AccountRankDetailPanel({
       {bonusResult ? (
         <div className="mt-4">
           <FeedbackState
-            title="Rank Bonus 결과"
-            description={`result_type=${bonusResult.result_type}, amount=${bonusResult.rank_bonus_amount_base}`}
+            title="직급 보상 결과"
+            description={`결과 ${getDisplayLabel(bonusResult.result_type)}, 보상 금액 ${formatBaseAmount(bonusResult.rank_bonus_amount_base, 0)}`}
             tone={bonusResult.result_type === "conflict" ? "error" : "success"}
           />
         </div>
@@ -177,28 +178,28 @@ export function AccountRankDetailPanel({
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="현재 직급" value={rank?.rank_status?.current_rank_level === null || rank?.rank_status?.current_rank_level === undefined ? "-" : String(rank.rank_status.current_rank_level)} />
         <MetricCard label="다음 직급" value={rank?.next_rank?.rank_level === null || rank?.next_rank?.rank_level === undefined ? "-" : String(rank.next_rank.rank_level)} />
-        <MetricCard label="직추천 ACTIVE" value={rank?.latest_qualification_result ? String(rank.latest_qualification_result.direct_active_referral_count) : "-"} />
+        <MetricCard label="직추천 회원 수" value={rank?.latest_qualification_result ? String(rank.latest_qualification_result.direct_active_referral_count) : "-"} />
         <MetricCard label="개인 활성 스테이킹" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.personal_active_stake_amount_base, 0) : "-"} />
-        <MetricCard label="LEFT" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.left_leg_volume_base, 0) : "-"} />
-        <MetricCard label="RIGHT" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.right_leg_volume_base, 0) : "-"} />
-        <MetricCard label="WEAK" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.weak_leg_volume_base, 0) : "-"} />
+        <MetricCard label="좌측 레그" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.left_leg_volume_base, 0) : "-"} />
+        <MetricCard label="우측 레그" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.right_leg_volume_base, 0) : "-"} />
+        <MetricCard label="약한 레그" value={rank?.latest_qualification_result ? formatBaseAmount(rank.latest_qualification_result.weak_leg_volume_base, 0) : "-"} />
         <MetricCard label="마지막 산정일" value={rank?.latest_qualification_result?.calculation_date ?? "-"} />
       </div>
 
       <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Next Rank Conditions</div>
+        <div className="text-xs tracking-[0.16em] text-slate-500">다음 직급 조건</div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {rank?.next_rank_progress?.length ? (
             rank.next_rank_progress.map((item) => (
               <div key={item.metric} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold text-slate-100">{item.metric}</div>
+                  <div className="font-semibold text-slate-100">{getProgressMetricLabel(item.metric)}</div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.met ? "bg-emerald-500/15 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`}>
-                    {item.met ? "MET" : "PENDING"}
+                    {item.met ? "충족" : "미충족"}
                   </span>
                 </div>
                 <div className="mt-3 text-sm text-slate-300">
-                  current: {String(item.current)} / required: {String(item.required)}
+                  현재 {String(item.current)} / 필요 {String(item.required)}
                 </div>
               </div>
             ))
@@ -216,7 +217,7 @@ export function AccountRankDetailPanel({
             <div className="text-sm font-semibold text-slate-100">최근 직급 이력</div>
             {history[0]?.calc_run_id ? (
               <Button variant="ghost" onClick={() => onSelectCalcRunId(history[0].calc_run_id)}>
-                최근 calc_run 보기
+                최근 계산 실행 보기
               </Button>
             ) : null}
           </div>
@@ -224,17 +225,17 @@ export function AccountRankDetailPanel({
             <table className="data-table min-w-full">
               <thead>
                 <tr>
-                  <th>date</th>
-                  <th>change</th>
-                  <th>final</th>
-                  <th>weak</th>
+                  <th>기준일</th>
+                  <th>변경 구분</th>
+                  <th>최종 직급</th>
+                  <th>약한 레그</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((item) => (
                   <tr key={item.id}>
                     <td>{item.effective_date}</td>
-                    <td>{item.change_type}</td>
+                    <td>{getDisplayLabel(item.change_type)}</td>
                     <td className="tabular text-right">{item.final_rank_level ?? "-"}</td>
                     <td className="tabular text-right">{formatBaseAmount(item.weak_leg_volume_base, 0)}</td>
                   </tr>
@@ -246,19 +247,19 @@ export function AccountRankDetailPanel({
 
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold text-slate-100">RANK_BONUS rewards</div>
+            <div className="text-sm font-semibold text-slate-100">직급 보상 내역</div>
             <Button variant="ghost" onClick={() => onOpenRewards({ accountId })}>
-              전체 rewards 보기
+              전체 보상 보기
             </Button>
           </div>
           <TableShell height="max-h-[320px]">
             <table className="data-table min-w-full">
               <thead>
                 <tr>
-                  <th>date</th>
-                  <th>amount</th>
-                  <th>status</th>
-                  <th>detail</th>
+                  <th>보상 기준일</th>
+                  <th>보상 금액</th>
+                  <th>상태</th>
+                  <th>보기</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,13 +267,13 @@ export function AccountRankDetailPanel({
                   <tr key={reward.id}>
                     <td>{formatRewardDate(reward.reward_date)}</td>
                     <td className="tabular text-right">{formatRewardAmountBase(reward.amount_base)}</td>
-                    <td>{reward.status}</td>
+                    <td>{getDisplayLabel(reward.status)}</td>
                     <td>
                       <Button
                         variant="ghost"
                         onClick={() => onOpenRewards({ accountId, rewardId: reward.id, calcRunId: reward.calc_run_id ?? null })}
                       >
-                        detail
+                        상세 보기
                       </Button>
                     </td>
                   </tr>
@@ -293,4 +294,16 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <div className="mt-2 tabular text-lg font-semibold text-slate-50">{value}</div>
     </div>
   );
+}
+
+function getProgressMetricLabel(metric: string) {
+  const labelMap: Record<string, string> = {
+    direct_active_referral_count: "직추천 회원 수",
+    personal_active_stake_amount_base: "개인 활성 스테이킹",
+    left_leg_volume_base: "좌측 레그 매출",
+    right_leg_volume_base: "우측 레그 매출",
+    weak_leg_volume_base: "약한 레그 매출",
+  };
+
+  return labelMap[metric] ?? metric;
 }

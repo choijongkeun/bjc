@@ -67,8 +67,8 @@ describe("rank admin UI", () => {
       />
     );
 
-    expect(html).toContain("Qualification 실행");
-    expect(html).toContain("Rank Bonus 실행");
+    expect(html).toContain("직급 산정 실행");
+    expect(html).toContain("직급 보상 실행");
   });
 
   it("hides rank execution buttons for READER", () => {
@@ -85,9 +85,9 @@ describe("rank admin UI", () => {
       />
     );
 
-    expect(html).not.toContain("Qualification 실행");
-    expect(html).not.toContain("Rank Bonus 실행");
-    expect(html).toContain("READER는 rank 실행 버튼이 비노출되며 조회만 가능합니다.");
+    expect(html).not.toContain(">직급 산정 실행<");
+    expect(html).not.toContain(">직급 보상 실행<");
+    expect(html).toContain("READER는 직급 실행 기능 없이 조회만 가능합니다.");
   });
 
   it("renders rank bonus metadata in reward detail without sensitive fields", () => {
@@ -130,8 +130,8 @@ describe("rank admin UI", () => {
       />
     );
 
-    expect(html).toContain("total_base_daily_reward");
-    expect(html).toContain("total_rank_bonus");
+    expect(html).toContain("총 기준 보상 금액");
+    expect(html).toContain("총 직급 보상 금액");
     expect(html).toContain("이 실행의 보상 보기");
   });
 });

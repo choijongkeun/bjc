@@ -44,8 +44,8 @@ export function DirectReferralRunSummaryPanel({
     <div className={`rounded-2xl p-5 ${wrapperClassName}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.16em] text-slate-300/80">Run Result</div>
-          <div className="mt-2 text-lg font-bold text-slate-50">DIRECT_REFERRAL 실행 결과</div>
+          <div className="text-xs tracking-[0.16em] text-slate-300/80">실행 결과</div>
+          <div className="mt-2 text-lg font-bold text-slate-50">직추천 보상 실행 결과</div>
         </div>
         <div className="flex items-center gap-2">
           {result.conflict_count > 0 ? <AlertTriangle className="h-4 w-4 text-amber-300" /> : null}
@@ -63,7 +63,7 @@ export function DirectReferralRunSummaryPanel({
         </Button>
         {onOpenCalcRunDetail ? (
           <Button variant="ghost" onClick={() => onOpenCalcRunDetail(result.calc_run_id)}>
-            calc_run 상세 보기
+            계산 실행 상세 보기
           </Button>
         ) : null}
       </div>
@@ -139,7 +139,7 @@ export function DirectReferralRunModal({
       <div className="w-full max-w-3xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Direct Referral Run</div>
+            <div className="text-xs tracking-[0.18em] text-slate-500">직추천 보상 실행</div>
             <h3 className="mt-2 text-xl font-bold text-slate-50">직추천 보상 배치 실행</h3>
           </div>
           <button type="button" className="rounded-2xl border border-slate-800 p-2 text-slate-400 hover:text-slate-100" onClick={onClose}>
@@ -150,11 +150,9 @@ export function DirectReferralRunModal({
         <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
           <div className="font-semibold text-slate-100">실행 전 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
-            <li>대상은 `ACTIVE` 스테이킹이며 `CANCEL_REQUESTED`는 제외됩니다.</li>
-            <li>sponsor는 `ACTIVE USER`만 대상이며 `BLOCKED/WITHDRAWN`은 skip 됩니다.</li>
-            <li>보상률은 `referral_bonus_rules depth=1` 정책 rule 기준으로 계산됩니다.</li>
-            <li>동일 source staking 보상은 duplicate로 처리되어 중복 생성되지 않습니다.</li>
-            <li>자동 reversal은 이번 버전에 포함되지 않습니다.</li>
+            <li>활성 스테이킹만 대상이며 취소 요청 건은 제외됩니다.</li>
+            <li>활성 회원의 직추천 관계만 계산합니다.</li>
+            <li>동일 스테이킹 기준으로 이미 생성된 보상은 중복으로 처리합니다.</li>
           </ul>
         </div>
 
@@ -162,13 +160,13 @@ export function DirectReferralRunModal({
         {error ? <div className="mt-4"><FeedbackState title="실행 실패" description={error} tone="error" /></div> : null}
         {!canManageDirectReferral(role) ? (
           <div className="mt-4">
-            <FeedbackState title="조회 전용" description="READER는 DIRECT_REFERRAL 실행 버튼과 submit 동작이 비활성화됩니다." />
+            <FeedbackState title="조회 전용" description="READER는 직추천 보상 실행 기능을 사용할 수 없습니다." />
           </div>
         ) : null}
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">policy_version_id</div>
+            <div className="mb-2 text-sm font-semibold text-slate-200">정책 버전</div>
             <input
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={policyVersionId}
@@ -178,7 +176,7 @@ export function DirectReferralRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">activated_from</div>
+            <div className="mb-2 text-sm font-semibold text-slate-200">활성화 시작일</div>
             <input
               type="date"
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
@@ -188,7 +186,7 @@ export function DirectReferralRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">activated_to</div>
+            <div className="mb-2 text-sm font-semibold text-slate-200">활성화 종료일</div>
             <input
               type="date"
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"

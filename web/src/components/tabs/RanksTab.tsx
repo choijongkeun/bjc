@@ -12,6 +12,7 @@ import {
   type SessionRole,
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
+import { getDisplayLabel } from "@/lib/display";
 import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
 import { AccountRankDetailPanel } from "@/components/ranks/AccountRankDetailPanel";
 import { RankBonusRunModal } from "@/components/ranks/RankBonusRunModal";
@@ -282,18 +283,16 @@ export function RanksTab({
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-50">Ranks 운영</h2>
-            <p className="text-sm text-slate-400">
-              직급 산정 실행, 직급 보상 실행, 회원별 직급 상세, calc_run summary와 결과 drill-down을 제공합니다.
-            </p>
+            <h2 className="text-lg font-bold text-slate-50">직급 관리</h2>
+            <p className="text-sm text-slate-400">직급 산정 실행, 직급 보상 실행, 회원별 직급 현황을 확인합니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => setQualificationOpen(true)}>
-                Qualification 실행
+                직급 산정 실행
               </Button>
             ) : null}
-            {role === "ADMIN" ? <Button onClick={() => setBonusOpen(true)}>Rank Bonus 실행</Button> : null}
+            {role === "ADMIN" ? <Button onClick={() => setBonusOpen(true)}>직급 보상 실행</Button> : null}
             <Button variant="secondary" onClick={() => void refreshAll()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               새로고침
@@ -303,7 +302,7 @@ export function RanksTab({
 
         {role !== "ADMIN" ? (
           <div className="mt-4">
-            <FeedbackState title="조회 전용" description="READER는 rank 실행 버튼이 비노출되며 조회만 가능합니다." />
+            <FeedbackState title="조회 전용" description="READER는 직급 실행 기능 없이 조회만 가능합니다." />
           </div>
         ) : null}
 
@@ -327,13 +326,13 @@ export function RanksTab({
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-50">Rank 대상 회원</h3>
-                <p className="text-sm text-slate-400">현재 페이지 회원의 current rank, next rank, qualification metrics를 함께 확인합니다.</p>
+                <h3 className="text-lg font-bold text-slate-50">직급 대상 회원</h3>
+                <p className="text-sm text-slate-400">현재 직급과 다음 직급 조건을 함께 확인합니다.</p>
               </div>
               <div className="flex gap-2">
                 <input
                   className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
-                  placeholder="login_id / display_name"
+                  placeholder="아이디 / 이름"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
@@ -350,21 +349,21 @@ export function RanksTab({
             </div>
 
             {accountError ? <FeedbackState title="회원 조회 실패" description={accountError} tone="error" /> : null}
-            {accountLoading ? <FeedbackState title="회원 목록 로딩 중" description="rank read model을 병행 조회하고 있습니다." /> : null}
+            {accountLoading ? <FeedbackState title="회원 목록 불러오는 중" description="직급 정보를 함께 조회하고 있습니다." /> : null}
 
             <TableShell height="max-h-[520px]">
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
-                    <th>login_id</th>
-                    <th>current</th>
-                    <th>next</th>
-                    <th>direct</th>
-                    <th>active stake</th>
-                    <th>left</th>
-                    <th>right</th>
-                    <th>weak</th>
-                    <th>last qualification</th>
+                    <th>아이디</th>
+                    <th>현재 직급</th>
+                    <th>다음 직급</th>
+                    <th>직추천 수</th>
+                    <th>활성 스테이킹</th>
+                    <th>좌측 레그</th>
+                    <th>우측 레그</th>
+                    <th>약한 레그</th>
+                    <th>최근 산정일</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -409,8 +408,8 @@ export function RanksTab({
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-50">Rank Calc Runs</h3>
-                <p className="text-sm text-slate-400">qualification과 bonus 실행을 함께 조회하고 summary/detail로 이동합니다.</p>
+                <h3 className="text-lg font-bold text-slate-50">직급 계산 실행 내역</h3>
+                <p className="text-sm text-slate-400">직급 산정과 직급 보상 실행 이력을 확인합니다.</p>
               </div>
               <Button variant="secondary" onClick={() => void refreshAll()} disabled={runLoading}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
@@ -418,18 +417,18 @@ export function RanksTab({
               </Button>
             </div>
 
-            {runError ? <FeedbackState title="calc_run 조회 실패" description={runError} tone="error" /> : null}
-            {runLoading ? <FeedbackState title="calc_run 로딩 중" description="rank run 목록을 불러오고 있습니다." /> : null}
+            {runError ? <FeedbackState title="계산 실행 조회 실패" description={runError} tone="error" /> : null}
+            {runLoading ? <FeedbackState title="계산 실행 불러오는 중" description="직급 실행 목록을 불러오고 있습니다." /> : null}
 
             <TableShell height="max-h-[400px]">
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
-                    <th>run_date</th>
-                    <th>run_type</th>
-                    <th>status</th>
-                    <th>policy</th>
-                    <th>detail</th>
+                    <th>실행일</th>
+                    <th>실행 구분</th>
+                    <th>상태</th>
+                    <th>정책 버전</th>
+                    <th>보기</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -440,7 +439,7 @@ export function RanksTab({
                       onClick={() => onSelectCalcRunId(run.id)}
                     >
                       <td>{run.run_date}</td>
-                      <td>{run.run_type}</td>
+                      <td>{getDisplayLabel(run.run_type)}</td>
                       <td><StatusBadge value={run.status} /></td>
                       <td className="font-mono text-xs text-slate-400">{run.policy_version_id}</td>
                       <td>
@@ -451,7 +450,7 @@ export function RanksTab({
                             onOpenCalcRun(run.id);
                           }}
                         >
-                          calc 탭 보기
+                          계산 실행 보기
                         </Button>
                       </td>
                     </tr>
@@ -470,48 +469,48 @@ export function RanksTab({
           <Card>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-50">선택 run summary</h3>
-                <p className="text-sm text-slate-400">audit 추론 없이 qualification/bonus 요약을 직접 확인합니다.</p>
+                <h3 className="text-lg font-bold text-slate-50">선택한 실행 결과</h3>
+                <p className="text-sm text-slate-400">선택한 직급 실행의 요약을 확인합니다.</p>
               </div>
               {selectedRun ? <StatusBadge value={selectedRun.run_type} tone="blue" /> : null}
             </div>
             <div className="mt-4">
-              {summaryError ? <FeedbackState title="run summary 조회 실패" description={summaryError} tone="error" /> : null}
+              {summaryError ? <FeedbackState title="실행 결과 조회 실패" description={summaryError} tone="error" /> : null}
               {!selectedRun ? (
-                <FeedbackState title="선택된 run 없음" description="좌측 rank calc run 목록에서 실행을 선택해 주세요." />
+                <FeedbackState title="선택된 실행 없음" description="좌측 계산 실행 목록에서 실행을 선택해 주세요." />
               ) : summary ? (
                 <RankRunSummary
                   summary={summary}
                   onOpenRewards={(calcRunId) => onOpenRewards({ calcRunId })}
                 />
               ) : (
-                <FeedbackState title="run summary 로딩 중" description="선택한 rank run의 summary를 불러오고 있습니다." />
+                <FeedbackState title="실행 결과 불러오는 중" description="선택한 직급 실행 결과를 불러오고 있습니다." />
               )}
             </div>
             {selectedRun?.run_type === "RANK_QUALIFICATION" ? (
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold text-slate-100">Qualification Results</div>
+                  <div className="text-sm font-semibold text-slate-100">직급 산정 결과</div>
                   <div className="text-xs text-slate-500">총 {resultsTotal}건</div>
                 </div>
                 {resultsLoading ? (
-                  <FeedbackState title="qualification 결과 로딩 중" description="account별 산정 결과를 불러오고 있습니다." />
+                  <FeedbackState title="직급 산정 결과 불러오는 중" description="회원별 산정 결과를 불러오고 있습니다." />
                 ) : (
                   <TableShell height="max-h-[320px]">
                     <table className="data-table min-w-full">
                       <thead>
                         <tr>
-                          <th>account</th>
-                          <th>status</th>
-                          <th>applied</th>
-                          <th>weak</th>
+                          <th>회원 ID</th>
+                          <th>상태</th>
+                          <th>적용 직급</th>
+                          <th>약한 레그</th>
                         </tr>
                       </thead>
                       <tbody>
                         {results.map((item) => (
                           <tr key={item.id} className="cursor-pointer hover:bg-slate-800/60" onClick={() => onSelectAccountId(item.account_id)}>
                             <td className="font-mono text-xs text-slate-400">{item.account_id}</td>
-                            <td>{item.result_status}</td>
+                            <td>{getDisplayLabel(item.result_status)}</td>
                             <td className="tabular text-right">{item.applied_rank_level ?? "-"}</td>
                             <td className="tabular text-right">{formatBaseAmount(item.weak_leg_volume_base, 0)}</td>
                           </tr>
