@@ -132,6 +132,21 @@ export function getVisibleRewardMetadataEntries(metadata?: RewardMetadata | null
     { label: "base daily reward", value: metadata.base_daily_reward_amount_base },
     { label: "qualification calc run", value: metadata.qualification_calc_run_id },
     { label: "qualification result", value: metadata.qualification_result_id },
+    { label: "rule id", value: metadata.rule_id },
+    { label: "rate bps", value: metadata.rate_bps },
+    { label: "weight bps", value: metadata.weight_bps },
+    { label: "base amount", value: metadata.base_amount_base },
+    { label: "pool amount", value: metadata.pool_amount_base },
+    { label: "total score", value: metadata.total_score },
+    { label: "score amount", value: metadata.score_amount_base },
+    { label: "score ratio", value: metadata.score_ratio_bps ? `${metadata.score_ratio_bps} bps` : undefined },
+    { label: "qualification source", value: metadata.qualification_source },
+    { label: "requested amount", value: metadata.requested_amount_base },
+    { label: "release amount", value: metadata.release_amount_base },
+    { label: "freeze amount", value: metadata.freeze_amount_base },
+    { label: "release bps", value: metadata.release_bps ? `${metadata.release_bps} bps` : undefined },
+    { label: "freeze bps", value: metadata.freeze_bps ? `${metadata.freeze_bps} bps` : undefined },
+    { label: "sidecar status", value: metadata.sidecar_status },
   ];
 
   return items

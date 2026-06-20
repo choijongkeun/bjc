@@ -147,7 +147,7 @@ export default function RewardDetailPage() {
               <SectionTitle
                 eyebrow="Metadata"
                 title="허용된 metadata"
-                description="principal snapshot, bps snapshot, duration snapshot, denominator만 표시합니다."
+                description="보상 계산과 출금 판단에 필요한 허용 필드만 제한적으로 표시합니다."
               />
               <div className="mt-5">
                 {metadataEntries.length === 0 ? (

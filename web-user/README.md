@@ -122,9 +122,11 @@ npm run dev
 - Rewards 화면은 `GET /api/me/rewards`, `GET /api/me/rewards/:rewardId`, `GET /api/me/stakings/:stakingId/rewards`를 사용합니다.
 - 금액은 모두 string/base amount로 유지하며 `Number`, `parseInt`, `parseFloat`로 변환하지 않습니다.
 - Rewards 요약 카드의 `출금 가능 보상`, `출금 완료 보상`은 `/withdrawals` 화면으로 연결됩니다.
-- Rewards 요약 카드의 `BONUS 누적`에는 `DIRECT_REFERRAL`과 `RANK_BONUS`가 함께 반영됩니다.
+- Rewards 요약 카드의 `BONUS 누적`에는 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 함께 반영됩니다.
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급합니다.
 - TODO: 시작일 포함 전액 지급 정책은 향후 운영 정책에 따라 변경될 수 있습니다.
+- `CONTRIBUTION` reward 상세는 sanitize된 metadata allowlist만 표시합니다.
+- repository design 기준 현재 `SIDECAR`는 reward accrual이 아니라 withdrawal split settlement이므로 사용자 rewards 목록에 `SIDECAR` row는 생성하지 않습니다.
 
 ## Rank 참고
 
@@ -138,6 +140,7 @@ npm run dev
 
 - 화면은 `GET /api/me/withdrawal-balance`, `POST /api/me/withdrawal-preview`, `POST /api/me/withdrawals`, `GET /api/me/withdrawals`, `GET /api/me/withdrawals/:withdrawalId`, `POST /api/me/withdrawals/:withdrawalId/cancel`을 사용합니다.
 - 상단 카드에서 `DAILY_REWARD`, `BONUS`, 예약 금액, 완료 출금액을 조회합니다.
+- BONUS 출금 가능 잔액에는 현재 `DIRECT_REFERRAL`, `RANK_BONUS`, `CONTRIBUTION`이 반영됩니다.
 - 미리보기는 참고용이며 실제 신청 시 후보 reward, 수수료, 실수령액을 서버에서 다시 계산합니다.
 - 한 번의 요청에는 `DAILY_REWARD`와 `BONUS`를 혼합하지 않습니다.
 - `REQUESTED` 상태에서만 사용자가 직접 취소할 수 있습니다.

@@ -61,4 +61,48 @@ describe("reward helpers", () => {
       { label: "denominator", value: "10000" },
     ]);
   });
+
+  it("shows contribution and sidecar metadata fields for users", () => {
+    expect(
+      getVisibleRewardMetadataEntries({
+        formula_version: "contribution_v1",
+        rule_id: "rule-1",
+        weight_bps: "500",
+        base_amount_base: "1000",
+        pool_amount_base: "200",
+        total_score: "5000",
+        score_amount_base: "50",
+        score_ratio_bps: "100",
+        qualification_source: "referral_edges",
+      })
+    ).toEqual([
+      { label: "formula version", value: "contribution_v1" },
+      { label: "rule id", value: "rule-1" },
+      { label: "weight bps", value: "500" },
+      { label: "base amount", value: "1000" },
+      { label: "pool amount", value: "200" },
+      { label: "total score", value: "5000" },
+      { label: "score amount", value: "50" },
+      { label: "score ratio", value: "100 bps" },
+      { label: "qualification source", value: "referral_edges" },
+    ]);
+
+    expect(
+      getVisibleRewardMetadataEntries({
+        requested_amount_base: "300",
+        release_amount_base: "210",
+        freeze_amount_base: "90",
+        release_bps: "7000",
+        freeze_bps: "3000",
+        sidecar_status: "SIDECAR_ACTIVE",
+      })
+    ).toEqual([
+      { label: "requested amount", value: "300" },
+      { label: "release amount", value: "210" },
+      { label: "freeze amount", value: "90" },
+      { label: "release bps", value: "7000 bps" },
+      { label: "freeze bps", value: "3000 bps" },
+      { label: "sidecar status", value: "SIDECAR_ACTIVE" },
+    ]);
+  });
 });

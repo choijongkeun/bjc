@@ -63,4 +63,43 @@ describe("accountRewardService helpers", () => {
       referral_depth: 1
     });
   });
+
+  it("keeps only allowed contribution and sidecar metadata keys", () => {
+    expect(
+      sanitizeRewardMetadata({
+        formula_version: "contribution_v1",
+        rule_id: "rule-1",
+        weight_bps: "500",
+        base_amount_base: "1000",
+        pool_amount_base: "200",
+        total_score: "5000",
+        score_amount_base: "50",
+        score_ratio_bps: "100",
+        qualification_source: "referral_edges",
+        requested_amount_base: "300",
+        release_amount_base: "210",
+        freeze_amount_base: "90",
+        release_bps: "7000",
+        freeze_bps: "3000",
+        sidecar_status: "SIDECAR_ACTIVE",
+        password: "drop-me"
+      })
+    ).toEqual({
+      formula_version: "contribution_v1",
+      rule_id: "rule-1",
+      weight_bps: "500",
+      base_amount_base: "1000",
+      pool_amount_base: "200",
+      total_score: "5000",
+      score_amount_base: "50",
+      score_ratio_bps: "100",
+      qualification_source: "referral_edges",
+      requested_amount_base: "300",
+      release_amount_base: "210",
+      freeze_amount_base: "90",
+      release_bps: "7000",
+      freeze_bps: "3000",
+      sidecar_status: "SIDECAR_ACTIVE"
+    });
+  });
 });

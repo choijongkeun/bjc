@@ -86,6 +86,7 @@ npm run preview:bjc
 - `ADMIN`: staking 조회 + 활성화/거절/관리자 취소 가능
 - `READER`: rewards 조회 가능, `DAILY_REWARD` 실행/`Reward reversal` 버튼 비노출
 - `ADMIN`: rewards 조회 + 수동 `DAILY_REWARD` 실행 + `DIRECT_REFERRAL` 실행 + `Reward reversal` 가능
+- `ADMIN`: rewards 조회 + `CONTRIBUTION` 실행 + `SIDECAR` 실행 가능
 - `READER`: withdrawals 조회 가능, 승인/거절/처리/완료/실패 버튼 비노출
 - `ADMIN`: withdrawals 조회 + 승인/거절/처리 시작/완료/실패 가능
 
@@ -156,9 +157,14 @@ npm run build
 - `Calc` 탭에서 `DAILY_REWARD` run에 대해 rewards 탭 이동
 - `ADMIN` 전용 수동 `DAILY_REWARD` 실행 모달
 - `ADMIN` 전용 `DIRECT_REFERRAL` 배치 실행 모달
+- `ADMIN` 전용 `CONTRIBUTION` 배치 실행 모달
+- `ADMIN` 전용 `SIDECAR` 배치 실행 모달
 - `DIRECT_REFERRAL` 실행 결과 summary, duplicate/skip/conflict/failed 집계 표시
+- `CONTRIBUTION` / `SIDECAR` 실행 결과 summary, duplicate/skip/conflict/failed 집계 표시
 - 실행 성공 후 `calc_run_id`와 `reward_type=DIRECT_REFERRAL` 기준 rewards 목록 이동 지원
+- 실행 성공 후 `calc_run_id` 기준 calc summary / rewards drill-down / CSV 다운로드 지원
 - `Reward` 상세 패널에서 `DIRECT_REFERRAL` source account/source staking/source principal/rate/formula 표시
+- `Reward` 상세 패널에서 `CONTRIBUTION` metadata allowlist와 `SIDECAR` metadata allowlist를 표시
 - `ADMIN` 전용 `CONFIRMED` 일반 보상 reversal
 - `READER`는 조회 전용이며 실행/reversal 버튼이 노출되지 않음
 - 현재 V1 `DAILY_REWARD` 정책: 스테이킹 시작일을 포함해 일 단위 전액 지급
@@ -177,8 +183,26 @@ npm run build
 - `ADMIN`은 qualification/rank bonus 배치 실행과 account detail의 단건 실행이 가능합니다.
 - `READER`는 조회 전용이며 rank 실행 버튼이 노출되지 않습니다.
 - `Calc` 탭에서는 `RANK_QUALIFICATION`, `RANK_BONUS` run summary를 직접 표시하고 rank/rewards drill-down으로 연결합니다.
+- `Calc` 탭에서는 `DAILY_REWARD`, `DIRECT_REFERRAL`, `RANK_QUALIFICATION`, `RANK_BONUS`, `CONTRIBUTION`, `SIDECAR` 공통 summary를 표시합니다.
 - `Accounts` 탭에서는 `직급 보기` 액션으로 `Ranks` 탭 상세 패널로 이동할 수 있습니다.
+- `Accounts` 탭에서는 `policy_version_id` + `calculation_date` 입력으로 선택 회원의 `CONTRIBUTION` / `SIDECAR` 단건 실행이 가능합니다.
 - `Reward` 상세 패널은 `RANK_BONUS` metadata를 sanitize된 allowlist 기준으로 표시합니다.
+
+## Contribution / Sidecar Admin Guide
+
+- 배치 실행:
+  - `Rewards` 탭에서 `CONTRIBUTION 실행`, `SIDECAR 실행`
+  - 입력값: `policy_version_id`, `calculation_date`
+- 단건 실행:
+  - `Accounts` 탭 상세에서 `보너스 단건 실행`
+  - `ADMIN`만 실행 가능, `READER`는 조회 전용
+- 운영 통계:
+  - `Reports` 탭에서 `reward-summary`, `reward-by-type`, `calc-run-summary`, CSV 다운로드를 제공합니다.
+- 현재 확정 정책:
+  - `CONTRIBUTION`은 reward/ledger/account_rewards까지 생성됩니다.
+  - `SIDECAR`는 repository design 기준으로 withdrawal split ledger/settlement만 생성합니다.
+- 현재 명시적 제한:
+  - `SIDECAR` reward row는 현재 V1에서 생성하지 않습니다.
 
 ## Direct Referral Admin Guide
 

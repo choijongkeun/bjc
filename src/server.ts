@@ -10,12 +10,14 @@ import { AuthService } from "./services/authService.js";
 import { NetworkService } from "./services/networkService.js";
 import { AdminAccountService } from "./services/adminAccountService.js";
 import { AccountStakingService } from "./services/accountStakingService.js";
-import { AccountRewardService } from "./services/accountRewardService.js";
+import { AccountRewardService, sanitizeRewardMetadata } from "./services/accountRewardService.js";
 import { DailyRewardService } from "./services/dailyRewardService.js";
 import { DirectReferralRewardService } from "./services/directReferralRewardService.js";
+import { ContributionRewardService } from "./services/contributionRewardService.js";
 import { RankBonusService } from "./services/rankBonusService.js";
 import { RankQualificationService } from "./services/rankQualificationService.js";
 import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
+import { SidecarRewardService } from "./services/sidecarRewardService.js";
 import { toHttpError } from "./http/httpErrors.js";
 import { actorMiddleware } from "./http/actorMiddleware.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
@@ -54,9 +56,11 @@ const accountStakingService = new AccountStakingService(pool);
 const accountRewardService = new AccountRewardService(pool);
 const dailyRewardService = new DailyRewardService(pool);
 const directReferralRewardService = new DirectReferralRewardService(pool);
+const contributionRewardService = new ContributionRewardService(pool);
 const rankBonusService = new RankBonusService(pool);
 const rankQualificationService = new RankQualificationService(pool);
 const rewardWithdrawalService = new RewardWithdrawalService(pool);
+const sidecarRewardService = new SidecarRewardService(pool);
 const requireSession = sessionAuthMiddleware(authService);
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -130,12 +134,64 @@ const rewardSortSchema = z
   ])
   .default("reward_date_desc");
 
+const reportCalcRunTypeSchema = z.enum([
+  "DAILY_REWARD",
+  "DIRECT_REFERRAL",
+  "RANK_QUALIFICATION",
+  "RANK_BONUS",
+  "CONTRIBUTION",
+  "SIDECAR"
+]);
+
 function requireActorId(req: express.Request): string {
   const actorId = req.header("x-actor-account-id");
   if (!actorId) {
     throw unauthorized("Missing header: x-actor-account-id");
   }
   return actorId;
+}
+
+function toCsvScalar(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function escapeCsvCell(value: unknown): string {
+  const text = toCsvScalar(value);
+  if (text.includes('"') || text.includes(",") || text.includes("\n") || text.includes("\r")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function buildCsv(rows: Array<Record<string, unknown>>): string {
+  if (!rows.length) {
+    return "";
+  }
+  const firstRow = rows[0];
+  if (!firstRow) {
+    return "";
+  }
+  const headers = Object.keys(firstRow);
+  const lines = [
+    headers.map((header) => escapeCsvCell(header)).join(","),
+    ...rows.map((row) => headers.map((header) => escapeCsvCell(row[header])).join(","))
+  ];
+  return lines.join("\n");
+}
+
+function sendCsv(res: express.Response, filename: string, rows: Array<Record<string, unknown>>) {
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(buildCsv(rows));
 }
 
 app.get("/health", (_req, res) => {
@@ -1310,6 +1366,164 @@ app.get("/api/admin/reports/withdrawal-summary", async (req, res, next) => {
   }
 });
 
+app.get("/api/admin/reports/reward-summary", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        policy_version_id: z.string().trim().min(1).optional(),
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await engine.getRewardSummaryReport({
+      actor_account_id,
+      ...query
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/reports/reward-by-type", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        policy_version_id: z.string().trim().min(1).optional(),
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await engine.listRewardByTypeReport({
+      actor_account_id,
+      ...query
+    });
+    res.json({ items: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/reports/calc-run-summary", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        policy_version_id: z.string().trim().min(1).optional(),
+        status: z.enum(["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "FINALIZED"]).optional(),
+        run_type: reportCalcRunTypeSchema.optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const result = await engine.listCalcRunSummaryReport({
+      actor_account_id,
+      ...query
+    });
+    res.json({ items: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/reports/rewards.csv", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        policy_version_id: z.string().trim().min(1).optional(),
+        reward_type: rewardTypeSchema.optional(),
+        status: rewardStatusSchema.optional(),
+        account_id: z.string().trim().min(1).optional(),
+        calc_run_id: z.string().trim().min(1).optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const rows = await engine.listRewardsForCsv({
+      actor_account_id,
+      ...query
+    });
+    const csvRows = rows.map((row) => ({
+      id: row.id,
+      account_id: row.account_id,
+      account_login_id: row.account_login_id ?? "",
+      account_display_name: row.account_display_name ?? "",
+      reward_type: row.reward_type,
+      reward_date: row.reward_date,
+      amount_base: row.amount_base,
+      status: row.status,
+      policy_version_id: row.policy_version_id,
+      calc_run_id: row.calc_run_id ?? "",
+      calc_run_run_type: row.calc_run_run_type ?? "",
+      source_reference: row.source_reference,
+      source_ledger_event_id: row.source_ledger_event_id ?? "",
+      account_staking_id: row.account_staking_id ?? "",
+      product_id: row.product_id ?? "",
+      product_name: row.product_name ?? "",
+      product_symbol: row.product_symbol ?? "",
+      product_decimals: row.product_decimals ?? "",
+      confirmed_at: row.confirmed_at ?? "",
+      available_at: row.available_at ?? "",
+      reversed_at: row.reversed_at ?? "",
+      created_at: row.created_at,
+      metadata_json: JSON.stringify(sanitizeRewardMetadata(row.metadata_json))
+    }));
+    sendCsv(res, "rewards.csv", csvRows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/admin/reports/calc-runs.csv", async (req, res, next) => {
+  try {
+    const query = z
+      .object({
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        policy_version_id: z.string().trim().min(1).optional(),
+        status: z.enum(["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "FINALIZED"]).optional(),
+        run_type: reportCalcRunTypeSchema.optional()
+      })
+      .parse(req.query);
+    const actor_account_id = requireActorId(req);
+    const rows = await engine.listCalcRunsForCsv({
+      actor_account_id,
+      ...query
+    });
+    const csvRows = rows.map((row) => ({
+      id: row.id,
+      policy_version_id: row.policy_version_id,
+      run_type: row.run_type,
+      run_date: row.run_date,
+      status: row.status,
+      started_at: row.started_at ?? "",
+      finished_at: row.finished_at ?? "",
+      finalized_at: row.finalized_at ?? "",
+      error_message: row.error_message ?? "",
+      created_at: row.created_at,
+      created_count: row.created_count,
+      duplicate_skip_count: row.duplicate_skip_count,
+      conflict_count: row.conflict_count,
+      failed_count: row.failed_count,
+      total_reward_amount_base: row.total_reward_amount_base,
+      total_base_amount_base: row.total_base_amount_base,
+      total_requested_amount_base: row.total_requested_amount_base,
+      total_release_amount_base: row.total_release_amount_base,
+      total_freeze_amount_base: row.total_freeze_amount_base
+    }));
+    sendCsv(res, "calc-runs.csv", csvRows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/api/admin/calc-runs/daily-reward", async (req, res, next) => {
   try {
     const body = z
@@ -1410,6 +1624,94 @@ app.post("/api/admin/rewards/rank-bonus/run", async (req, res, next) => {
     const actor_account_id = requireActorId(req);
     const result = await rankBonusService.runBatch({
       actor_account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/rewards/contribution/run", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await contributionRewardService.runBatch({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/accounts/:accountId/contribution", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await contributionRewardService.runForAccount({
+      actor_account_id,
+      account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/rewards/sidecar/run", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await sidecarRewardService.runBatch({
+      actor_account_id,
+      policy_version_id: body.policy_version_id,
+      calculation_date: body.calculation_date
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/admin/accounts/:accountId/sidecar", async (req, res, next) => {
+  try {
+    const account_id = z.string().trim().min(1).parse(req.params.accountId);
+    const body = z
+      .object({
+        policy_version_id: z.string().trim().min(1),
+        calculation_date: z.string().trim().min(1)
+      })
+      .parse(req.body);
+
+    const actor_account_id = requireActorId(req);
+    const result = await sidecarRewardService.runForAccount({
+      actor_account_id,
+      account_id,
       policy_version_id: body.policy_version_id,
       calculation_date: body.calculation_date
     });
@@ -1537,7 +1839,17 @@ app.get("/api/admin/calc-runs/:calcRunId/summary", async (req, res, next) => {
     }
 
     const summary =
-      runType === "RANK_QUALIFICATION"
+      runType === "DAILY_REWARD"
+        ? await dailyRewardService.getCalcRunSummary({
+            actor_account_id,
+            calc_run_id
+          })
+        : runType === "DIRECT_REFERRAL"
+          ? await directReferralRewardService.getCalcRunSummary({
+              actor_account_id,
+              calc_run_id
+            })
+        : runType === "RANK_QUALIFICATION"
         ? await rankQualificationService.getCalcRunSummary({
             actor_account_id,
             calc_run_id
@@ -1547,8 +1859,18 @@ app.get("/api/admin/calc-runs/:calcRunId/summary", async (req, res, next) => {
               actor_account_id,
               calc_run_id
             })
+          : runType === "CONTRIBUTION"
+            ? await contributionRewardService.getCalcRunSummary({
+                actor_account_id,
+                calc_run_id
+              })
+            : runType === "SIDECAR"
+              ? await sidecarRewardService.getCalcRunSummary({
+                  actor_account_id,
+                  calc_run_id
+                })
           : (() => {
-              throw validationError("calc_run summary is only supported for rank runs", {
+              throw validationError("calc_run summary is not supported for the run type", {
                 calc_run_id,
                 run_type: runType
               });

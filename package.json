@@ -18,7 +18,9 @@
     "smoke:direct-referral": "tsx scripts/direct_referral_reward_smoke.ts",
     "smoke:rank-qualification": "tsx scripts/rank_qualification_smoke.ts",
     "smoke:rank-bonus": "tsx scripts/rank_bonus_smoke.ts",
-    "smoke:all": "npm run preflight:smoke && npm run smoke:member && npm run smoke:staking && npm run smoke:reward && npm run smoke:withdrawal && npm run smoke:direct-referral && npm run smoke:rank-qualification && npm run smoke:rank-bonus"
+    "smoke:contribution": "tsx scripts/contribution_reward_smoke.ts",
+    "smoke:sidecar": "tsx scripts/sidecar_reward_smoke.ts",
+    "smoke:all": "npm run preflight:smoke && npm run smoke:member && npm run smoke:staking && npm run smoke:reward && npm run smoke:withdrawal && npm run smoke:direct-referral && npm run smoke:rank-qualification && npm run smoke:rank-bonus && npm run smoke:contribution && npm run smoke:sidecar"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",

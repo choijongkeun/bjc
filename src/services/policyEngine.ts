@@ -13,7 +13,14 @@ import {
   listLedgerEvents
 } from "../repos/ledgerEventsRepo.js";
 import { getPolicyVersionById, insertPolicyVersion, listPolicyVersions, lockPolicyVersion, activatePolicyVersion } from "../repos/policyVersionsRepo.js";
-import { getReportSummary } from "../repos/reportsRepo.js";
+import {
+  getReportSummary,
+  getRewardSummaryReport,
+  listCalcRunSummaryReport,
+  listCalcRunsForCsv,
+  listRewardByTypeReport,
+  listRewardsForCsv
+} from "../repos/reportsRepo.js";
 import { deleteSettlementItem, insertSettlementItem, listSettlementItems, updateSettlementItemAmount } from "../repos/settlementItemsRepo.js";
 import { insertStakingProduct, listStakingProducts } from "../repos/stakingProductsRepo.js";
 import { newId } from "../util/ids.js";
@@ -672,6 +679,83 @@ export class PolicyEngine {
       const actor = await requireActor(conn, input.actor_account_id);
       assertRoleAtLeast(actor, "READER");
       return getReportSummary(conn, input);
+    });
+  }
+
+  async getRewardSummaryReport(input: {
+    actor_account_id: string;
+    date_from?: string;
+    date_to?: string;
+    policy_version_id?: string;
+    reward_type?: string;
+    status?: string;
+  }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      assertRoleAtLeast(actor, "READER");
+      return getRewardSummaryReport(conn, input);
+    });
+  }
+
+  async listRewardByTypeReport(input: {
+    actor_account_id: string;
+    date_from?: string;
+    date_to?: string;
+    policy_version_id?: string;
+    reward_type?: string;
+    status?: string;
+  }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      assertRoleAtLeast(actor, "READER");
+      return listRewardByTypeReport(conn, input);
+    });
+  }
+
+  async listCalcRunSummaryReport(input: {
+    actor_account_id: string;
+    date_from?: string;
+    date_to?: string;
+    policy_version_id?: string;
+    status?: string;
+    run_type?: string;
+  }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      assertRoleAtLeast(actor, "READER");
+      return listCalcRunSummaryReport(conn, input);
+    });
+  }
+
+  async listRewardsForCsv(input: {
+    actor_account_id: string;
+    date_from?: string;
+    date_to?: string;
+    policy_version_id?: string;
+    reward_type?: string;
+    status?: string;
+    account_id?: string;
+    calc_run_id?: string;
+  }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      assertRoleAtLeast(actor, "READER");
+      return listRewardsForCsv(conn, input);
+    });
+  }
+
+  async listCalcRunsForCsv(input: {
+    actor_account_id: string;
+    date_from?: string;
+    date_to?: string;
+    policy_version_id?: string;
+    status?: string;
+    run_type?: string;
+  }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      assertRoleAtLeast(actor, "READER");
+      return listCalcRunsForCsv(conn, input);
     });
   }
 

@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, PauseCircle, Play, ShieldAlert } from "lucide-react";
-import {
-  api,
-  type AuditLog,
-  type CalcRun,
-  type RankBonusRunSummary,
-  type RankQualificationRunSummary,
-  type SessionRole,
-  type SettlementItem,
-} from "@/lib/api";
+import { api, type AnyCalcRunSummary, type CalcRun, type SessionRole, type SettlementItem } from "@/lib/api";
 import { formatTokenAmount } from "@/lib/amount";
-import { RankRunSummary } from "@/components/ranks/RankRunSummary";
 import { Button, Card, FeedbackState, JsonPanel, Pagination, StatusBadge, TableShell } from "@/components/ui";
 
 export function CalcSettlementTab({
@@ -35,9 +26,9 @@ export function CalcSettlementTab({
   const [selected, setSelected] = useState<CalcRun | null>(null);
   const [settlements, setSettlements] = useState<SettlementItem[]>([]);
   const [settlementTotal, setSettlementTotal] = useState(0);
-  const [runMetrics, setRunMetrics] = useState<Record<string, DirectRunAuditSummary>>({});
-  const [rankSummary, setRankSummary] = useState<RankQualificationRunSummary | RankBonusRunSummary | null>(null);
-  const [rankSummaryError, setRankSummaryError] = useState<string | null>(null);
+  const [runSummaries, setRunSummaries] = useState<Record<string, AnyCalcRunSummary>>({});
+  const [selectedSummary, setSelectedSummary] = useState<AnyCalcRunSummary | null>(null);
+  const [selectedSummaryError, setSelectedSummaryError] = useState<string | null>(null);
   const [form, setForm] = useState({ policy_id: "", run_type: "DAILY_REWARD", run_date: new Date().toISOString().slice(0, 10) });
   const [failReason, setFailReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +45,6 @@ export function CalcSettlementTab({
         }
         return current && result.calc_runs.some((run) => run.id === current.id) ? current : result.calc_runs[0] ?? null;
       });
-      await loadRunMetrics(result.calc_runs);
       setError(null);
     } catch (loadError: any) {
       setError(loadError.message ?? "calc runs를 불러오지 못했습니다.");
@@ -82,30 +72,30 @@ export function CalcSettlementTab({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRankSummary() {
-      if (!selected || (selected.run_type !== "RANK_QUALIFICATION" && selected.run_type !== "RANK_BONUS")) {
-        setRankSummary(null);
-        setRankSummaryError(null);
+    async function loadSelectedSummary() {
+      if (!selected) {
+        setSelectedSummary(null);
+        setSelectedSummaryError(null);
         return;
       }
 
       try {
-        const result = await api.getRankCalcRunSummary(actorId, selected.id);
+        const result = await api.getCalcRunSummary(actorId, selected.id);
         if (cancelled) {
           return;
         }
-        setRankSummary(result);
-        setRankSummaryError(null);
+        setSelectedSummary(result);
+        setSelectedSummaryError(null);
       } catch (error: any) {
         if (cancelled) {
           return;
         }
-        setRankSummary(null);
-        setRankSummaryError(error.message ?? "rank run summary를 불러오지 못했습니다.");
+        setSelectedSummary(null);
+        setSelectedSummaryError(error.message ?? "calc run summary를 불러오지 못했습니다.");
       }
     }
 
-    void loadRankSummary();
+    void loadSelectedSummary();
 
     return () => {
       cancelled = true;
@@ -143,18 +133,14 @@ export function CalcSettlementTab({
     }
   }
 
-  async function loadRunMetrics(runList: CalcRun[]) {
-    const targets = runList.filter((run) => run.run_type === "DAILY_REWARD" || run.run_type === "DIRECT_REFERRAL");
+  async function loadRunSummaries(runList: CalcRun[]) {
+    const targets = runList.filter((run) =>
+      ["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_QUALIFICATION", "RANK_BONUS", "CONTRIBUTION", "SIDECAR"].includes(run.run_type)
+    );
     const entries = await Promise.all(
       targets.map(async (run) => {
         try {
-          const result = await api.listAuditLogs(actorId, {
-            target_table: "calc_runs",
-            target_id: run.id,
-            page: 1,
-            limit: 20,
-          });
-          const summary = extractAuditSummary(result.audit_logs);
+          const summary = await api.getCalcRunSummary(actorId, run.id);
           return [run.id, summary] as const;
         } catch {
           return [run.id, null] as const;
@@ -162,7 +148,7 @@ export function CalcSettlementTab({
       })
     );
 
-    setRunMetrics((current) => {
+    setRunSummaries((current) => {
       const next = { ...current };
       for (const [runId, summary] of entries) {
         if (summary) {
@@ -172,6 +158,10 @@ export function CalcSettlementTab({
       return next;
     });
   }
+
+  useEffect(() => {
+    void loadRunSummaries(runs);
+  }, [actorId, runs]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
@@ -210,7 +200,7 @@ export function CalcSettlementTab({
               </thead>
               <tbody>
                 {runs.map((run) => {
-                  const metrics = runMetrics[run.id];
+                  const summary = runSummaries[run.id];
                   return (
                     <tr
                       key={run.id}
@@ -230,10 +220,12 @@ export function CalcSettlementTab({
                       </td>
                       <td><StatusBadge value={run.status} /></td>
                       <td className="font-mono text-xs text-slate-400">{run.policy_version_id}</td>
-                      <td className="tabular text-right">{metrics?.created_count ?? "-"}</td>
-                      <td className="tabular text-right">{metrics?.duplicate_skip_count ?? "-"}</td>
-                      <td className={`tabular text-right ${Number(metrics?.failed_count ?? 0) > 0 ? "text-rose-300" : ""}`}>{metrics?.failed_count ?? "-"}</td>
-                      <td className="tabular text-right">{metrics?.total_reward_amount_base ?? "-"}</td>
+                      <td className="tabular text-right">{getSummaryMetric(summary, "created_count")}</td>
+                      <td className="tabular text-right">{getSummaryMetric(summary, "duplicate_skip_count")}</td>
+                      <td className={`tabular text-right ${getNumericSummaryMetric(summary, "failed_count") > 0 ? "text-rose-300" : ""}`}>
+                        {getSummaryMetric(summary, "failed_count")}
+                      </td>
+                      <td className="tabular text-right">{getSummaryAmount(summary)}</td>
                       <td className="text-slate-500">{run.error_message ?? "-"}</td>
                       <td>
                         {run.run_type === "RANK_BONUS" ? (
@@ -299,21 +291,16 @@ export function CalcSettlementTab({
               <div className="font-mono text-xs text-slate-400">{selected.id}</div>
               <div>run_type: {selected.run_type}</div>
               <div>policy_id: <span className="font-mono text-xs text-slate-400">{selected.policy_version_id}</span></div>
-              {rankSummary ? (
-                <RankRunSummary
-                  summary={rankSummary}
-                  onOpenRewards={selected.run_type === "RANK_BONUS" ? onOpenRewards : undefined}
-                />
-              ) : null}
-              {rankSummaryError ? <FeedbackState title="rank summary 조회 실패" description={rankSummaryError} tone="error" /> : null}
-              {runMetrics[selected.id] ? (
+              {selectedSummary ? (
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div>created_count: {runMetrics[selected.id].created_count}</div>
-                  <div>duplicate_skip_count: {runMetrics[selected.id].duplicate_skip_count}</div>
-                  <div>failed_count: {runMetrics[selected.id].failed_count}</div>
-                  <div>total_reward_amount_base: {runMetrics[selected.id].total_reward_amount_base}</div>
+                  {formatCalcRunSummary(selectedSummary).map((item) => (
+                    <div key={item.label}>
+                      {item.label}: {item.value}
+                    </div>
+                  ))}
                 </div>
               ) : null}
+              {selectedSummaryError ? <FeedbackState title="calc run summary 조회 실패" description={selectedSummaryError} tone="error" /> : null}
               {selected.status === "FINALIZED" ? <FeedbackState title="FINALIZED 잠금" description="정산이 확정된 calc_run은 settlement_items 수정이 불가합니다." /> : null}
             </div>
             <div className="mt-4">
@@ -378,40 +365,50 @@ export function CalcSettlementTab({
   );
 }
 
-type DirectRunAuditSummary = {
-  created_count: string;
-  duplicate_skip_count: string;
-  failed_count: string;
-  total_reward_amount_base: string;
-};
-
-function extractAuditSummary(auditLogs: AuditLog[]): DirectRunAuditSummary | null {
-  for (const log of auditLogs) {
-    const meta = (log.meta ?? {}) as Record<string, unknown>;
-    const createdCount = toMetricValue(meta.created_count);
-    const duplicateCount = toMetricValue(meta.duplicate_skip_count);
-    const failedCount = toMetricValue(meta.failed_count);
-    const totalAmount = toMetricValue(meta.total_reward_amount_base);
-
-    if (createdCount || duplicateCount || failedCount || totalAmount) {
-      return {
-        created_count: createdCount ?? "-",
-        duplicate_skip_count: duplicateCount ?? "-",
-        failed_count: failedCount ?? "-",
-        total_reward_amount_base: totalAmount ?? "-",
-      };
-    }
+function getSummaryMetric(summary: AnyCalcRunSummary | null | undefined, key: string): string {
+  if (!summary) {
+    return "-";
   }
-
-  return null;
-}
-
-function toMetricValue(value: unknown): string | null {
+  const value = (summary as Record<string, unknown>)[key];
   if (typeof value === "string" && value.length > 0) {
     return value;
   }
   if (typeof value === "number" && Number.isFinite(value)) {
     return String(value);
   }
-  return null;
+  return "-";
+}
+
+function getNumericSummaryMetric(summary: AnyCalcRunSummary | null | undefined, key: string): number {
+  const value = getSummaryMetric(summary, key);
+  return /^\d+$/.test(value) ? Number(value) : 0;
+}
+
+function getSummaryAmount(summary: AnyCalcRunSummary | null | undefined): string {
+  const keys = [
+    "total_reward_amount_base",
+    "total_rank_bonus_amount_base",
+    "total_base_daily_reward_amount_base",
+    "total_base_amount_base",
+    "total_requested_amount_base",
+    "total_release_amount_base",
+    "total_freeze_amount_base"
+  ];
+  for (const key of keys) {
+    const value = getSummaryMetric(summary, key);
+    if (value !== "-") {
+      return value;
+    }
+  }
+  return "-";
+}
+
+function formatCalcRunSummary(summary: AnyCalcRunSummary): Array<{ label: string; value: string }> {
+  return Object.entries(summary as Record<string, unknown>)
+    .filter(([key]) => key !== "calc_run_id")
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([key, value]) => ({
+      label: key,
+      value: String(value)
+    }));
 }

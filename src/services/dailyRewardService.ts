@@ -1,7 +1,7 @@
 import type { DbConn, DbPool } from "../db/pool.js";
 
 import { assertIntString } from "../domain/amount.js";
-import { conflictError, notFound, validationError } from "../domain/errors.js";
+import { conflictError, forbidden, notFound, validationError } from "../domain/errors.js";
 import { assertCalcRunStatusTransitionAllowed } from "../domain/calcRunStatus.js";
 import {
   getRewardBySourceReference,
@@ -18,7 +18,7 @@ import {
   insertCalcRun,
   updateCalcRunStatus,
 } from "../repos/calcRunsRepo.js";
-import { insertAdminAuditLog } from "../repos/auditLogRepo.js";
+import { insertAdminAuditLog, listAdminAuditLogs, type AdminAuditLogRow } from "../repos/auditLogRepo.js";
 import { insertLedgerEvent } from "../repos/ledgerEventsRepo.js";
 import { getPolicyVersionById } from "../repos/policyVersionsRepo.js";
 import { withTx } from "../db/tx.js";
@@ -28,6 +28,17 @@ import { assertRoleAtLeast, requireActor } from "./authz.js";
 const BPS_DENOMINATOR = 10000n;
 const ASIA_SEOUL_OFFSET_HOURS = 9;
 const DEFAULT_BATCH_CHUNK_SIZE = 200;
+
+type DailyRewardRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
+  status: string;
+};
 
 export function formatSqlDateTime(value: Date): string {
   return value.toISOString().slice(0, 19).replace("T", " ");
@@ -41,6 +52,52 @@ function normalizeSqlDateTimeValue(value: Date | string | null): string | null {
     return formatSqlDateTime(value);
   }
   return value;
+}
+
+function toJsonObject(value: unknown): Record<string, unknown> {
+  if (value instanceof Uint8Array) {
+    try {
+      return toJsonObject(JSON.parse(Buffer.from(value).toString("utf8")) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      return toJsonObject(JSON.parse(value) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function toStringMetric(value: unknown): string | null {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function toNumberMetric(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function createEmptyDailyRewardSummary(calc_run_id: string, status = "RUNNING"): DailyRewardRunSummary {
+  return {
+    calc_run_id,
+    target_count: 0,
+    created_count: 0,
+    zero_reward_skip_count: 0,
+    duplicate_skip_count: 0,
+    failed_count: 0,
+    total_reward_amount_base: "0",
+    status
+  };
 }
 
 function toApiDateTime(value: Date | string | null | undefined): string | null {
@@ -489,4 +546,70 @@ export class DailyRewardService {
       total_reward_amount_base: total_reward_amount_base.toString()
     };
   }
+
+  async getCalcRunSummary(input: { actor_account_id: string; calc_run_id: string }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      if (actor.role === "USER") {
+        throw forbidden("reader permission required", { actorRole: actor.role });
+      }
+
+      const calcRun = await getCalcRunById(conn, input.calc_run_id);
+      if (!calcRun) {
+        throw notFound("calc_run not found", { calc_run_id: input.calc_run_id });
+      }
+      if (calcRun.run_type !== "DAILY_REWARD") {
+        throw validationError("calc_run is not a daily reward run", {
+          calc_run_id: input.calc_run_id,
+          run_type: calcRun.run_type
+        });
+      }
+
+      const audit = await listAdminAuditLogs(conn, {
+        action: "ADMIN_DAILY_REWARD_RUN",
+        target_table: "calc_runs",
+        target_id: input.calc_run_id,
+        page: 1,
+        limit: 20
+      });
+
+      return extractDailyRewardSummaryFromAuditLogs(audit.items, input.calc_run_id) ?? createEmptyDailyRewardSummary(input.calc_run_id, calcRun.status);
+    });
+  }
+}
+
+export function extractDailyRewardSummaryFromAuditLogs(
+  auditLogs: AdminAuditLogRow[],
+  calc_run_id: string
+): DailyRewardRunSummary | null {
+  for (const row of auditLogs) {
+    const meta = toJsonObject(row.meta);
+    const target_count = toNumberMetric(meta.target_count);
+    const created_count = toNumberMetric(meta.created_count);
+    const zero_reward_skip_count = toNumberMetric(meta.zero_reward_skip_count);
+    const duplicate_skip_count = toNumberMetric(meta.duplicate_skip_count);
+    const failed_count = toNumberMetric(meta.failed_count);
+    const total_reward_amount_base = toStringMetric(meta.total_reward_amount_base);
+    if (
+      target_count !== null &&
+      created_count !== null &&
+      zero_reward_skip_count !== null &&
+      duplicate_skip_count !== null &&
+      failed_count !== null &&
+      total_reward_amount_base !== null
+    ) {
+      return {
+        calc_run_id,
+        target_count,
+        created_count,
+        zero_reward_skip_count,
+        duplicate_skip_count,
+        failed_count,
+        total_reward_amount_base,
+        status: toStringMetric(meta.status) ?? "SUCCEEDED"
+      };
+    }
+  }
+
+  return null;
 }

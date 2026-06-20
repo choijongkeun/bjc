@@ -16,7 +16,7 @@ import {
 } from "../domain/directReferralReward.js";
 import { getRewardById, getRewardBySourceReference, insertAccountReward, updateRewardSourceLedgerEvent } from "../repos/accountRewardsRepo.js";
 import { getAccountAuthById } from "../repos/accountsRepo.js";
-import { insertAdminAuditLog } from "../repos/auditLogRepo.js";
+import { insertAdminAuditLog, listAdminAuditLogs, type AdminAuditLogRow } from "../repos/auditLogRepo.js";
 import {
   getCalcRunById,
   getCalcRunByPolicyRunTypeDate,
@@ -45,6 +45,20 @@ const DIRECT_REFERRAL_RUN_TYPE = "DIRECT_REFERRAL";
 const DEFAULT_BATCH_CHUNK_SIZE = 200;
 const RULE_MISSING_REASON = "ACTIVE_DIRECT_REFERRAL_RULE_NOT_FOUND";
 
+type DirectReferralRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  no_sponsor_skip_count: number;
+  inactive_sponsor_skip_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
+  status: string;
+};
+
 type DirectReferralProcessResult =
   | { type: "created"; reward_id: string; amount_base: string }
   | { type: "no_sponsor" }
@@ -63,6 +77,55 @@ function isRuleMissingError(err: unknown): boolean {
     err.code === "VALIDATION_ERROR" &&
     err.details?.reason === RULE_MISSING_REASON
   );
+}
+
+function toJsonObject(value: unknown): Record<string, unknown> {
+  if (value instanceof Uint8Array) {
+    try {
+      return toJsonObject(JSON.parse(Buffer.from(value).toString("utf8")) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      return toJsonObject(JSON.parse(value) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function toStringMetric(value: unknown): string | null {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function toNumberMetric(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function createEmptyDirectReferralRunSummary(calc_run_id: string, status = "RUNNING"): DirectReferralRunSummary {
+  return {
+    calc_run_id,
+    target_count: 0,
+    created_count: 0,
+    no_sponsor_skip_count: 0,
+    inactive_sponsor_skip_count: 0,
+    zero_reward_skip_count: 0,
+    duplicate_skip_count: 0,
+    conflict_count: 0,
+    failed_count: 0,
+    total_reward_amount_base: "0",
+    status
+  };
 }
 
 export function assertCanRunDirectReferral(role: "USER" | "READER" | "ADMIN"): void {
@@ -869,4 +932,81 @@ export class DirectReferralRewardService {
       return toCalcRunResponse(row);
     });
   }
+
+  async getCalcRunSummary(input: { actor_account_id: string; calc_run_id: string }) {
+    return this.withConnection(async (conn) => {
+      const actor = await requireActor(conn, input.actor_account_id);
+      if (actor.role === "USER") {
+        throw forbidden("reader permission required", { actorRole: actor.role });
+      }
+      const calcRun = await getCalcRunById(conn, input.calc_run_id);
+      if (!calcRun) {
+        throw notFound("calc_run not found", { calc_run_id: input.calc_run_id });
+      }
+      if (calcRun.run_type !== DIRECT_REFERRAL_RUN_TYPE) {
+        throw validationError("calc_run is not a direct referral run", {
+          calc_run_id: input.calc_run_id,
+          run_type: calcRun.run_type
+        });
+      }
+
+      const audit = await listAdminAuditLogs(conn, {
+        action: "ADMIN_DIRECT_REFERRAL_RUN",
+        target_table: "calc_runs",
+        target_id: input.calc_run_id,
+        page: 1,
+        limit: 20
+      });
+
+      return (
+        extractDirectReferralSummaryFromAuditLogs(audit.items, input.calc_run_id) ??
+        createEmptyDirectReferralRunSummary(input.calc_run_id, calcRun.status)
+      );
+    });
+  }
+}
+
+export function extractDirectReferralSummaryFromAuditLogs(
+  auditLogs: AdminAuditLogRow[],
+  calc_run_id: string
+): DirectReferralRunSummary | null {
+  for (const row of auditLogs) {
+    const meta = toJsonObject(row.meta);
+    const target_count = toNumberMetric(meta.target_count);
+    const created_count = toNumberMetric(meta.created_count);
+    const no_sponsor_skip_count = toNumberMetric(meta.no_sponsor_skip_count);
+    const inactive_sponsor_skip_count = toNumberMetric(meta.inactive_sponsor_skip_count);
+    const zero_reward_skip_count = toNumberMetric(meta.zero_reward_skip_count);
+    const duplicate_skip_count = toNumberMetric(meta.duplicate_skip_count);
+    const conflict_count = toNumberMetric(meta.conflict_count);
+    const failed_count = toNumberMetric(meta.failed_count);
+    const total_reward_amount_base = toStringMetric(meta.total_reward_amount_base);
+    if (
+      target_count !== null &&
+      created_count !== null &&
+      no_sponsor_skip_count !== null &&
+      inactive_sponsor_skip_count !== null &&
+      zero_reward_skip_count !== null &&
+      duplicate_skip_count !== null &&
+      conflict_count !== null &&
+      failed_count !== null &&
+      total_reward_amount_base !== null
+    ) {
+      return {
+        calc_run_id,
+        target_count,
+        created_count,
+        no_sponsor_skip_count,
+        inactive_sponsor_skip_count,
+        zero_reward_skip_count,
+        duplicate_skip_count,
+        conflict_count,
+        failed_count,
+        total_reward_amount_base,
+        status: toStringMetric(meta.status) ?? "SUCCEEDED"
+      };
+    }
+  }
+
+  return null;
 }

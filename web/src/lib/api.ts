@@ -292,6 +292,21 @@ export type RewardMetadata = Partial<{
   base_daily_reward_amount_base: string;
   qualification_calc_run_id: string;
   qualification_result_id: string;
+  rule_id: string;
+  rate_bps: string;
+  weight_bps: string;
+  base_amount_base: string;
+  pool_amount_base: string;
+  total_score: string;
+  score_amount_base: string;
+  score_ratio_bps: string;
+  qualification_source: string;
+  requested_amount_base: string;
+  release_amount_base: string;
+  freeze_amount_base: string;
+  release_bps: string;
+  freeze_bps: string;
+  sidecar_status: string;
   original_reward_id: string;
   original_source_reference: string;
   reason: string;
@@ -557,6 +572,137 @@ export type RankBonusSingleRunResponse = {
   rank_bonus_amount_base: string;
 };
 
+export type ContributionRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  zero_base_skip_count: number;
+  zero_reward_skip_count: number;
+  ineligible_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_base_amount_base: string;
+  total_reward_amount_base: string;
+  pool_amount_base: string;
+  total_score: string;
+  status: string;
+};
+
+export type ContributionSingleRunResponse = {
+  calc_run_id: string;
+  status: string;
+  result_type: "created" | "duplicate" | "zero_base" | "zero_reward" | "ineligible" | "conflict";
+  reward_id: string | null;
+  existing_reward_id: string | null;
+  base_amount_base: string;
+  reward_amount_base: string;
+  pool_amount_base: string;
+  total_score: string;
+};
+
+export type SidecarRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  zero_base_skip_count: number;
+  ineligible_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_requested_amount_base: string;
+  total_release_amount_base: string;
+  total_freeze_amount_base: string;
+  sidecar_status: string;
+  status: string;
+};
+
+export type SidecarSingleRunResponse = {
+  calc_run_id: string;
+  status: string;
+  result_type: "created" | "duplicate" | "zero_base" | "ineligible" | "conflict";
+  target_count: number;
+  created_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  zero_base_skip_count: number;
+  total_requested_amount_base: string;
+  total_release_amount_base: string;
+  total_freeze_amount_base: string;
+  sidecar_status: string;
+};
+
+export type DailyCalcRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
+  status: string;
+};
+
+export type DirectReferralCalcRunSummary = {
+  calc_run_id: string;
+  target_count: number;
+  created_count: number;
+  no_sponsor_skip_count: number;
+  inactive_sponsor_skip_count: number;
+  zero_reward_skip_count: number;
+  duplicate_skip_count: number;
+  conflict_count: number;
+  failed_count: number;
+  total_reward_amount_base: string;
+  status: string;
+};
+
+export type AnyCalcRunSummary =
+  | DailyCalcRunSummary
+  | DirectReferralCalcRunSummary
+  | RankQualificationRunSummary
+  | RankBonusRunSummary
+  | ContributionRunSummary
+  | SidecarRunSummary;
+
+export type RewardSummaryReport = {
+  reward_amount_base: string;
+  reward_count: string;
+  reversal_amount_base: string;
+  net_reward_amount_base: string;
+  reserved_withdrawal_amount_base: string;
+  completed_withdrawal_amount_base: string;
+  calc_run_succeeded_count: string;
+  calc_run_failed_count: string;
+  duplicate_skip_count: string;
+  conflict_count: string;
+  failed_count: string;
+};
+
+export type RewardByTypeReportRow = {
+  reward_type: string;
+  reward_amount_base: string;
+  reward_count: string;
+  reversal_amount_base: string;
+  net_reward_amount_base: string;
+  reserved_withdrawal_amount_base: string;
+  completed_withdrawal_amount_base: string;
+};
+
+export type CalcRunSummaryReportRow = {
+  run_type: string;
+  total_run_count: string;
+  pending_run_count: string;
+  running_run_count: string;
+  succeeded_run_count: string;
+  failed_run_count: string;
+  finalized_run_count: string;
+  created_count: string;
+  duplicate_skip_count: string;
+  conflict_count: string;
+  failed_count: string;
+};
+
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
 export type BinaryPosition = "LEFT" | "RIGHT";
 export type AdminAccountSort = "joined_at_desc" | "joined_at_asc" | "login_id_asc" | "total_stake_desc";
@@ -744,6 +890,22 @@ async function request<T>(path: string, init: RequestInit & { actorId?: string }
   return payload as T;
 }
 
+async function requestBlob(path: string, init: RequestInit & { actorId?: string } = {}): Promise<Blob> {
+  const headers = new Headers(init.headers ?? {});
+  if (init.actorId) {
+    headers.set("x-actor-account-id", init.actorId);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+    const errorPayload = typeof payload === "object" && payload && "error" in payload ? (payload as any).error : null;
+    throw new ApiError(response.status, errorPayload?.message ?? response.statusText, errorPayload?.details);
+  }
+  return response.blob();
+}
+
 function params(query: Record<string, string | number | boolean | undefined | null>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
@@ -808,6 +970,58 @@ export const api = {
     request<PagedResponse<SettlementItem, "settlement_items">>(`/api/settlement-items${params(query as any)}`, { method: "GET", actorId }),
   getReportSummary: (actorId: string, query: Record<string, unknown>) =>
     request<ReportSummary>(`/api/reports/summary${params(query as any)}`, { method: "GET", actorId }),
+  getRewardSummaryReport: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      policy_version_id?: string;
+      reward_type?: RewardType;
+      status?: RewardStatus;
+    }
+  ) => request<RewardSummaryReport>(`/api/admin/reports/reward-summary${params(query as any)}`, { method: "GET", actorId }),
+  getRewardByTypeReport: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      policy_version_id?: string;
+      reward_type?: RewardType;
+      status?: RewardStatus;
+    }
+  ) => request<{ items: RewardByTypeReportRow[] }>(`/api/admin/reports/reward-by-type${params(query as any)}`, { method: "GET", actorId }),
+  getCalcRunSummaryReport: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      policy_version_id?: string;
+      status?: CalcRun["status"];
+      run_type?: "DAILY_REWARD" | "DIRECT_REFERRAL" | "RANK_QUALIFICATION" | "RANK_BONUS" | "CONTRIBUTION" | "SIDECAR";
+    }
+  ) => request<{ items: CalcRunSummaryReportRow[] }>(`/api/admin/reports/calc-run-summary${params(query as any)}`, { method: "GET", actorId }),
+  downloadAdminRewardsCsv: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      policy_version_id?: string;
+      reward_type?: RewardType;
+      status?: RewardStatus;
+      account_id?: string;
+      calc_run_id?: string;
+    }
+  ) => requestBlob(`/api/admin/reports/rewards.csv${params(query as any)}`, { method: "GET", actorId }),
+  downloadAdminCalcRunsCsv: (
+    actorId: string,
+    query: {
+      date_from?: string;
+      date_to?: string;
+      policy_version_id?: string;
+      status?: CalcRun["status"];
+      run_type?: "DAILY_REWARD" | "DIRECT_REFERRAL" | "RANK_QUALIFICATION" | "RANK_BONUS" | "CONTRIBUTION" | "SIDECAR";
+    }
+  ) => requestBlob(`/api/admin/reports/calc-runs.csv${params(query as any)}`, { method: "GET", actorId }),
   listAuditLogs: (actorId: string, query: Record<string, unknown>) =>
     request<PagedResponse<AuditLog, "audit_logs">>(`/api/audit-logs${params(query as any)}`, { method: "GET", actorId }),
   listAdminAccounts: (
@@ -1053,6 +1267,30 @@ export const api = {
       actorId,
       body: JSON.stringify(body),
     }),
+  runContribution: (actorId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<ContributionRunSummary>(`/api/admin/rewards/contribution/run`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runContributionForAccount: (actorId: string, accountId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<ContributionSingleRunResponse>(`/api/admin/accounts/${accountId}/contribution`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runSidecar: (actorId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<SidecarRunSummary>(`/api/admin/rewards/sidecar/run`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
+  runSidecarForAccount: (actorId: string, accountId: string, body: { policy_version_id: string; calculation_date: string }) =>
+    request<SidecarSingleRunResponse>(`/api/admin/accounts/${accountId}/sidecar`, {
+      method: "POST",
+      actorId,
+      body: JSON.stringify(body),
+    }),
   runDirectReferralForStaking: (actorId: string, stakingId: string, body?: DirectReferralSingleRunRequest) =>
     request<DirectReferralSingleRunResponse>(`/api/admin/stakings/${stakingId}/direct-referral-calculate`, {
       method: "POST",
@@ -1071,6 +1309,11 @@ export const api = {
       `/api/admin/calc-runs/${calcRunId}/rank-results${params(query as any)}`,
       { method: "GET", actorId }
     ),
+  getCalcRunSummary: (actorId: string, calcRunId: string) =>
+    request<AnyCalcRunSummary>(`/api/admin/calc-runs/${calcRunId}/summary`, {
+      method: "GET",
+      actorId,
+    }),
   getRankCalcRunSummary: (actorId: string, calcRunId: string) =>
     request<RankQualificationRunSummary | RankBonusRunSummary>(`/api/admin/calc-runs/${calcRunId}/summary`, {
       method: "GET",

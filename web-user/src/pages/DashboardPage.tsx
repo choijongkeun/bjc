@@ -128,6 +128,11 @@ export default function DashboardPage() {
                     accent: "text-amber-200",
                   },
                   {
+                    label: "BONUS 누적",
+                    value: rewardSummary ? formatRewardAmountBase(rewardSummary.bonus_reward_amount_base ?? "0") : "...",
+                    accent: "text-emerald-200",
+                  },
+                  {
                     label: "현재 직급",
                     value:
                       rank?.rank_status?.current_rank_level === null || rank?.rank_status?.current_rank_level === undefined

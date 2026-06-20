@@ -9,6 +9,7 @@ import {
   type AdminWithdrawalListItem,
   type AdminAccountSort,
   type BinaryPosition,
+  getErrorMessage,
   type SessionRole
 } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
@@ -91,6 +92,11 @@ export function AccountsTab({
   const [stakingError, setStakingError] = useState<string | null>(null);
   const [rewardError, setRewardError] = useState<string | null>(null);
   const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
+  const [singleRunPolicyVersionId, setSingleRunPolicyVersionId] = useState("");
+  const [singleRunCalculationDate, setSingleRunCalculationDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [singleRunSubmitting, setSingleRunSubmitting] = useState<"" | "CONTRIBUTION" | "SIDECAR">("");
+  const [singleRunNotice, setSingleRunNotice] = useState<string | null>(null);
+  const [singleRunError, setSingleRunError] = useState<string | null>(null);
 
   const activeAccountId = useMemo(() => selectedAccountId ?? selected?.id ?? null, [selectedAccountId, selected?.id]);
 
@@ -161,6 +167,11 @@ export function AccountsTab({
       setStatusReason("");
       setStatusError(null);
       setStatusSuccess(null);
+      setSingleRunPolicyVersionId("");
+      setSingleRunCalculationDate(new Date().toISOString().slice(0, 10));
+      setSingleRunSubmitting("");
+      setSingleRunNotice(null);
+      setSingleRunError(null);
       return;
     }
 
@@ -169,6 +180,11 @@ export function AccountsTab({
     setStatusReason("");
     setStatusError(null);
     setStatusSuccess(null);
+    setSingleRunPolicyVersionId("");
+    setSingleRunCalculationDate(new Date().toISOString().slice(0, 10));
+    setSingleRunSubmitting("");
+    setSingleRunNotice(null);
+    setSingleRunError(null);
   }, [selected?.id, selected?.status]);
 
   function applyFilters() {
@@ -198,6 +214,41 @@ export function AccountsTab({
       setStatusError(updateError.message ?? "회원 상태를 변경하지 못했습니다.");
     } finally {
       setStatusBusy(false);
+    }
+  }
+
+  async function handleSingleRun(kind: "CONTRIBUTION" | "SIDECAR") {
+    if (!selected) {
+      return;
+    }
+    if (!singleRunPolicyVersionId.trim() || !singleRunCalculationDate.trim()) {
+      setSingleRunNotice(null);
+      setSingleRunError("policy_version_id와 calculation_date를 모두 입력해 주세요.");
+      return;
+    }
+
+    try {
+      setSingleRunSubmitting(kind);
+      setSingleRunError(null);
+      const result =
+        kind === "CONTRIBUTION"
+          ? await api.runContributionForAccount(actorId, selected.id, {
+              policy_version_id: singleRunPolicyVersionId.trim(),
+              calculation_date: singleRunCalculationDate.trim(),
+            })
+          : await api.runSidecarForAccount(actorId, selected.id, {
+              policy_version_id: singleRunPolicyVersionId.trim(),
+              calculation_date: singleRunCalculationDate.trim(),
+            });
+      setSingleRunNotice(
+        `${kind} 단건 실행 완료: calc_run=${result.calc_run_id}, result_type=${result.result_type}, status=${result.status}`
+      );
+      await loadAccountDetail(selected.id);
+    } catch (runError: unknown) {
+      setSingleRunNotice(null);
+      setSingleRunError(getErrorMessage(runError) || `${kind} 단건 실행에 실패했습니다.`);
+    } finally {
+      setSingleRunSubmitting("");
     }
   }
 
@@ -478,6 +529,66 @@ export function AccountsTab({
                           <Button onClick={() => void handleStatusUpdate()} disabled={statusBusy || !statusDraft}>
                             {statusBusy ? "처리 중..." : "상태 변경"}
                           </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">보너스 단건 실행</div>
+                      <p className="mt-2 text-sm text-slate-400">
+                        `CONTRIBUTION`과 `SIDECAR`를 선택 회원 기준으로 즉시 실행합니다. 정책은 `policy_version_id`와 계산일 입력값을 그대로 사용합니다.
+                      </p>
+                    </div>
+                    <StatusBadge value={selected.role} />
+                  </div>
+                  <div className="mt-4">
+                    {role !== "ADMIN" ? (
+                      <FeedbackState title="조회 전용" description="READER는 단건 보너스 실행을 수행할 수 없습니다." />
+                    ) : selected.role !== "USER" ? (
+                      <FeedbackState
+                        title="실행 제한"
+                        description="운영 계정 보호를 위해 현재는 USER 역할 계정에 대해서만 단건 보너스 실행을 허용합니다."
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        {singleRunError ? <FeedbackState title="단건 실행 실패" description={singleRunError} tone="error" /> : null}
+                        {singleRunNotice ? <FeedbackState title="단건 실행 완료" description={singleRunNotice} /> : null}
+                        <div className="grid gap-3 md:grid-cols-[1fr,220px]">
+                          <input
+                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                            placeholder="policy_version_id"
+                            value={singleRunPolicyVersionId}
+                            onChange={(e) => setSingleRunPolicyVersionId(e.target.value)}
+                            disabled={singleRunSubmitting !== ""}
+                          />
+                          <input
+                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                            type="date"
+                            value={singleRunCalculationDate}
+                            onChange={(e) => setSingleRunCalculationDate(e.target.value)}
+                            disabled={singleRunSubmitting !== ""}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                          <span>동일 snapshot은 duplicate, snapshot 불일치는 conflict로 처리됩니다.</span>
+                          <div className="flex flex-wrap gap-2">
+                            <Button variant="secondary" onClick={() => onOpenRewards(selected.id)}>
+                              최근 보상 보기
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              onClick={() => void handleSingleRun("CONTRIBUTION")}
+                              disabled={singleRunSubmitting !== ""}
+                            >
+                              {singleRunSubmitting === "CONTRIBUTION" ? "CONTRIBUTION 처리 중..." : "단건 CONTRIBUTION"}
+                            </Button>
+                            <Button onClick={() => void handleSingleRun("SIDECAR")} disabled={singleRunSubmitting !== ""}>
+                              {singleRunSubmitting === "SIDECAR" ? "SIDECAR 처리 중..." : "단건 SIDECAR"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}

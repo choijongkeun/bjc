@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, RefreshCcw, Search } from "lucide-react";
 import {
   api,
+  type ContributionRunSummary,
   getErrorMessage,
   type AdminRewardDetail,
   type AdminRewardListItem,
   type DailyRewardRunResponse,
   type DirectReferralRunResponse,
+  type SidecarRunSummary,
   type SessionRole,
 } from "@/lib/api";
 import {
@@ -23,6 +25,7 @@ import {
   type AdminRewardFilters,
 } from "@/lib/rewards";
 import { DailyRewardRunModal } from "@/components/DailyRewardRunModal";
+import { BonusOperationRunModal } from "@/components/rewards/BonusOperationRunModal";
 import { DirectReferralRunModal, DirectReferralRunSummaryPanel } from "@/components/rewards/DirectReferralRunModal";
 import { RewardDetailPanel } from "@/components/RewardDetailPanel";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
@@ -83,6 +86,14 @@ export function RewardsTab({
   const [directRunSubmitting, setDirectRunSubmitting] = useState(false);
   const [directRunError, setDirectRunError] = useState<string | null>(null);
   const [directRunResult, setDirectRunResult] = useState<DirectReferralRunResponse | null>(null);
+  const [contributionRunModalOpen, setContributionRunModalOpen] = useState(false);
+  const [contributionRunSubmitting, setContributionRunSubmitting] = useState(false);
+  const [contributionRunError, setContributionRunError] = useState<string | null>(null);
+  const [contributionRunResult, setContributionRunResult] = useState<ContributionRunSummary | null>(null);
+  const [sidecarRunModalOpen, setSidecarRunModalOpen] = useState(false);
+  const [sidecarRunSubmitting, setSidecarRunSubmitting] = useState(false);
+  const [sidecarRunError, setSidecarRunError] = useState<string | null>(null);
+  const [sidecarRunResult, setSidecarRunResult] = useState<SidecarRunSummary | null>(null);
 
   const requestQuery = useMemo(
     () =>
@@ -253,6 +264,60 @@ export function RewardsTab({
     }
   }
 
+  async function handleRunContribution(payload: { policy_version_id: string; calculation_date: string }) {
+    try {
+      setContributionRunSubmitting(true);
+      setContributionRunError(null);
+      const result = await api.runContribution(actorId, payload);
+      setContributionRunResult(result);
+      setDraftFilters((current) => ({
+        ...current,
+        reward_type: "CONTRIBUTION",
+        calc_run_id: result.calc_run_id,
+      }));
+      setAppliedFilters((current) => ({
+        ...current,
+        reward_type: "CONTRIBUTION",
+        calc_run_id: result.calc_run_id,
+      }));
+      setPage(1);
+      onSelectCalcRunId(result.calc_run_id);
+      onSelectRewardId(null);
+      await refreshList();
+    } catch (submitError) {
+      setContributionRunError(getErrorMessage(submitError));
+    } finally {
+      setContributionRunSubmitting(false);
+    }
+  }
+
+  async function handleRunSidecar(payload: { policy_version_id: string; calculation_date: string }) {
+    try {
+      setSidecarRunSubmitting(true);
+      setSidecarRunError(null);
+      const result = await api.runSidecar(actorId, payload);
+      setSidecarRunResult(result);
+      setDraftFilters((current) => ({
+        ...current,
+        reward_type: "SIDECAR",
+        calc_run_id: result.calc_run_id,
+      }));
+      setAppliedFilters((current) => ({
+        ...current,
+        reward_type: "SIDECAR",
+        calc_run_id: result.calc_run_id,
+      }));
+      setPage(1);
+      onSelectCalcRunId(result.calc_run_id);
+      onSelectRewardId(null);
+      await refreshList();
+    } catch (submitError) {
+      setSidecarRunError(getErrorMessage(submitError));
+    } finally {
+      setSidecarRunSubmitting(false);
+    }
+  }
+
   function openCalcRunRewards(calcRunId: string, rewardType?: AdminRewardFilters["reward_type"]) {
     const next = { ...draftFilters, calc_run_id: calcRunId, reward_type: rewardType ?? draftFilters.reward_type };
     setDraftFilters(next);
@@ -293,6 +358,16 @@ export function RewardsTab({
                 직추천 보상 실행
               </Button>
             ) : null}
+            {role === "ADMIN" ? (
+              <Button variant="secondary" onClick={() => setContributionRunModalOpen(true)}>
+                CONTRIBUTION 실행
+              </Button>
+            ) : null}
+            {role === "ADMIN" ? (
+              <Button variant="secondary" onClick={() => setSidecarRunModalOpen(true)}>
+                SIDECAR 실행
+              </Button>
+            ) : null}
             <Button variant="secondary" onClick={() => void refreshList()} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               새로고침
@@ -307,6 +382,24 @@ export function RewardsTab({
               result={directRunResult}
               onOpenCalcRunRewards={(calcRunId) => openCalcRunRewards(calcRunId, "DIRECT_REFERRAL")}
               onOpenCalcRunDetail={onOpenCalcRun}
+            />
+          </div>
+        ) : null}
+        {contributionRunResult ? (
+          <div className="mb-4">
+            <FeedbackState
+              title="CONTRIBUTION 실행 결과"
+              description={`calc_run=${contributionRunResult.calc_run_id}, created=${contributionRunResult.created_count}, duplicate=${contributionRunResult.duplicate_skip_count}, conflict=${contributionRunResult.conflict_count}`}
+              tone={contributionRunResult.failed_count > 0 || contributionRunResult.conflict_count > 0 ? "error" : "success"}
+            />
+          </div>
+        ) : null}
+        {sidecarRunResult ? (
+          <div className="mb-4">
+            <FeedbackState
+              title="SIDECAR 실행 결과"
+              description={`calc_run=${sidecarRunResult.calc_run_id}, created=${sidecarRunResult.created_count}, duplicate=${sidecarRunResult.duplicate_skip_count}, conflict=${sidecarRunResult.conflict_count}`}
+              tone={sidecarRunResult.failed_count > 0 || sidecarRunResult.conflict_count > 0 ? "error" : "success"}
             />
           </div>
         ) : null}
@@ -532,6 +625,32 @@ export function RewardsTab({
         onSubmit={handleRunDirectReferral}
         onOpenCalcRunRewards={(calcRunId) => openCalcRunRewards(calcRunId, "DIRECT_REFERRAL")}
         onOpenCalcRunDetail={onOpenCalcRun}
+      />
+      <BonusOperationRunModal
+        kind="CONTRIBUTION"
+        open={contributionRunModalOpen}
+        title="CONTRIBUTION 배치 실행"
+        description="기여도 계산은 contribution rule, depth/weight, 조직 범위, duplicate/conflict 기준을 그대로 사용합니다."
+        submitting={contributionRunSubmitting}
+        error={contributionRunError}
+        result={contributionRunResult}
+        onClose={() => setContributionRunModalOpen(false)}
+        onSubmit={handleRunContribution}
+        onOpenRewards={(calcRunId) => openCalcRunRewards(calcRunId, "CONTRIBUTION")}
+        onOpenCalcRun={onOpenCalcRun}
+      />
+      <BonusOperationRunModal
+        kind="SIDECAR"
+        open={sidecarRunModalOpen}
+        title="SIDECAR 배치 실행"
+        description="사이드카는 rule-driven split과 nullable product 정책을 유지하며, release/freeze 합계를 calc_run 단위로 집계합니다."
+        submitting={sidecarRunSubmitting}
+        error={sidecarRunError}
+        result={sidecarRunResult}
+        onClose={() => setSidecarRunModalOpen(false)}
+        onSubmit={handleRunSidecar}
+        onOpenRewards={(calcRunId) => openCalcRunRewards(calcRunId, "SIDECAR")}
+        onOpenCalcRun={onOpenCalcRun}
       />
     </div>
   );
