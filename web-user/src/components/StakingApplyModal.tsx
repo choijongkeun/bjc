@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { StakingProduct } from "@/lib/api";
 import { formatBaseAmount } from "@/lib/amount";
 import { createClientIdempotencyKey, formatDailyInterestBps } from "@/lib/staking";
-import { Button, TextField } from "@/components/ui";
+import { Button, FieldHint, FormField, TextField } from "@/components/ui";
 import { FeedbackState } from "@/components/FeedbackState";
 
 export function StakingApplyModal({
@@ -54,7 +54,7 @@ export function StakingApplyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-xs tracking-[0.18em] text-slate-500">스테이킹 신청</div>
@@ -78,19 +78,19 @@ export function StakingApplyModal({
           <InfoTile label="신청 가능 범위" value={rangeText} />
         </div>
 
-        <div className="mt-5 space-y-2">
-          <label className="text-sm font-semibold text-slate-200" htmlFor="principal_amount_base">
-            원금 입력
-          </label>
+        <div className="mt-5">
+          <FormField label="원금 입력" htmlFor="principal_amount_base">
           <TextField
             id="principal_amount_base"
             inputMode="numeric"
-            placeholder="금액을 입력해 주세요"
+            className="font-mono tabular"
+            placeholder="금액을 입력하세요"
             value={amountBase}
             onChange={(event) => setAmountBase(event.target.value.replace(/[^\d]/g, ""))}
             disabled={submitting}
           />
-          <p className="text-xs text-slate-500">최소 및 최대 신청 금액을 확인한 뒤 입력해 주세요.</p>
+            <FieldHint>최소 및 최대 신청 금액을 확인한 뒤 숫자만 입력해 주세요.</FieldHint>
+          </FormField>
         </div>
 
         {error ? (

@@ -310,6 +310,8 @@ export default function WithdrawalsPage() {
 
             <FilterField label="신청 금액">
               <TextField
+                inputMode="numeric"
+                className="font-mono tabular"
                 placeholder="예: 1000000"
                 value={form.requested_amount_base}
                 onChange={(event) => updateForm("requested_amount_base", event.target.value.replace(/[^\d]/g, ""))}
@@ -548,7 +550,7 @@ function MetricCard({ label, value, note }: { label: string; value: string; note
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-2 text-xs tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="mb-2 text-sm font-semibold text-slate-300">{label}</div>
       {children}
     </label>
   );

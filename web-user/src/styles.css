@@ -37,8 +37,77 @@
 
   button,
   input,
-  select {
+  select,
+  textarea {
     font: inherit;
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+    min-width: 0;
+    border-radius: 20px;
+    border-width: 1px;
+    border-color: rgba(71, 85, 105, 0.8);
+    background: rgba(2, 6, 23, 0.8);
+    color: rgb(241, 245, 249);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select) {
+    min-height: 56px;
+  }
+
+  :where(textarea) {
+    min-height: 112px;
+    resize: vertical;
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea)::placeholder {
+    color: rgb(100, 116, 139);
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):focus-visible {
+    outline: none;
+    border-color: rgba(96, 165, 250, 0.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 0 0 4px rgba(96, 165, 250, 0.12);
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):disabled {
+    cursor: not-allowed;
+    border-color: rgba(51, 65, 85, 0.8);
+    background: rgba(15, 23, 42, 0.85);
+    color: rgb(100, 116, 139);
+  }
+
+  select {
+    appearance: none;
+    padding-right: 3rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2394A3B8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+  }
+
+  input[type="date"],
+  input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0.82) sepia(0.12) saturate(0.5) hue-rotate(181deg);
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: rgb(241, 245, 249);
+    -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.92) inset;
+    transition: background-color 9999s ease-out 0s;
   }
 
   ::selection {
@@ -66,6 +135,22 @@
 
   .glass-card {
     @apply rounded-[28px] border border-slate-800/80 bg-slate-900/70 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl;
+  }
+
+  .modal-panel {
+    @apply w-full rounded-[28px] border border-slate-800 bg-slate-900/95 p-6 shadow-2xl backdrop-blur;
+  }
+
+  .modal-section {
+    @apply rounded-[24px] border border-slate-800 bg-slate-950/55 p-4 text-sm text-slate-300;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-semibold text-slate-200;
+  }
+
+  .field-hint {
+    @apply mt-2 text-xs text-slate-500;
   }
 
   .soft-grid {

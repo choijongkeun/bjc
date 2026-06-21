@@ -1,4 +1,11 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  PropsWithChildren,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getDisplayLabel } from "@/lib/display";
@@ -6,6 +13,16 @@ import { getDisplayLabel } from "@/lib/display";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export const fieldClassName = cn(
+  "w-full min-w-0 rounded-[20px] border border-slate-700/80 bg-slate-950/80 px-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition duration-150",
+  "placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-400/12 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/85 disabled:text-slate-500"
+);
+
+export const fieldInputClassName = cn(fieldClassName, "h-14 py-3");
+export const fieldTextareaClassName = cn(fieldClassName, "min-h-[112px] resize-y py-3 leading-6");
+export const fieldLabelClassName = "mb-2 block text-sm font-semibold text-slate-200";
+export const fieldHintClassName = "mt-2 text-xs text-slate-500";
 
 const variants = {
   primary: "bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/40",
@@ -42,11 +59,65 @@ export function TextField(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       className={cn(
-        "w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15",
+        fieldInputClassName,
         props.className
       )}
       {...props}
     />
+  );
+}
+
+export function SelectField(props: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(
+        fieldInputClassName,
+        "appearance-none pr-11",
+        props.className
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TextAreaField(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        fieldTextareaClassName,
+        props.className
+      )}
+      {...props}
+    />
+  );
+}
+
+export function FieldLabel({ children, className, htmlFor }: { children: ReactNode; className?: string; htmlFor?: string }) {
+  return (
+    <label className={cn(fieldLabelClassName, className)} htmlFor={htmlFor}>
+      {children}
+    </label>
+  );
+}
+
+export function FieldHint({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn(fieldHintClassName, className)}>{children}</p>;
+}
+
+export function FormField({
+  label,
+  htmlFor,
+  hint,
+  error,
+  className,
+  children,
+}: PropsWithChildren<{ label?: ReactNode; htmlFor?: string; hint?: ReactNode; error?: ReactNode; className?: string }>) {
+  return (
+    <div className={cn("space-y-2", className)}>
+      {label ? <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel> : null}
+      {children}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : hint ? <FieldHint>{hint}</FieldHint> : null}
+    </div>
   );
 }
 

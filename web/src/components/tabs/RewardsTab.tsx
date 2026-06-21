@@ -30,7 +30,7 @@ import { DirectReferralRunModal, DirectReferralRunSummaryPanel } from "@/compone
 import { RewardDetailPanel } from "@/components/RewardDetailPanel";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
-import { Button, Card, FeedbackState, Pagination, TableShell } from "@/components/ui";
+import { Button, Card, FeedbackState, Pagination, SelectField, TableShell, TextField } from "@/components/ui";
 
 const DEFAULT_FILTERS: AdminRewardFilters = {
   q: "",
@@ -409,32 +409,27 @@ export function RewardsTab({
         ) : null}
 
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="보상 ID / 회원 아이디 / 발생 회원"
             value={draftFilters.q ?? ""}
             onChange={(event) => updateDraft("q", event.target.value)}
           />
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="회원 ID"
             value={draftFilters.account_id ?? ""}
             onChange={(event) => updateDraft("account_id", event.target.value)}
           />
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="스테이킹 ID"
             value={draftFilters.staking_id ?? ""}
             onChange={(event) => updateDraft("staking_id", event.target.value)}
           />
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="계산 실행 ID"
             value={draftFilters.calc_run_id ?? ""}
             onChange={(event) => updateDraft("calc_run_id", event.target.value)}
           />
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <SelectField
             value={draftFilters.reward_type ?? ""}
             onChange={(event) => updateDraft("reward_type", event.target.value as AdminRewardFilters["reward_type"])}
           >
@@ -444,9 +439,8 @@ export function RewardsTab({
                 {option.label}
               </option>
             ))}
-          </select>
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          </SelectField>
+          <SelectField
             value={draftFilters.status ?? ""}
             onChange={(event) => updateDraft("status", event.target.value as AdminRewardFilters["status"])}
           >
@@ -456,16 +450,14 @@ export function RewardsTab({
                 {option.label}
               </option>
             ))}
-          </select>
-          <input
+          </SelectField>
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.reward_date_from ?? ""}
             onChange={(event) => updateDraft("reward_date_from", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.reward_date_to ?? ""}
             onChange={(event) => updateDraft("reward_date_to", event.target.value)}
           />
@@ -482,8 +474,8 @@ export function RewardsTab({
             </Button>
           </div>
           <div className="flex gap-2">
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            <SelectField
+              className="min-w-[190px]"
               value={draftFilters.sort ?? "reward_date_desc"}
               onChange={(event) => updateDraft("sort", event.target.value as AdminRewardFilters["sort"])}
             >
@@ -492,9 +484,9 @@ export function RewardsTab({
                   {option.label}
                 </option>
               ))}
-            </select>
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            </SelectField>
+            <SelectField
+              className="min-w-[120px]"
               value={String(draftFilters.limit ?? 20)}
               onChange={(event) => {
                 const limit = Number(event.target.value);
@@ -508,7 +500,7 @@ export function RewardsTab({
                   {value}개
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
         </div>
 

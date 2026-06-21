@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { ContributionRunSummary, SidecarRunSummary } from "@/lib/api";
 import { formatRewardAmountBase } from "@/lib/rewards";
-import { Button, FeedbackState, StatusBadge } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, StatusBadge, TextField } from "@/components/ui";
 
 type BonusOperationKind = "CONTRIBUTION" | "SIDECAR";
 
@@ -118,7 +118,7 @@ export function BonusOperationRunModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-4xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-4xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{kind === "CONTRIBUTION" ? "기여 보상" : "사이드카 정산"}</div>
@@ -129,7 +129,7 @@ export function BonusOperationRunModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div className="font-semibold text-slate-100">실행 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
             <li>{description}</li>
@@ -143,9 +143,9 @@ export function BonusOperationRunModal({
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">정책 버전</div>
-            <input
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
+            <FieldLabel htmlFor="bonus-operation-policy-version">정책 버전</FieldLabel>
+            <TextField
+              id="bonus-operation-policy-version"
               value={policyVersionId}
               onChange={(event) => setPolicyVersionId(event.target.value)}
               placeholder="정책 버전 ID 입력"
@@ -153,10 +153,10 @@ export function BonusOperationRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">계산 기준일</div>
-            <input
+            <FieldLabel htmlFor="bonus-operation-calculation-date">계산 기준일</FieldLabel>
+            <TextField
+              id="bonus-operation-calculation-date"
               type="date"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={calculationDate}
               onChange={(event) => setCalculationDate(event.target.value)}
               disabled={submitting}

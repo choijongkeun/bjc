@@ -16,7 +16,7 @@ import { formatBaseAmount } from "@/lib/amount";
 import { getDisplayLabel } from "@/lib/display";
 import { formatRewardAmountBase, formatRewardDate } from "@/lib/rewards";
 import { formatWithdrawalAmountBase, formatWithdrawalDateTime, shortenTxHash } from "@/lib/withdrawals";
-import { Button, Card, FeedbackState, Pagination, StatusBadge, TableShell } from "@/components/ui";
+import { Button, Card, FeedbackState, Pagination, SelectField, StatusBadge, TableShell, TextField } from "@/components/ui";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
@@ -268,15 +268,13 @@ export function AccountsTab({
         {error ? <FeedbackState title="오류" description={error} tone="error" /> : null}
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <div className="xl:col-span-2">
-            <input
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+            <TextField
               placeholder="아이디 / 이름 / 추천 코드"
               value={draftFilters.q}
               onChange={(e) => setDraftFilters((current) => ({ ...current, q: e.target.value }))}
             />
           </div>
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <SelectField
             value={draftFilters.role}
             onChange={(e) => setDraftFilters((current) => ({ ...current, role: e.target.value as AccountFilters["role"] }))}
           >
@@ -284,9 +282,8 @@ export function AccountsTab({
             <option value="ADMIN">관리자</option>
             <option value="READER">조회 관리자</option>
             <option value="USER">일반 회원</option>
-          </select>
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          </SelectField>
+          <SelectField
             value={draftFilters.status}
             onChange={(e) => setDraftFilters((current) => ({ ...current, status: e.target.value as AccountFilters["status"] }))}
           >
@@ -294,16 +291,15 @@ export function AccountsTab({
             <option value="ACTIVE">활성</option>
             <option value="BLOCKED">차단</option>
             <option value="WITHDRAWN">탈퇴</option>
-          </select>
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          </SelectField>
+          <SelectField
             value={draftFilters.binary_position}
             onChange={(e) => setDraftFilters((current) => ({ ...current, binary_position: e.target.value as AccountFilters["binary_position"] }))}
           >
             <option value="">전체 위치</option>
             <option value="LEFT">좌측</option>
             <option value="RIGHT">우측</option>
-          </select>
+          </SelectField>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={applyFilters}>
               <Search className="mr-2 h-4 w-4" />
@@ -326,8 +322,8 @@ export function AccountsTab({
             총 <span className="tabular text-slate-200">{total}</span>명
           </div>
           <div className="flex gap-2">
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            <SelectField
+              className="min-w-[170px]"
               value={sort}
               onChange={(e) => setSort(e.target.value as AdminAccountSort)}
             >
@@ -335,9 +331,9 @@ export function AccountsTab({
               <option value="joined_at_asc">가입일 오래된순</option>
               <option value="login_id_asc">아이디 오름차순</option>
               <option value="total_stake_desc">스테이킹 금액 높은순</option>
-            </select>
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            </SelectField>
+            <SelectField
+              className="min-w-[120px]"
               value={limit}
               onChange={(e) => {
                 setLimit(Number(e.target.value));
@@ -347,7 +343,7 @@ export function AccountsTab({
               <option value={20}>20개</option>
               <option value={50}>50개</option>
               <option value={100}>100개</option>
-            </select>
+            </SelectField>
           </div>
         </div>
         <TableShell height="max-h-[720px]">
@@ -499,8 +495,7 @@ export function AccountsTab({
                         {statusError ? <FeedbackState title="상태 변경 실패" description={statusError} tone="error" /> : null}
                         {statusSuccess ? <FeedbackState title="상태 변경 완료" description={statusSuccess} /> : null}
                         <div className="grid gap-3 md:grid-cols-[220px,1fr]">
-                          <select
-                            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                          <SelectField
                             value={statusDraft}
                             onChange={(e) => setStatusDraft(e.target.value as AdminAccountDetail["status"])}
                             disabled={statusBusy}
@@ -510,9 +505,8 @@ export function AccountsTab({
                                 {getDisplayLabel(nextStatus)}
                               </option>
                             ))}
-                          </select>
-                          <input
-                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                          </SelectField>
+                          <TextField
                             placeholder="변경 사유를 남길 수 있습니다."
                             value={statusReason}
                             onChange={(e) => setStatusReason(e.target.value)}
@@ -550,15 +544,13 @@ export function AccountsTab({
                         {singleRunError ? <FeedbackState title="단건 실행 실패" description={singleRunError} tone="error" /> : null}
                         {singleRunNotice ? <FeedbackState title="단건 실행 완료" description={singleRunNotice} /> : null}
                         <div className="grid gap-3 md:grid-cols-[1fr,220px]">
-                          <input
-                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                          <TextField
                             placeholder="정책 버전 ID"
                             value={singleRunPolicyVersionId}
                             onChange={(e) => setSingleRunPolicyVersionId(e.target.value)}
                             disabled={singleRunSubmitting !== ""}
                           />
-                          <input
-                            className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+                          <TextField
                             type="date"
                             value={singleRunCalculationDate}
                             onChange={(e) => setSingleRunCalculationDate(e.target.value)}

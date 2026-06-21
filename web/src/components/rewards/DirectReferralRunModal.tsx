@@ -8,7 +8,7 @@ import {
   getDirectReferralRunStatusLabel,
   validateDirectReferralRunInput,
 } from "@/lib/rewards";
-import { Button, FeedbackState, StatusBadge } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, StatusBadge, TextField } from "@/components/ui";
 
 type DirectReferralRunPayload = {
   policy_version_id: string;
@@ -136,7 +136,7 @@ export function DirectReferralRunModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-4xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs tracking-[0.18em] text-slate-500">직추천 보상 실행</div>
@@ -147,7 +147,7 @@ export function DirectReferralRunModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div className="font-semibold text-slate-100">실행 전 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
             <li>활성 스테이킹만 대상이며 취소 요청 건은 제외됩니다.</li>
@@ -166,9 +166,9 @@ export function DirectReferralRunModal({
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">정책 버전</div>
-            <input
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
+            <FieldLabel htmlFor="direct-referral-policy-version">정책 버전</FieldLabel>
+            <TextField
+              id="direct-referral-policy-version"
               value={policyVersionId}
               onChange={(event) => setPolicyVersionId(event.target.value)}
               placeholder="정책 버전 ID 입력"
@@ -176,20 +176,20 @@ export function DirectReferralRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">활성화 시작일</div>
-            <input
+            <FieldLabel htmlFor="direct-referral-activated-from">활성화 시작일</FieldLabel>
+            <TextField
+              id="direct-referral-activated-from"
               type="date"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={activatedFrom}
               onChange={(event) => setActivatedFrom(event.target.value)}
               disabled={submitting || !canManageDirectReferral(role)}
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">활성화 종료일</div>
-            <input
+            <FieldLabel htmlFor="direct-referral-activated-to">활성화 종료일</FieldLabel>
+            <TextField
+              id="direct-referral-activated-to"
               type="date"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={activatedTo}
               onChange={(event) => setActivatedTo(event.target.value)}
               disabled={submitting || !canManageDirectReferral(role)}

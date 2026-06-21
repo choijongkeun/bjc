@@ -82,7 +82,7 @@ export default function LoginPage() {
           </div>
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">아이디</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">아이디</span>
               <div className="relative">
                 <UserRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextField
@@ -96,7 +96,7 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">비밀번호</span>
               <div className="relative">
                 <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextField
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 hover:bg-slate-900/70 hover:text-slate-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-2xl p-2.5 text-slate-400 transition hover:bg-slate-900/80 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/30"
                 onClick={() => setShowPassword((value) => !value)}
                 aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
               >

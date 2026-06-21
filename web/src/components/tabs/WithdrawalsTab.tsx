@@ -23,7 +23,7 @@ import {
 import { WithdrawalStatusBadge } from "@/components/WithdrawalStatusBadge";
 import { WithdrawalTypeBadge } from "@/components/WithdrawalTypeBadge";
 import { WithdrawalDetailPanel } from "@/components/withdrawals/WithdrawalDetailPanel";
-import { Button, Card, FeedbackState, Pagination, TableShell } from "@/components/ui";
+import { Button, Card, FeedbackState, Pagination, SelectField, TableShell, TextField } from "@/components/ui";
 
 const DEFAULT_FILTERS: AdminWithdrawalFilters = {
   q: "",
@@ -249,20 +249,17 @@ export function WithdrawalsTab({
         {error ? <FeedbackState title="출금 목록 조회 오류" description={error} tone="error" /> : null}
 
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="출금 ID / 아이디 / 이름"
             value={draftFilters.q ?? ""}
             onChange={(event) => updateDraft("q", event.target.value)}
           />
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <TextField
             placeholder="회원 ID"
             value={draftFilters.account_id ?? ""}
             onChange={(event) => updateDraft("account_id", event.target.value)}
           />
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          <SelectField
             value={draftFilters.withdrawal_type ?? ""}
             onChange={(event) => updateDraft("withdrawal_type", event.target.value as AdminWithdrawalFilters["withdrawal_type"])}
           >
@@ -272,9 +269,8 @@ export function WithdrawalsTab({
                 {option.label}
               </option>
             ))}
-          </select>
-          <select
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          </SelectField>
+          <SelectField
             value={draftFilters.status ?? ""}
             onChange={(event) => updateDraft("status", event.target.value as AdminWithdrawalFilters["status"])}
           >
@@ -284,46 +280,39 @@ export function WithdrawalsTab({
                 {option.label}
               </option>
             ))}
-          </select>
-          <input
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
+          </SelectField>
+          <TextField
             placeholder="네트워크"
             value={draftFilters.network ?? ""}
             onChange={(event) => updateDraft("network", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.requested_from ?? ""}
             onChange={(event) => updateDraft("requested_from", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.requested_to ?? ""}
             onChange={(event) => updateDraft("requested_to", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.completed_from ?? ""}
             onChange={(event) => updateDraft("completed_from", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.completed_to ?? ""}
             onChange={(event) => updateDraft("completed_to", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.date_from ?? ""}
             onChange={(event) => updateDraft("date_from", event.target.value)}
           />
-          <input
+          <TextField
             type="date"
-            className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
             value={draftFilters.date_to ?? ""}
             onChange={(event) => updateDraft("date_to", event.target.value)}
           />
@@ -340,8 +329,8 @@ export function WithdrawalsTab({
             </Button>
           </div>
           <div className="flex gap-2">
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            <SelectField
+              className="min-w-[190px]"
               value={draftFilters.sort ?? "requested_at_desc"}
               onChange={(event) => updateDraft("sort", event.target.value as AdminWithdrawalFilters["sort"])}
             >
@@ -350,9 +339,9 @@ export function WithdrawalsTab({
                   {option.label}
                 </option>
               ))}
-            </select>
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm"
+            </SelectField>
+            <SelectField
+              className="min-w-[120px]"
               value={String(draftFilters.limit ?? 20)}
               onChange={(event) => {
                 const nextLimit = event.target.value === "100" ? 100 : event.target.value === "50" ? 50 : 20;
@@ -364,7 +353,7 @@ export function WithdrawalsTab({
               <option value="20">20개</option>
               <option value="50">50개</option>
               <option value="100">100개</option>
-            </select>
+            </SelectField>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { AdminRewardDetail } from "@/lib/api";
 import { formatRewardAmountBase } from "@/lib/rewards";
-import { Button, FeedbackState } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, TextAreaField } from "@/components/ui";
 
 export function RewardReverseModal({
   reward,
@@ -45,10 +45,10 @@ export function RewardReverseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Reward Reversal</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">보상 취소</div>
             <h3 className="mt-2 text-xl font-bold text-slate-50">역분개 확인</h3>
           </div>
           <button type="button" className="rounded-2xl border border-slate-800 p-2 text-slate-400 hover:text-slate-100" onClick={onClose}>
@@ -56,7 +56,7 @@ export function RewardReverseModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div>원본 보상은 `REVERSED`로 변경되고, 동일 금액의 음수 `REVERSAL` row가 추가됩니다.</div>
           <div className="mt-2">역분개 금액: <span className="tabular font-semibold text-rose-200">-{formatRewardAmountBase(reward.amount_base.replace(/^-/, ""))}</span></div>
         </div>
@@ -65,12 +65,9 @@ export function RewardReverseModal({
         {error ? <div className="mt-4"><FeedbackState title="역분개 실패" description={error} tone="error" /></div> : null}
 
         <div className="mt-4">
-          <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="reward-reversal-reason">
-            reason
-          </label>
-          <textarea
+          <FieldLabel htmlFor="reward-reversal-reason">사유</FieldLabel>
+          <TextAreaField
             id="reward-reversal-reason"
-            className="min-h-[120px] w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
             placeholder="역분개 사유를 입력해 주세요."
             value={reason}
             onChange={(event) => setReason(event.target.value)}

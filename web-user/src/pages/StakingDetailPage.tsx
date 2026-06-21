@@ -12,7 +12,7 @@ import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
 import { StakingStatusBadge } from "@/components/StakingStatusBadge";
 import { UserShell } from "@/components/UserShell";
-import { Badge, Button, Card, SectionTitle, TableShell } from "@/components/ui";
+import { Badge, Button, Card, FieldLabel, SectionTitle, TableShell, TextAreaField } from "@/components/ui";
 
 export default function StakingDetailPage() {
   const { stakingId = "" } = useParams();
@@ -294,7 +294,7 @@ export default function StakingDetailPage() {
 
       {confirmOpen && staking ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+          <div className="modal-panel max-w-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
@@ -308,18 +308,15 @@ export default function StakingDetailPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-4 rounded-[20px] border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-300">
+            <div className="modal-section mt-4">
               {availableAction === "cancel"
                 ? "이 요청은 즉시 취소 상태로 변경됩니다."
                 : "취소 요청이 접수되며, 최종 취소는 관리자 확인 후 반영됩니다."}
             </div>
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="cancel-reason">
-                사유 입력
-              </label>
-              <textarea
+              <FieldLabel htmlFor="cancel-reason">사유 입력</FieldLabel>
+              <TextAreaField
                 id="cancel-reason"
-                className="min-h-[120px] w-full rounded-[20px] border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
                 placeholder="선택 입력"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}

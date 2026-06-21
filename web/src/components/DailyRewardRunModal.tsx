@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { DailyRewardRunResponse } from "@/lib/api";
 import { getDailyRewardRunResultItems, getDefaultKstRewardDate } from "@/lib/rewards";
-import { Button, FeedbackState, StatusBadge } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, StatusBadge, TextField } from "@/components/ui";
 
 export function DailyRewardRunModal({
   open,
@@ -52,7 +52,7 @@ export function DailyRewardRunModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Daily Reward Run</div>
@@ -63,7 +63,7 @@ export function DailyRewardRunModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div className="font-semibold text-slate-100">실행 전 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
             <li>동일 policy/date 실행 이력이 있으면 중복 실행이 거절될 수 있습니다.</li>
@@ -87,9 +87,9 @@ export function DailyRewardRunModal({
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">policy_version_id</div>
-            <input
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
+            <FieldLabel htmlFor="daily-reward-policy-version">정책 버전</FieldLabel>
+            <TextField
+              id="daily-reward-policy-version"
               value={policyVersionId}
               onChange={(event) => setPolicyVersionId(event.target.value)}
               placeholder="정책 버전 ID 입력"
@@ -97,10 +97,10 @@ export function DailyRewardRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">reward_date</div>
-            <input
+            <FieldLabel htmlFor="daily-reward-date">보상 기준일</FieldLabel>
+            <TextField
+              id="daily-reward-date"
               type="date"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={rewardDate}
               onChange={(event) => setRewardDate(event.target.value)}
               disabled={submitting}

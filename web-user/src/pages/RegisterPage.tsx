@@ -124,14 +124,14 @@ export default function RegisterPage() {
           <form className="space-y-5 px-8 py-8" onSubmit={handleSubmit}>
             <div className="grid gap-5 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">아이디</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-300">아이디</span>
                 <div className="relative">
                   <UserRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField className="pl-11" value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="회원 로그인 ID" />
                 </div>
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">이름</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-300">이름</span>
                 <div className="relative">
                   <BadgeCheck className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField className="pl-11" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="표시 이름" />
@@ -141,7 +141,7 @@ export default function RegisterPage() {
 
             <div className="grid gap-5 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-300">비밀번호</span>
                 <div className="relative">
                   <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField
@@ -155,7 +155,7 @@ export default function RegisterPage() {
                 </div>
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">비밀번호 확인</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-300">비밀번호 확인</span>
                 <div className="relative">
                   <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <TextField
@@ -171,7 +171,7 @@ export default function RegisterPage() {
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-semibold tracking-[0.18em] text-slate-500">희망 바이너리 위치</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">희망 바이너리 위치</span>
               <SelectField value={preferredBinaryPosition} onChange={(event) => setPreferredBinaryPosition(event.target.value as "" | BinaryPosition)}>
                 <option value="">미선택</option>
                 <option value="LEFT">좌측</option>
@@ -182,7 +182,7 @@ export default function RegisterPage() {
             <div className="rounded-[28px] border border-slate-800 bg-slate-950/45 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs tracking-[0.18em] text-slate-500">추천인 확인</div>
+                  <div className="text-sm font-semibold text-slate-300">추천인 확인</div>
                   <div className="mt-2 text-sm text-slate-400">추천인 코드 확인이 완료되어야 가입 버튼이 활성화됩니다.</div>
                 </div>
                 {resolvedReferral ? <FeedbackState title="추천인 확인 완료" description={`${resolvedReferral.sponsor_login_id} / ${resolvedReferral.sponsor_display_name}`} tone="success" /> : null}

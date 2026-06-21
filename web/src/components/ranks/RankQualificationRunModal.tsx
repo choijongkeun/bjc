@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { RankQualificationRunSummary } from "@/lib/api";
-import { Button, FeedbackState } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, TextField } from "@/components/ui";
 import { RankRunSummary } from "@/components/ranks/RankRunSummary";
 
 export function RankQualificationRunModal({
@@ -49,7 +49,7 @@ export function RankQualificationRunModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-3xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs tracking-[0.18em] text-slate-500">직급 산정 실행</div>
@@ -60,7 +60,7 @@ export function RankQualificationRunModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div className="font-semibold text-slate-100">실행 안내</div>
           <ul className="mt-2 space-y-1 text-slate-400">
             <li>정책 버전과 계산 기준일에 따라 직급을 산정합니다.</li>
@@ -73,9 +73,9 @@ export function RankQualificationRunModal({
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">정책 버전</div>
-            <input
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
+            <FieldLabel htmlFor="rank-qualification-policy-version">정책 버전</FieldLabel>
+            <TextField
+              id="rank-qualification-policy-version"
               value={policyVersionId}
               onChange={(event) => setPolicyVersionId(event.target.value)}
               placeholder="정책 버전 ID 입력"
@@ -83,10 +83,10 @@ export function RankQualificationRunModal({
             />
           </label>
           <label className="block">
-            <div className="mb-2 text-sm font-semibold text-slate-200">계산 기준일</div>
-            <input
+            <FieldLabel htmlFor="rank-qualification-calculation-date">계산 기준일</FieldLabel>
+            <TextField
+              id="rank-qualification-calculation-date"
               type="date"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={calculationDate}
               onChange={(event) => setCalculationDate(event.target.value)}
               disabled={submitting}

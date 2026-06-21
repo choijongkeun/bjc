@@ -338,7 +338,7 @@ export default function RewardsPage() {
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
       {children}
     </label>
   );

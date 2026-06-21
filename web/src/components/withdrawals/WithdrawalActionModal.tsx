@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { AdminWithdrawalDetail } from "@/lib/api";
 import { formatWithdrawalAmountBase, type WithdrawalActionMode, validateWithdrawalActionInput } from "@/lib/withdrawals";
-import { Button, FeedbackState } from "@/components/ui";
+import { Button, FeedbackState, FieldLabel, TextAreaField, TextField } from "@/components/ui";
 
 type ActionPayload = {
   reason?: string;
@@ -90,7 +90,7 @@ export function WithdrawalActionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+      <div className="modal-panel max-w-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{mode}</div>
@@ -101,7 +101,7 @@ export function WithdrawalActionModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           <div className="grid gap-3 md:grid-cols-2">
             <SummaryItem label="출금 ID" value={withdrawal.id} mono />
             <SummaryItem label="회원" value={`${withdrawal.account?.login_id ?? "-"} / ${withdrawal.account?.display_name ?? "-"}`} />
@@ -112,7 +112,7 @@ export function WithdrawalActionModal({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <div className="modal-section mt-4">
           {mode === "approve" ? <div>요청된 출금을 APPROVED 상태로 전환합니다. 승인 후 다음 단계에서 처리 시작을 별도로 수행해야 합니다.</div> : null}
           {mode === "reject" ? <div>REQUESTED 상태의 출금을 거절합니다. 거절 사유는 필수이며 예약된 allocation은 해제됩니다.</div> : null}
           {mode === "processing" ? <div>APPROVED 상태의 출금을 PROCESSING으로 전환합니다. 실제 외부 송금은 이번 시스템이 수행하지 않습니다.</div> : null}
@@ -130,12 +130,9 @@ export function WithdrawalActionModal({
 
         {mode === "reject" || mode === "fail" ? (
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="withdrawal-action-reason">
-              {mode === "reject" ? "거절 사유" : "실패 사유"}
-            </label>
-            <textarea
+            <FieldLabel htmlFor="withdrawal-action-reason">{mode === "reject" ? "거절 사유" : "실패 사유"}</FieldLabel>
+            <TextAreaField
               id="withdrawal-action-reason"
-              className="min-h-[120px] w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               disabled={submitting}
@@ -147,12 +144,9 @@ export function WithdrawalActionModal({
 
         {mode === "processing" || mode === "complete" ? (
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="withdrawal-action-network">
-              network
-            </label>
-            <input
+            <FieldLabel htmlFor="withdrawal-action-network">네트워크</FieldLabel>
+            <TextField
               id="withdrawal-action-network"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={network}
               onChange={(event) => setNetwork(event.target.value)}
               disabled={submitting}
@@ -164,12 +158,9 @@ export function WithdrawalActionModal({
 
         {mode === "complete" ? (
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="withdrawal-action-tx-hash">
-              tx_hash
-            </label>
-            <input
+            <FieldLabel htmlFor="withdrawal-action-tx-hash">거래 해시</FieldLabel>
+            <TextField
               id="withdrawal-action-tx-hash"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15"
               value={txHash}
               onChange={(event) => setTxHash(event.target.value)}
               disabled={submitting}
