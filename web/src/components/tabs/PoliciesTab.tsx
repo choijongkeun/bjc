@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, CheckCircle2, Copy, Plus, RefreshCcw, X } from "lucide-react";
+import { Check, CheckCircle2, Copy, Plus, RefreshCcw, Trash2, X } from "lucide-react";
 import { api, type PolicyVersion, type SessionRole, type StakingProduct } from "@/lib/api";
 import { Button, Card, FeedbackState, FormField, Pagination, StatusBadge, TableShell, TextField, cn } from "@/components/ui";
 
@@ -21,6 +21,38 @@ const emptyProduct = {
   daily_interest_bps: "50",
   is_active: true,
 };
+
+export function getProductQueueKey(product: typeof emptyProduct) {
+  return [
+    product.name.trim().toLowerCase(),
+    product.symbol.trim().toLowerCase(),
+    product.decimals,
+    product.min_stake_amount_base.trim(),
+    product.max_stake_amount_base.trim(),
+    product.staking_days,
+    product.daily_interest_bps.trim(),
+  ].join("::");
+}
+
+export function getProductQueueSummary(product: typeof emptyProduct) {
+  return `${product.symbol} · ${product.min_stake_amount_base || "-"}~${product.max_stake_amount_base || "-"} · ${product.staking_days}일 · ${product.daily_interest_bps}bps`;
+}
+
+function formatProductBatchError(error: any) {
+  const baseMessage = error?.message ?? "상품 등록에 실패했습니다.";
+  const details = error?.details;
+  if (!details || typeof details !== "object") {
+    return baseMessage;
+  }
+
+  const index = typeof (details as { index?: unknown }).index === "number" ? (details as { index: number }).index : null;
+  const name = typeof (details as { name?: unknown }).name === "string" ? (details as { name: string }).name : null;
+  if (index === null && !name) {
+    return baseMessage;
+  }
+
+  return `${baseMessage}${index !== null ? ` (${index + 1}번째 상품` : " ("}${name ? `: ${name}` : ""})`;
+}
 
 function DetailItem({
   label,
@@ -210,6 +242,8 @@ function ProductBatchModal({
   productQueue,
   onChangeDraft,
   onAddQueue,
+  onRemoveQueue,
+  onClearQueue,
   onClose,
   onSubmit,
 }: {
@@ -221,6 +255,8 @@ function ProductBatchModal({
   productQueue: Array<typeof emptyProduct>;
   onChangeDraft: (next: typeof emptyProduct) => void;
   onAddQueue: () => void;
+  onRemoveQueue: (index: number) => void;
+  onClearQueue: () => void;
   onClose: () => void;
   onSubmit: () => void | Promise<void>;
 }) {
@@ -343,6 +379,9 @@ function ProductBatchModal({
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {submitting ? "등록 중..." : "배치 등록"}
             </Button>
+            <Button variant="ghost" onClick={onClearQueue} disabled={productQueue.length === 0 || submitting}>
+              큐 전체 비우기
+            </Button>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
             <div className="mb-2 font-semibold">등록 대기 큐 ({productQueue.length})</div>
@@ -350,8 +389,20 @@ function ProductBatchModal({
               <div className="text-slate-500">아직 추가된 상품이 없습니다.</div>
             ) : (
               productQueue.map((item, index) => (
-                <div key={`${item.name}-${index}`} className="rounded-2xl border border-slate-800/80 bg-slate-950/70 px-3 py-2 text-slate-400">
-                  {item.name} / {item.staking_days}일 / {item.daily_interest_bps}bps
+                <div key={`${getProductQueueKey(item)}-${index}`} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 px-3 py-3 text-slate-400">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-100">{item.name}</div>
+                    <div className="mt-1 text-xs text-slate-400">{getProductQueueSummary(item)}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => onRemoveQueue(index)}
+                    disabled={submitting}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    삭제
+                  </Button>
                 </div>
               ))
             )}
@@ -494,6 +545,46 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
     setProductSubmitError(null);
   }
 
+  function addProductToQueue() {
+    const normalizedDraft = {
+      ...productDraft,
+      name: productDraft.name.trim(),
+      symbol: productDraft.symbol.trim(),
+      min_stake_amount_base: productDraft.min_stake_amount_base.trim(),
+      max_stake_amount_base: productDraft.max_stake_amount_base.trim(),
+      daily_interest_bps: productDraft.daily_interest_bps.trim(),
+    };
+
+    if (!normalizedDraft.name) {
+      setProductSubmitError("상품명을 입력해 주세요.");
+      return;
+    }
+    if (!normalizedDraft.symbol) {
+      setProductSubmitError("심볼을 입력해 주세요.");
+      return;
+    }
+    if (!normalizedDraft.min_stake_amount_base) {
+      setProductSubmitError("최소 스테이킹 금액을 입력해 주세요.");
+      return;
+    }
+    if (!normalizedDraft.max_stake_amount_base) {
+      setProductSubmitError("최대 스테이킹 금액을 입력해 주세요.");
+      return;
+    }
+    if (!normalizedDraft.daily_interest_bps) {
+      setProductSubmitError("일일 이자율을 입력해 주세요.");
+      return;
+    }
+    if (productQueue.some((item) => getProductQueueKey(item) === getProductQueueKey(normalizedDraft))) {
+      setProductSubmitError("이미 큐에 추가된 상품입니다.");
+      return;
+    }
+
+    setProductQueue((current) => [...current, normalizedDraft]);
+    setProductDraft(emptyProduct);
+    setProductSubmitError(null);
+  }
+
   function openPolicyDetail(policyId: string) {
     setSelectedPolicyId(policyId);
     setIsPolicyDetailModalOpen(true);
@@ -559,13 +650,60 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
     try {
       setIsSubmittingProducts(true);
       setProductSubmitError(null);
+      // #region debug-point A:submit-products
+      fetch("http://127.0.0.1:7777/event", {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId: "product-batch-fail",
+          runId: "pre-fix",
+          hypothesisId: "A",
+          location: "PoliciesTab.tsx:submitProducts",
+          msg: "[DEBUG] submit product batch request",
+          data: {
+            policy_id: selectedPolicy.id,
+            queue_size: productQueue.length,
+            products: productQueue.map((product, index) => ({
+              index,
+              name: product.name,
+              symbol: product.symbol,
+              decimals: product.decimals,
+              min_stake_amount_base: product.min_stake_amount_base,
+              max_stake_amount_base: product.max_stake_amount_base,
+              staking_days: product.staking_days,
+              daily_interest_bps: product.daily_interest_bps,
+              is_active: product.is_active,
+            })),
+          },
+          ts: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       const response = await api.createStakingProducts(actorId, { policy_id: selectedPolicy.id, products: productQueue });
       setNotice(`상품 ${response.upserted}건을 등록했습니다.`);
       setProductQueue([]);
       setIsProductBatchModalOpen(false);
       await load();
     } catch (actionError: any) {
-      setProductSubmitError(actionError.message ?? "상품 등록에 실패했습니다.");
+      // #region debug-point B:submit-products-error
+      fetch("http://127.0.0.1:7777/event", {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId: "product-batch-fail",
+          runId: "pre-fix",
+          hypothesisId: "B",
+          location: "PoliciesTab.tsx:submitProducts:catch",
+          msg: "[DEBUG] submit product batch failed",
+          data: {
+            message: actionError?.message ?? null,
+            details: actionError?.details ?? null,
+            queue_size: productQueue.length,
+            policy_id: selectedPolicy.id,
+          },
+          ts: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      setProductSubmitError(formatProductBatchError(actionError));
     } finally {
       setIsSubmittingProducts(false);
     }
@@ -841,9 +979,12 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
         productDraft={productDraft}
         productQueue={productQueue}
         onChangeDraft={setProductDraft}
-        onAddQueue={() => {
-          setProductQueue((current) => [...current, productDraft]);
-          setProductDraft(emptyProduct);
+        onAddQueue={addProductToQueue}
+        onRemoveQueue={(index) => {
+          setProductQueue((current) => current.filter((_, currentIndex) => currentIndex !== index));
+        }}
+        onClearQueue={() => {
+          setProductQueue([]);
         }}
         onClose={closeProductBatchModal}
         onSubmit={submitProducts}

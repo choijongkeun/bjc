@@ -2020,6 +2020,36 @@ app.post("/api/staking-products", async (req, res, next) => {
       })
       .parse(req.body);
 
+    // #region debug-point C:api-staking-products
+    fetch("http://127.0.0.1:7777/event", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: "product-batch-fail",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "server.ts:/api/staking-products",
+        msg: "[DEBUG] server received staking product batch",
+        data: {
+          policy_id: body.policy_id,
+          product_count: body.products.length,
+          products: body.products.map((product, index) => ({
+            index,
+            id: product.id ?? null,
+            name: product.name,
+            symbol: product.symbol,
+            decimals: product.decimals,
+            min_stake_amount_base: product.min_stake_amount_base,
+            max_stake_amount_base: product.max_stake_amount_base,
+            staking_days: product.staking_days,
+            daily_interest_bps: product.daily_interest_bps,
+            is_active: product.is_active
+          }))
+        },
+        ts: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion
+
     const actor_account_id = requireActorId(req);
     const result = await engine.upsertStakingProducts({
       actor_account_id,
@@ -2028,6 +2058,24 @@ app.post("/api/staking-products", async (req, res, next) => {
     });
     res.json(result);
   } catch (err) {
+    // #region debug-point D:api-staking-products-error
+    fetch("http://127.0.0.1:7777/event", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: "product-batch-fail",
+        runId: "pre-fix",
+        hypothesisId: "D",
+        location: "server.ts:/api/staking-products:catch",
+        msg: "[DEBUG] server staking product batch failed",
+        data: {
+          message: err instanceof Error ? err.message : String(err),
+          code: typeof err === "object" && err !== null ? (err as any).code ?? null : null,
+          details: typeof err === "object" && err !== null ? (err as any).details ?? null : null
+        },
+        ts: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion
     next(err);
   }
 });

@@ -77,6 +77,143 @@ function assertDailyInterestBps(value: string): void {
   }
 }
 
+function makeProductBatchDetails(
+  index: number,
+  product: {
+    name: string;
+    symbol: string;
+    min_stake_amount_base: string;
+    max_stake_amount_base: string;
+    staking_days: number;
+    daily_interest_bps: string;
+  },
+  extra?: Record<string, unknown>
+) {
+  return {
+    index,
+    name: product.name,
+    symbol: product.symbol,
+    min_stake_amount_base: product.min_stake_amount_base,
+    max_stake_amount_base: product.max_stake_amount_base,
+    staking_days: product.staking_days,
+    daily_interest_bps: product.daily_interest_bps,
+    ...extra
+  };
+}
+
+function normalizeBatchProduct(
+  product: {
+    id?: string | null;
+    name: string;
+    symbol: string;
+    decimals: number;
+    min_stake_amount_base: string;
+    max_stake_amount_base: string;
+    staking_days: number;
+    daily_interest_bps: string;
+    is_active: boolean;
+  },
+  index: number
+) {
+  const normalized = {
+    ...product,
+    id: product.id ?? null,
+    name: product.name.trim(),
+    symbol: product.symbol.trim(),
+    min_stake_amount_base: product.min_stake_amount_base.trim(),
+    max_stake_amount_base: product.max_stake_amount_base.trim(),
+    daily_interest_bps: String(product.daily_interest_bps).trim()
+  };
+
+  if (!normalized.name) {
+    throw validationError("name is required", makeProductBatchDetails(index, normalized, { field: "name", reason: "required" }));
+  }
+  if (!normalized.symbol) {
+    throw validationError("symbol is required", makeProductBatchDetails(index, normalized, { field: "symbol", reason: "required" }));
+  }
+  if (!normalized.min_stake_amount_base) {
+    throw validationError(
+      "min_stake_amount_base is required",
+      makeProductBatchDetails(index, normalized, { field: "min_stake_amount_base", reason: "required" })
+    );
+  }
+  if (!normalized.max_stake_amount_base) {
+    throw validationError(
+      "max_stake_amount_base is required",
+      makeProductBatchDetails(index, normalized, { field: "max_stake_amount_base", reason: "required" })
+    );
+  }
+  if (!Number.isInteger(normalized.decimals) || normalized.decimals < 0 || normalized.decimals > 30) {
+    throw validationError("decimals must be an integer between 0 and 30", makeProductBatchDetails(index, normalized, { field: "decimals", reason: "invalid" }));
+  }
+  if (!Number.isInteger(normalized.staking_days) || normalized.staking_days <= 0) {
+    throw validationError("staking_days must be a positive integer", makeProductBatchDetails(index, normalized, { field: "staking_days", reason: "invalid" }));
+  }
+
+  try {
+    assertNonNegativeIntString("min_stake_amount_base", normalized.min_stake_amount_base);
+  } catch {
+    throw validationError(
+      "min_stake_amount_base must be a non-negative integer string",
+      makeProductBatchDetails(index, normalized, { field: "min_stake_amount_base", reason: "invalid" })
+    );
+  }
+  try {
+    assertNonNegativeIntString("max_stake_amount_base", normalized.max_stake_amount_base);
+  } catch {
+    throw validationError(
+      "max_stake_amount_base must be a non-negative integer string",
+      makeProductBatchDetails(index, normalized, { field: "max_stake_amount_base", reason: "invalid" })
+    );
+  }
+  try {
+    assertDailyInterestBps(normalized.daily_interest_bps);
+  } catch {
+    throw validationError(
+      "daily_interest_bps must be a non-negative integer string",
+      makeProductBatchDetails(index, normalized, { field: "daily_interest_bps", reason: "invalid" })
+    );
+  }
+  if (BigInt(normalized.min_stake_amount_base) > BigInt(normalized.max_stake_amount_base)) {
+    throw validationError(
+      "min_stake_amount_base must be less than or equal to max_stake_amount_base",
+      makeProductBatchDetails(index, normalized, { field: "min_stake_amount_base", reason: "min_gt_max" })
+    );
+  }
+
+  return normalized;
+}
+
+export function validateStakingProductBatchProducts(
+  products: Array<{
+    id?: string | null;
+    name: string;
+    symbol: string;
+    decimals: number;
+    min_stake_amount_base: string;
+    max_stake_amount_base: string;
+    staking_days: number;
+    daily_interest_bps: string;
+    is_active: boolean;
+  }>
+) {
+  const normalizedProducts = products.map((product, index) => normalizeBatchProduct(product, index));
+  const seenNames = new Map<string, number>();
+
+  normalizedProducts.forEach((product, index) => {
+    const duplicateIndex = seenNames.get(product.name.toLowerCase());
+    if (duplicateIndex !== undefined) {
+      throw conflictError(
+        "duplicate product name found in request",
+        makeProductBatchDetails(index, product, { field: "name", reason: "duplicate_in_request", duplicate_of_index: duplicateIndex })
+      );
+    }
+    seenNames.set(product.name.toLowerCase(), index);
+  });
+
+  return normalizedProducts;
+}
+
 function validateLedgerEventInput(event: LedgerEventInput): void {
   if (!ledgerEventTypes.has(event.event_type)) {
     throw validationError("invalid event_type", { event_type: event.event_type });
@@ -296,18 +433,24 @@ export class PolicyEngine {
         throw notFound("policy_version not found", { policy_version_id: input.policy_version_id });
       }
 
-      const ids: string[] = [];
-      for (const product of input.products) {
-        assertNonNegativeIntString("min_stake_amount_base", product.min_stake_amount_base);
-        assertNonNegativeIntString("max_stake_amount_base", product.max_stake_amount_base);
-        assertDailyInterestBps(product.daily_interest_bps);
-        if (BigInt(product.min_stake_amount_base) > BigInt(product.max_stake_amount_base)) {
-          throw validationError("min_stake_amount_base must be less than or equal to max_stake_amount_base", {
-            min_stake_amount_base: product.min_stake_amount_base,
-            max_stake_amount_base: product.max_stake_amount_base
-          });
-        }
+      const normalizedProducts = validateStakingProductBatchProducts(input.products);
+      const existingProducts = await listStakingProducts(conn, {
+        policy_version_id: input.policy_version_id,
+        page: 1,
+        limit: Math.max(normalizedProducts.length, 100)
+      });
+      const existingNames = new Set(existingProducts.items.map((product) => product.name.toLowerCase()));
+      const existingDuplicate = normalizedProducts.findIndex((product) => existingNames.has(product.name.toLowerCase()));
+      if (existingDuplicate >= 0) {
+        const product = normalizedProducts[existingDuplicate]!;
+        throw conflictError(
+          "staking product already exists",
+          makeProductBatchDetails(existingDuplicate, product, { field: "name", reason: "duplicate_in_db" })
+        );
+      }
 
+      const ids: string[] = [];
+      for (const product of normalizedProducts) {
         const id = product.id ?? newId();
         await insertStakingProduct(conn, {
           id,

@@ -914,11 +914,20 @@ function toFriendlyMessage(status: number, message: string) {
     return "이 작업을 수행할 권한이 없습니다.";
   }
   if (status === 404) {
+    if (message.includes("policy_version not found")) {
+      return "선택된 정책을 찾을 수 없습니다.";
+    }
     return "요청한 정보를 찾을 수 없습니다.";
   }
   if (status === 409) {
     if (message.includes("policy_version name and version already exist")) {
       return "같은 정책명과 버전이 이미 존재합니다.";
+    }
+    if (message.includes("duplicate product name found in request")) {
+      return "큐 안에 같은 상품명이 중복되어 있습니다.";
+    }
+    if (message.includes("staking product already exists")) {
+      return "이미 등록된 상품입니다.";
     }
     return "현재 상태로는 요청을 처리할 수 없습니다.";
   }
@@ -927,6 +936,14 @@ function toFriendlyMessage(status: number, message: string) {
     if (message.includes("version is required")) return "버전을 입력해 주세요.";
     if (message.includes("effective_to must be greater than or equal to effective_from")) {
       return "적용 종료일은 적용 시작일보다 빠를 수 없습니다.";
+    }
+    if (message.includes("min_stake_amount_base is required")) return "최소 스테이킹 금액이 누락되었습니다.";
+    if (message.includes("max_stake_amount_base is required")) return "최대 스테이킹 금액이 누락되었습니다.";
+    if (message.includes("symbol is required")) return "심볼이 누락되었습니다.";
+    if (message.includes("staking_days must be a positive integer")) return "스테이킹 기간을 올바르게 입력해 주세요.";
+    if (message.includes("daily_interest_bps must be a non-negative integer string")) return "일일 이자율을 올바르게 입력해 주세요.";
+    if (message.includes("min_stake_amount_base must be less than or equal to max_stake_amount_base")) {
+      return "최소 스테이킹 금액은 최대 금액보다 클 수 없습니다.";
     }
     return "입력값을 다시 확인해 주세요.";
   }
