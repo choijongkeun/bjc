@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, RefreshCcw, Search } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, RefreshCcw, Search } from "lucide-react";
 import {
   api,
   type ContributionRunSummary,
@@ -30,7 +30,7 @@ import { DirectReferralRunModal, DirectReferralRunSummaryPanel } from "@/compone
 import { RewardDetailPanel } from "@/components/RewardDetailPanel";
 import { RewardStatusBadge } from "@/components/RewardStatusBadge";
 import { RewardTypeBadge } from "@/components/RewardTypeBadge";
-import { Button, Card, FeedbackState, Pagination, SelectField, TableShell, TextField } from "@/components/ui";
+import { Button, Card, FeedbackState, FormField, Pagination, SelectField, TableShell, TextField, cn } from "@/components/ui";
 
 const DEFAULT_FILTERS: AdminRewardFilters = {
   q: "",
@@ -45,6 +45,109 @@ const DEFAULT_FILTERS: AdminRewardFilters = {
   limit: 20,
   sort: "reward_date_desc",
 };
+
+function formatCompactDateTime(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : "-";
+}
+
+function DetailItem({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0 space-y-1", className)}>
+      <dt className="text-xs font-medium text-slate-500">{label}</dt>
+      <dd className="min-w-0 text-sm text-slate-200">{value}</dd>
+    </div>
+  );
+}
+
+function CopyableValue({
+  label,
+  value,
+  className,
+  textClassName,
+}: {
+  label: string;
+  value: string | null | undefined;
+  className?: string;
+  textClassName?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const safeValue = value?.trim() ? value : null;
+
+  async function handleCopy(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (!safeValue || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(safeValue);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
+      <span className={cn("min-w-0 flex-1 truncate", textClassName)} title={safeValue ?? "-"}>
+        {safeValue ?? "-"}
+      </span>
+      {safeValue ? (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/70 text-slate-400 transition hover:border-slate-700 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/30"
+          aria-label={`${label} 복사`}
+          title={copied ? `${label} 복사됨` : `${label} 복사`}
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function CalcRunLink({
+  calcRunId,
+  onOpenCalcRun,
+}: {
+  calcRunId: string | null | undefined;
+  onOpenCalcRun: (calcRunId: string) => void;
+}) {
+  if (!calcRunId) {
+    return <span>-</span>;
+  }
+
+  return (
+    <div className="space-y-1">
+      <CopyableValue
+        label="계산 실행 ID"
+        value={calcRunId}
+        textClassName="font-mono text-xs text-slate-400"
+      />
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenCalcRun(calcRunId);
+        }}
+      >
+        상세
+        <ExternalLink className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
 
 export function RewardsTab({
   actorId,
@@ -94,6 +197,7 @@ export function RewardsTab({
   const [sidecarRunSubmitting, setSidecarRunSubmitting] = useState(false);
   const [sidecarRunError, setSidecarRunError] = useState<string | null>(null);
   const [sidecarRunResult, setSidecarRunResult] = useState<SidecarRunSummary | null>(null);
+  const [expandedRewardId, setExpandedRewardId] = useState<string | null>(null);
 
   const requestQuery = useMemo(
     () =>
@@ -334,6 +438,10 @@ export function RewardsTab({
     onSelectRewardId(rewardId);
   }
 
+  function toggleExpandedReward(rewardId: string) {
+    setExpandedRewardId((current) => (current === rewardId ? null : rewardId));
+  }
+
   async function handleUpdated(nextReward: AdminRewardDetail) {
     setSelectedReward(nextReward);
     await refreshList();
@@ -408,99 +516,117 @@ export function RewardsTab({
           </div>
         ) : null}
 
-        <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <TextField
-            placeholder="보상 ID / 회원 아이디 / 발생 회원"
-            value={draftFilters.q ?? ""}
-            onChange={(event) => updateDraft("q", event.target.value)}
-          />
-          <TextField
-            placeholder="회원 ID"
-            value={draftFilters.account_id ?? ""}
-            onChange={(event) => updateDraft("account_id", event.target.value)}
-          />
-          <TextField
-            placeholder="스테이킹 ID"
-            value={draftFilters.staking_id ?? ""}
-            onChange={(event) => updateDraft("staking_id", event.target.value)}
-          />
-          <TextField
-            placeholder="계산 실행 ID"
-            value={draftFilters.calc_run_id ?? ""}
-            onChange={(event) => updateDraft("calc_run_id", event.target.value)}
-          />
-          <SelectField
-            value={draftFilters.reward_type ?? ""}
-            onChange={(event) => updateDraft("reward_type", event.target.value as AdminRewardFilters["reward_type"])}
-          >
-            <option value="">전체 보상 구분</option>
-            {REWARD_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            value={draftFilters.status ?? ""}
-            onChange={(event) => updateDraft("status", event.target.value as AdminRewardFilters["status"])}
-          >
-            <option value="">전체 상태</option>
-            {REWARD_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            type="date"
-            value={draftFilters.reward_date_from ?? ""}
-            onChange={(event) => updateDraft("reward_date_from", event.target.value)}
-          />
-          <TextField
-            type="date"
-            value={draftFilters.reward_date_to ?? ""}
-            onChange={(event) => updateDraft("reward_date_to", event.target.value)}
-          />
-        </div>
-
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2">
-            <Button onClick={applyFilters}>
-              <Search className="mr-2 h-4 w-4" />
-              조회
-            </Button>
-            <Button variant="ghost" onClick={resetFilters}>
-              초기화
-            </Button>
-          </div>
-          <div className="flex gap-2">
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <FormField label="검색" className="sm:col-span-2">
+            <TextField
+              placeholder="보상 ID / 회원 아이디 / 발생 회원을 입력하세요"
+              value={draftFilters.q ?? ""}
+              onChange={(event) => updateDraft("q", event.target.value)}
+            />
+          </FormField>
+          <FormField label="회원 ID">
+            <TextField
+              placeholder="회원 ID를 입력하세요"
+              value={draftFilters.account_id ?? ""}
+              onChange={(event) => updateDraft("account_id", event.target.value)}
+            />
+          </FormField>
+          <FormField label="스테이킹 ID">
+            <TextField
+              placeholder="스테이킹 ID를 입력하세요"
+              value={draftFilters.staking_id ?? ""}
+              onChange={(event) => updateDraft("staking_id", event.target.value)}
+            />
+          </FormField>
+          <FormField label="계산 실행 ID">
+            <TextField
+              placeholder="계산 실행 ID를 입력하세요"
+              value={draftFilters.calc_run_id ?? ""}
+              onChange={(event) => updateDraft("calc_run_id", event.target.value)}
+            />
+          </FormField>
+          <FormField label="보상 구분">
             <SelectField
-              className="min-w-[190px]"
-              value={draftFilters.sort ?? "reward_date_desc"}
-              onChange={(event) => updateDraft("sort", event.target.value as AdminRewardFilters["sort"])}
+              value={draftFilters.reward_type ?? ""}
+              onChange={(event) => updateDraft("reward_type", event.target.value as AdminRewardFilters["reward_type"])}
             >
-              {REWARD_SORT_OPTIONS.map((option) => (
+              <option value="">전체 보상 구분</option>
+              {REWARD_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </SelectField>
+          </FormField>
+          <FormField label="상태">
             <SelectField
-              className="min-w-[120px]"
-              value={String(draftFilters.limit ?? 20)}
-              onChange={(event) => {
-                const limit = Number(event.target.value);
-                updateDraft("limit", limit);
-                setAppliedFilters((current) => ({ ...current, limit }));
-                setPage(1);
-              }}
+              value={draftFilters.status ?? ""}
+              onChange={(event) => updateDraft("status", event.target.value as AdminRewardFilters["status"])}
             >
-              {[20, 50, 100].map((value) => (
-                <option key={value} value={value}>
-                  {value}개
+              <option value="">전체 상태</option>
+              {REWARD_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </SelectField>
+          </FormField>
+          <FormField label="보상 시작일">
+            <TextField
+              type="date"
+              value={draftFilters.reward_date_from ?? ""}
+              onChange={(event) => updateDraft("reward_date_from", event.target.value)}
+            />
+          </FormField>
+          <FormField label="보상 종료일">
+            <TextField
+              type="date"
+              value={draftFilters.reward_date_to ?? ""}
+              onChange={(event) => updateDraft("reward_date_to", event.target.value)}
+            />
+          </FormField>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button className="flex-1 sm:flex-none" onClick={applyFilters}>
+              <Search className="mr-2 h-4 w-4" />
+              조회
+            </Button>
+            <Button className="flex-1 sm:flex-none" variant="ghost" onClick={resetFilters}>
+              초기화
+            </Button>
+          </div>
+          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+            <FormField label="정렬" className="sm:min-w-[220px]">
+              <SelectField
+                value={draftFilters.sort ?? "reward_date_desc"}
+                onChange={(event) => updateDraft("sort", event.target.value as AdminRewardFilters["sort"])}
+              >
+                {REWARD_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
+            <FormField label="페이지 크기" className="sm:min-w-[140px]">
+              <SelectField
+                value={String(draftFilters.limit ?? 20)}
+                onChange={(event) => {
+                  const limit = Number(event.target.value);
+                  updateDraft("limit", limit);
+                  setAppliedFilters((current) => ({ ...current, limit }));
+                  setPage(1);
+                }}
+              >
+                {[20, 50, 100].map((value) => (
+                  <option key={value} value={value}>
+                    {value}개
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
           </div>
         </div>
 
@@ -513,77 +639,279 @@ export function RewardsTab({
 
         {items.length > 0 ? (
           <>
-            <TableShell height="max-h-[760px]">
-              <table className="data-table min-w-full">
-                <thead>
-                  <tr>
-                    <th>보상 ID</th>
-                    <th>보상 기준일</th>
-                    <th>아이디</th>
-                    <th>이름</th>
-                    <th>보상 구분</th>
-                    <th>보상 금액</th>
-                    <th>상태</th>
-                    <th>스테이킹 / 발생 정보</th>
-                    <th>계산 실행 ID</th>
-                    <th>확정 일시</th>
-                    <th>출금 가능 일시</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => {
-                    const negative = item.reward_type === "REVERSAL" || isNegativeRewardAmount(item.amount_base);
-                    const active = activeSelectedId === item.id;
-                    return (
-                      <tr
-                        key={item.id}
-                        className={active ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}
+            <div className="hidden xl:block">
+              <TableShell height="max-h-[760px]">
+                <table className="data-table min-w-full">
+                  <thead>
+                    <tr>
+                      <th>보상 ID</th>
+                      <th>보상 기준일</th>
+                      <th>아이디</th>
+                      <th>이름</th>
+                      <th>보상 구분</th>
+                      <th>보상 금액</th>
+                      <th>상태</th>
+                      <th>스테이킹 / 발생 정보</th>
+                      <th>계산 실행 ID</th>
+                      <th>확정 일시</th>
+                      <th>출금 가능 일시</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => {
+                      const negative = item.reward_type === "REVERSAL" || isNegativeRewardAmount(item.amount_base);
+                      const active = activeSelectedId === item.id;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={active ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}
+                          onClick={() => {
+                            openRewardDetail(item.id);
+                            onSelectAccountId(item.account_id);
+                            onSelectCalcRunId(item.calc_run_id);
+                          }}
+                        >
+                          <td className="max-w-[230px]">
+                            <CopyableValue label="보상 ID" value={item.id} textClassName="font-mono text-xs text-slate-300" />
+                          </td>
+                          <td>{formatRewardDate(item.reward_date)}</td>
+                          <td className="max-w-[170px]">
+                            <CopyableValue label="회원 아이디" value={item.account?.login_id} />
+                          </td>
+                          <td className="max-w-[170px] truncate" title={item.account?.display_name ?? "-"}>
+                            {item.account?.display_name ?? "-"}
+                          </td>
+                          <td><RewardTypeBadge type={item.reward_type} /></td>
+                          <td className={`tabular text-right font-semibold ${negative ? "text-rose-200" : "text-slate-100"}`}>{formatRewardAmountBase(item.amount_base)}</td>
+                          <td><RewardStatusBadge status={item.status} /></td>
+                          <td className="max-w-[240px]">
+                            <div className="truncate" title={item.product?.name ?? "-"}>
+                              {item.product?.name ?? "-"}
+                            </div>
+                            <CopyableValue
+                              label="스테이킹 ID"
+                              value={item.account_staking_id ?? item.source_account_staking_id}
+                              textClassName="font-mono text-xs text-slate-500"
+                            />
+                            {item.reward_type === "DIRECT_REFERRAL" ? (
+                              <div className="mt-1 truncate text-xs text-slate-400" title={item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}>
+                                발생 회원: {item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="max-w-[220px]">
+                            <CalcRunLink calcRunId={item.calc_run_id} onOpenCalcRun={onOpenCalcRun} />
+                          </td>
+                          <td className="max-w-[148px] truncate text-slate-400" title={formatRewardDateTime(item.confirmed_at)}>
+                            {formatRewardDateTime(item.confirmed_at)}
+                          </td>
+                          <td className="max-w-[148px] truncate text-slate-400" title={formatRewardDateTime(item.available_at)}>
+                            {formatRewardDateTime(item.available_at)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableShell>
+            </div>
+
+            <div className="hidden md:block xl:hidden">
+              <TableShell height="max-h-[760px]">
+                <table className="data-table min-w-full">
+                  <thead>
+                    <tr>
+                      <th>회원 / 보상</th>
+                      <th>구분</th>
+                      <th>금액</th>
+                      <th>상태</th>
+                      <th>기준일</th>
+                      <th className="w-[120px]">상세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => {
+                      const negative = item.reward_type === "REVERSAL" || isNegativeRewardAmount(item.amount_base);
+                      const active = activeSelectedId === item.id;
+                      const expanded = expandedRewardId === item.id;
+                      return (
+                        <Fragment key={item.id}>
+                          <tr
+                            className={cn(active ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60", expanded && "border-b-0")}
+                            onClick={() => {
+                              openRewardDetail(item.id);
+                              onSelectAccountId(item.account_id);
+                              onSelectCalcRunId(item.calc_run_id);
+                            }}
+                          >
+                            <td className="max-w-[320px]">
+                              <div className="space-y-1">
+                                <CopyableValue label="회원 아이디" value={item.account?.login_id} textClassName="font-semibold text-slate-100" />
+                                <div className="truncate text-sm text-slate-400" title={item.account?.display_name ?? "-"}>
+                                  {item.account?.display_name ?? "-"}
+                                </div>
+                                <CopyableValue label="보상 ID" value={item.id} textClassName="font-mono text-xs text-slate-500" />
+                              </div>
+                            </td>
+                            <td><RewardTypeBadge type={item.reward_type} /></td>
+                            <td className={`tabular text-right font-semibold ${negative ? "text-rose-200" : "text-slate-100"}`}>
+                              {formatRewardAmountBase(item.amount_base)}
+                            </td>
+                            <td><RewardStatusBadge status={item.status} /></td>
+                            <td className="text-slate-400">{formatCompactDateTime(item.reward_date)}</td>
+                            <td>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  className="px-3 py-2 text-xs"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openRewardDetail(item.id);
+                                    onSelectAccountId(item.account_id);
+                                    onSelectCalcRunId(item.calc_run_id);
+                                  }}
+                                >
+                                  선택
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  className="px-3 py-2 text-xs"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpandedReward(item.id);
+                                  }}
+                                >
+                                  {expanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />}
+                                  {expanded ? "접기" : "열기"}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expanded ? (
+                            <tr className="bg-slate-950/70">
+                              <td colSpan={6} className="px-4 py-4">
+                                <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                  <DetailItem
+                                    label="보상 ID"
+                                    value={<CopyableValue label="보상 ID" value={item.id} textClassName="font-mono text-xs text-slate-400" />}
+                                  />
+                                  <DetailItem
+                                    label="계산 실행 ID"
+                                    value={<CalcRunLink calcRunId={item.calc_run_id} onOpenCalcRun={onOpenCalcRun} />}
+                                  />
+                                  <DetailItem
+                                    label="스테이킹 ID"
+                                    value={<CopyableValue label="스테이킹 ID" value={item.account_staking_id ?? item.source_account_staking_id} textClassName="font-mono text-xs text-slate-400" />}
+                                  />
+                                  <DetailItem label="상품" value={item.product?.name ?? "-"} />
+                                  <DetailItem label="확정 일시" value={formatRewardDateTime(item.confirmed_at)} />
+                                  <DetailItem label="출금 가능 일시" value={formatRewardDateTime(item.available_at)} />
+                                  {item.reward_type === "DIRECT_REFERRAL" ? (
+                                    <DetailItem
+                                      label="발생 회원"
+                                      value={
+                                        <CopyableValue
+                                          label="발생 회원"
+                                          value={item.source?.display_name ?? item.source?.login_id ?? item.source_account_id}
+                                        />
+                                      }
+                                      className="sm:col-span-2 lg:col-span-3"
+                                    />
+                                  ) : null}
+                                </dl>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableShell>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {items.map((item) => {
+                const negative = item.reward_type === "REVERSAL" || isNegativeRewardAmount(item.amount_base);
+                const active = activeSelectedId === item.id;
+                const expanded = expandedRewardId === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "rounded-[24px] border border-slate-800 bg-slate-950/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+                      active && "border-blue-500/40 bg-blue-500/10"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <CopyableValue label="회원 아이디" value={item.account?.login_id} textClassName="font-semibold text-slate-100" />
+                        <div className="mt-1 truncate text-sm text-slate-400" title={item.account?.display_name ?? "-"}>
+                          {item.account?.display_name ?? "-"}
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        <RewardStatusBadge status={item.status} />
+                      </div>
+                    </div>
+                    <dl className="mt-4 grid grid-cols-2 gap-3">
+                      <DetailItem label="보상 구분" value={<RewardTypeBadge type={item.reward_type} />} />
+                      <DetailItem label="기준일" value={formatCompactDateTime(item.reward_date)} />
+                      <DetailItem
+                        label="보상 금액"
+                        value={<span className={cn("tabular font-semibold", negative ? "text-rose-200" : "text-slate-100")}>{formatRewardAmountBase(item.amount_base)}</span>}
+                      />
+                      <DetailItem label="상품" value={item.product?.name ?? "-"} />
+                    </dl>
+                    {expanded ? (
+                      <dl className="mt-4 grid gap-3 border-t border-slate-800 pt-4">
+                        <DetailItem
+                          label="보상 ID"
+                          value={<CopyableValue label="보상 ID" value={item.id} textClassName="font-mono text-xs text-slate-400" />}
+                        />
+                        <DetailItem
+                          label="계산 실행 ID"
+                          value={<CalcRunLink calcRunId={item.calc_run_id} onOpenCalcRun={onOpenCalcRun} />}
+                        />
+                        <DetailItem
+                          label="스테이킹 ID"
+                          value={<CopyableValue label="스테이킹 ID" value={item.account_staking_id ?? item.source_account_staking_id} textClassName="font-mono text-xs text-slate-400" />}
+                        />
+                        <DetailItem label="확정 일시" value={formatRewardDateTime(item.confirmed_at)} />
+                        <DetailItem label="출금 가능 일시" value={formatRewardDateTime(item.available_at)} />
+                        {item.reward_type === "DIRECT_REFERRAL" ? (
+                          <DetailItem
+                            label="발생 회원"
+                            value={<CopyableValue label="발생 회원" value={item.source?.display_name ?? item.source?.login_id ?? item.source_account_id} />}
+                          />
+                        ) : null}
+                      </dl>
+                    ) : null}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        variant={active ? "primary" : "secondary"}
+                        className="flex-1"
                         onClick={() => {
                           openRewardDetail(item.id);
                           onSelectAccountId(item.account_id);
                           onSelectCalcRunId(item.calc_run_id);
                         }}
                       >
-                        <td className="font-mono text-xs text-slate-300">{item.id}</td>
-                        <td>{formatRewardDate(item.reward_date)}</td>
-                        <td>{item.account?.login_id ?? "-"}</td>
-                        <td>{item.account?.display_name ?? "-"}</td>
-                        <td><RewardTypeBadge type={item.reward_type} /></td>
-                        <td className={`tabular text-right font-semibold ${negative ? "text-rose-200" : "text-slate-100"}`}>{formatRewardAmountBase(item.amount_base)}</td>
-                        <td><RewardStatusBadge status={item.status} /></td>
-                        <td>
-                          <div>{item.product?.name ?? "-"}</div>
-                          <div className="font-mono text-xs text-slate-500">{item.account_staking_id ?? item.source_account_staking_id ?? "-"}</div>
-                          {item.reward_type === "DIRECT_REFERRAL" ? (
-                            <div className="mt-1 text-xs text-slate-400">
-                              발생 회원: {item.source?.display_name ?? item.source?.login_id ?? item.source_account_id ?? "-"}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="font-mono text-xs text-slate-400">
-                          <div>{item.calc_run_id ?? "-"}</div>
-                          {item.calc_run_id ? (
-                            <button
-                              type="button"
-                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onOpenCalcRun(item.calc_run_id!);
-                              }}
-                            >
-                              상세
-                              <ExternalLink className="h-3 w-3" />
-                            </button>
-                          ) : null}
-                        </td>
-                        <td className="text-slate-400">{formatRewardDateTime(item.confirmed_at)}</td>
-                        <td className="text-slate-400">{formatRewardDateTime(item.available_at)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableShell>
+                        {active ? "선택됨" : "상세 보기"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="px-4"
+                        onClick={() => toggleExpandedReward(item.id)}
+                      >
+                        {expanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />}
+                        {expanded ? "추가 정보 접기" : "추가 정보"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
             <div className="mt-4">
               <Pagination page={page} limit={requestQuery.limit!} total={total} onChange={setPage} />
             </div>
