@@ -4,6 +4,8 @@ export type PolicyVersionStatus = "DRAFT" | "ACTIVE" | "RETIRED";
 
 export type PolicyVersionRow = {
   id: string;
+  name: string;
+  version: string;
   status: PolicyVersionStatus;
   note: string | null;
   effective_from: string | null;
@@ -18,6 +20,8 @@ export async function insertPolicyVersion(
   conn: DbConn,
   input: {
     id: string;
+    name: string;
+    version: string;
     status: PolicyVersionStatus;
     note?: string | null;
     effective_from?: string | null;
@@ -26,9 +30,11 @@ export async function insertPolicyVersion(
   }
 ): Promise<void> {
   await conn.query(
-    "insert into policy_versions (id, status, note, effective_from, effective_to, created_by) values (?, ?, ?, ?, ?, ?)",
+    "insert into policy_versions (id, name, version, status, note, effective_from, effective_to, created_by) values (?, ?, ?, ?, ?, ?, ?, ?)",
     [
       input.id,
+      input.name,
+      input.version,
       input.status,
       input.note ?? null,
       input.effective_from ?? null,
@@ -40,7 +46,7 @@ export async function insertPolicyVersion(
 
 export async function getPolicyVersionById(conn: DbConn, id: string): Promise<PolicyVersionRow | null> {
   const [rows] = await conn.query(
-    "select id, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at from policy_versions where id = ? limit 1",
+    "select id, name, version, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at from policy_versions where id = ? limit 1",
     [id]
   );
   const arr = rows as any[];
@@ -50,7 +56,7 @@ export async function getPolicyVersionById(conn: DbConn, id: string): Promise<Po
 
 export async function lockPolicyVersion(conn: DbConn, id: string): Promise<PolicyVersionRow | null> {
   const [rows] = await conn.query(
-    "select id, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at from policy_versions where id = ? for update",
+    "select id, name, version, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at from policy_versions where id = ? for update",
     [id]
   );
   const arr = rows as any[];
@@ -105,7 +111,7 @@ export async function listPolicyVersions(
   const total = Number((countRows as Array<{ total: number | string }>)[0]?.total ?? 0);
 
   const [rows] = await conn.query(
-    `select id, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at
+    `select id, name, version, status, note, effective_from, effective_to, created_by, created_at, activated_at, retired_at
        from policy_versions
        ${whereSql}
       order by created_at desc, id desc

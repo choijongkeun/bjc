@@ -4,6 +4,7 @@ import { withTx } from "../db/tx.js";
 import { assertCalcRunStatusTransitionAllowed, type CalcRunStatus } from "../domain/calcRunStatus.js";
 import { conflictError, notFound, validationError } from "../domain/errors.js";
 import { assertIntString, assertNonNegativeIntString } from "../domain/amount.js";
+import { normalizePolicyVersionCreateInput } from "../domain/policyVersion.js";
 import { insertAdminAuditLog, listAdminAuditLogs } from "../repos/auditLogRepo.js";
 import { getCalcRunForUpdate, insertCalcRun, listCalcRuns, updateCalcRunStatus } from "../repos/calcRunsRepo.js";
 import {
@@ -57,6 +58,19 @@ function isMysqlDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as any).code === "ER_DUP_ENTRY";
 }
 
+export function toCreatePolicyVersionError(
+  err: unknown,
+  input: { name: string; version: string }
+): Error {
+  if (isMysqlDuplicateKeyError(err)) {
+    return conflictError("policy_version name and version already exist", {
+      name: input.name,
+      version: input.version
+    });
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 function assertDailyInterestBps(value: string): void {
   if (!/^\d+$/.test(value)) {
     throw validationError("daily_interest_bps must be a non-negative integer string", { daily_interest_bps: value });
@@ -91,6 +105,8 @@ export class PolicyEngine {
 
   async createPolicyVersion(input: {
     actor_account_id: string;
+    name: string;
+    version: string;
     note?: string | null;
     effective_from?: string | null;
     effective_to?: string | null;
@@ -99,15 +115,29 @@ export class PolicyEngine {
       const actor = await requireActor(conn, input.actor_account_id);
       assertRoleAtLeast(actor, "ADMIN");
 
-      const id = newId();
-      await insertPolicyVersion(conn, {
-        id,
-        status: "DRAFT",
+      const normalized = normalizePolicyVersionCreateInput({
+        name: input.name,
+        version: input.version,
         note: input.note ?? null,
         effective_from: input.effective_from ?? null,
-        effective_to: input.effective_to ?? null,
-        created_by: actor.id
+        effective_to: input.effective_to ?? null
       });
+
+      const id = newId();
+      try {
+        await insertPolicyVersion(conn, {
+          id,
+          name: normalized.name,
+          version: normalized.version,
+          status: "DRAFT",
+          note: normalized.note,
+          effective_from: normalized.effective_from,
+          effective_to: normalized.effective_to,
+          created_by: actor.id
+        });
+      } catch (err) {
+        throw toCreatePolicyVersionError(err, { name: normalized.name, version: normalized.version });
+      }
 
       await insertAdminAuditLog(conn, {
         actor_account_id: actor.id,
@@ -115,9 +145,11 @@ export class PolicyEngine {
         target_table: "policy_versions",
         target_id: id,
         meta: {
-          note: input.note ?? null,
-          effective_from: input.effective_from ?? null,
-          effective_to: input.effective_to ?? null
+          name: normalized.name,
+          version: normalized.version,
+          note: normalized.note,
+          effective_from: normalized.effective_from,
+          effective_to: normalized.effective_to
         }
       });
 

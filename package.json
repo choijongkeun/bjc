@@ -29,6 +29,7 @@
     "smoke:contribution": "tsx scripts/contribution_reward_smoke.ts",
     "smoke:sidecar": "tsx scripts/sidecar_reward_smoke.ts",
     "smoke:all": "npm run preflight:smoke && npm run smoke:member && npm run smoke:staking && npm run smoke:reward && npm run smoke:withdrawal && npm run smoke:direct-referral && npm run smoke:rank-qualification && npm run smoke:rank-bonus && npm run smoke:contribution && npm run smoke:sidecar",
+    "reset:data": "tsx scripts/reset_bjc_data.ts",
     "batch:daily-reward": "tsx scripts/run_reward_batch.ts daily-reward",
     "batch:direct-referral": "tsx scripts/run_reward_batch.ts direct-referral",
     "batch:rank-qualification": "tsx scripts/run_reward_batch.ts rank-qualification",

@@ -22,6 +22,7 @@ import { toHttpError } from "./http/httpErrors.js";
 import { checkReadiness } from "./http/readiness.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
 import { notFound, unauthorized, validationError } from "./domain/errors.js";
+import { policyVersionCreateRequestSchema } from "./domain/policyVersion.js";
 import { getCalcRunById } from "./repos/calcRunsRepo.js";
 import { buildCsv } from "./util/csv.js";
 
@@ -185,11 +186,11 @@ app.get("/api/referrals/resolve", async (req, res, next) => {
   try {
     const query = z
       .object({
-        referral_code: z.string().trim().min(1)
+        login_id: z.string().trim().min(1)
       })
       .parse(req.query);
 
-    const result = await authService.resolveReferralCode({ referral_code: query.referral_code });
+    const result = await authService.resolveReferralCode({ sponsor_login_id: query.login_id });
     res.json(result);
   } catch (err) {
     next(err);
@@ -203,7 +204,7 @@ app.post("/api/auth/register", async (req, res, next) => {
         login_id: z.string().trim().min(3).max(64).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
         password: z.string().min(8).max(128),
         display_name: z.string().trim().min(1).max(100),
-        referral_code: z.string().trim().min(1).max(32),
+        sponsor_login_id: z.string().trim().min(3).max(64),
         preferred_binary_position: z.enum(["LEFT", "RIGHT"]).optional()
       })
       .parse(req.body);
@@ -862,17 +863,11 @@ app.get("/api/admin/accounts/:accountId/rank-history", async (req, res, next) =>
 
 app.post("/admin/policy-versions", async (req, res, next) => {
   try {
-    const body = z
-      .object({
-        note: z.string().nullable().optional(),
-        effective_from: z.string().nullable().optional(),
-        effective_to: z.string().nullable().optional()
-      })
-      .parse(req.body);
+    const body = policyVersionCreateRequestSchema.parse(req.body);
 
     const actor_account_id = requireActorId(req);
     const result = await engine.createPolicyVersion({ actor_account_id, ...body });
-    res.json(result);
+    res.json({ policy_id: result.policy_version_id, status: "DRAFT", name: body.name, version: body.version });
   } catch (err) {
     next(err);
   }
@@ -1875,17 +1870,11 @@ app.get("/api/admin/calc-runs/:calcRunId/summary", async (req, res, next) => {
 
 app.post("/api/policies", async (req, res, next) => {
   try {
-    const body = z
-      .object({
-        note: z.string().nullable().optional(),
-        effective_from: z.string().nullable().optional(),
-        effective_to: z.string().nullable().optional()
-      })
-      .parse(req.body);
+    const body = policyVersionCreateRequestSchema.parse(req.body);
 
     const actor_account_id = requireActorId(req);
     const result = await engine.createPolicyVersion({ actor_account_id, ...body });
-    res.json({ policy_id: result.policy_version_id, status: "DRAFT" });
+    res.json({ policy_id: result.policy_version_id, status: "DRAFT", name: body.name, version: body.version });
   } catch (err) {
     next(err);
   }

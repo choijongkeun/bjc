@@ -58,7 +58,12 @@ async function main() {
   let policyVersionId = "";
   let productId = "";
   try {
-    await engine.createPolicyVersion({ actor_account_id: ids.user, note: `user should fail ${suffix}` });
+    await engine.createPolicyVersion({
+      actor_account_id: ids.user,
+      name: `Smoke Policy ${suffix}`,
+      version: "V1",
+      note: `user should fail ${suffix}`
+    });
     results.push({ name: "USER create policy_version", ok: false, message: "unexpected success" });
   } catch (e: any) {
     results.push({ name: "USER create policy_version", ok: true, message: e?.message });
@@ -67,6 +72,8 @@ async function main() {
   try {
     const { policy_version_id } = await engine.createPolicyVersion({
       actor_account_id: ids.admin,
+      name: `Smoke Policy ${suffix}`,
+      version: "V1",
       note: `smoke ${suffix}`
     });
     policyVersionId = policy_version_id;

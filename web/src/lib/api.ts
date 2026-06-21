@@ -32,6 +32,8 @@ export type WithdrawalSort =
 
 export type PolicyVersion = {
   id: string;
+  name: string;
+  version: string;
   status: "DRAFT" | "ACTIVE" | "RETIRED";
   note: string | null;
   effective_from: string | null;
@@ -915,9 +917,17 @@ function toFriendlyMessage(status: number, message: string) {
     return "요청한 정보를 찾을 수 없습니다.";
   }
   if (status === 409) {
+    if (message.includes("policy_version name and version already exist")) {
+      return "같은 정책명과 버전이 이미 존재합니다.";
+    }
     return "현재 상태로는 요청을 처리할 수 없습니다.";
   }
   if (status === 422) {
+    if (message.includes("name is required")) return "정책명을 입력해 주세요.";
+    if (message.includes("version is required")) return "버전을 입력해 주세요.";
+    if (message.includes("effective_to must be greater than or equal to effective_from")) {
+      return "적용 종료일은 적용 시작일보다 빠를 수 없습니다.";
+    }
     return "입력값을 다시 확인해 주세요.";
   }
   return message || "요청 처리 중 오류가 발생했습니다.";
@@ -1038,8 +1048,16 @@ export const api = {
   },
   listPolicies: (actorId: string, query: Record<string, unknown>) =>
     request<PagedResponse<PolicyVersion, "policy_versions">>(`/api/policies${params(query as any)}`, { method: "GET", actorId }),
-  createPolicy: (actorId: string, body: { note?: string | null; effective_from?: string | null; effective_to?: string | null }) =>
-    request<{ policy_id: string; status: string }>(`/api/policies`, { method: "POST", actorId, body: JSON.stringify(body) }),
+  createPolicy: (
+    actorId: string,
+    body: {
+      name: string;
+      version: string;
+      note?: string | null;
+      effective_from?: string | null;
+      effective_to?: string | null;
+    }
+  ) => request<{ policy_id: string; status: string; name: string; version: string }>(`/api/policies`, { method: "POST", actorId, body: JSON.stringify(body) }),
   activatePolicy: (actorId: string, policyId: string) =>
     request<{ ok: true }>(`/api/policies/${policyId}/activate`, { method: "POST", actorId, body: JSON.stringify({}) }),
   listStakingProducts: (actorId: string, query: Record<string, unknown>) =>
