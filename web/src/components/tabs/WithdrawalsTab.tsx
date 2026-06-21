@@ -214,8 +214,8 @@ export function WithdrawalsTab({
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-50">Withdrawals 관리</h2>
-            <p className="text-sm text-slate-400">전체 출금, 상태별 액션, 회원별 조회, 수동 완료/실패 처리를 관리합니다.</p>
+            <h2 className="text-lg font-bold text-slate-50">출금 관리</h2>
+            <p className="text-sm text-slate-400">전체 출금 내역과 상태별 처리 현황을 확인합니다.</p>
           </div>
           <Button variant="secondary" onClick={refreshAll} disabled={loading || summaryLoading}>
             <RefreshCcw className="mr-2 h-4 w-4" />
@@ -225,7 +225,7 @@ export function WithdrawalsTab({
 
         {selectedAccountId ? (
           <div className="mb-4">
-            <FeedbackState title="회원 필터 적용" description={`현재 account_id ${selectedAccountId} 기준으로 출금 목록을 조회 중입니다.`} />
+            <FeedbackState title="회원 필터 적용" description={`현재 회원 ID ${selectedAccountId} 기준으로 출금 목록을 조회 중입니다.`} />
           </div>
         ) : null}
 
@@ -240,7 +240,7 @@ export function WithdrawalsTab({
               ))
             : summaryCards.map((card) => (
                 <div key={card.label} className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{card.label}</div>
+                  <div className="text-xs tracking-[0.16em] text-slate-500">{card.label}</div>
                   <div className="mt-2 text-xl font-bold text-slate-50">{card.value}</div>
                 </div>
               ))}
@@ -251,13 +251,13 @@ export function WithdrawalsTab({
         <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="withdrawal id / login_id / display_name"
+            placeholder="출금 ID / 아이디 / 이름"
             value={draftFilters.q ?? ""}
             onChange={(event) => updateDraft("q", event.target.value)}
           />
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="account_id"
+            placeholder="회원 ID"
             value={draftFilters.account_id ?? ""}
             onChange={(event) => updateDraft("account_id", event.target.value)}
           />
@@ -266,7 +266,7 @@ export function WithdrawalsTab({
             value={draftFilters.withdrawal_type ?? ""}
             onChange={(event) => updateDraft("withdrawal_type", event.target.value as AdminWithdrawalFilters["withdrawal_type"])}
           >
-            <option value="">전체 withdrawal_type</option>
+            <option value="">전체 출금 구분</option>
             {WITHDRAWAL_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -278,7 +278,7 @@ export function WithdrawalsTab({
             value={draftFilters.status ?? ""}
             onChange={(event) => updateDraft("status", event.target.value as AdminWithdrawalFilters["status"])}
           >
-            <option value="">전체 status</option>
+            <option value="">전체 상태</option>
             {WITHDRAWAL_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -287,7 +287,7 @@ export function WithdrawalsTab({
           </select>
           <input
             className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3"
-            placeholder="network"
+            placeholder="네트워크"
             value={draftFilters.network ?? ""}
             onChange={(event) => updateDraft("network", event.target.value)}
           />
@@ -372,8 +372,8 @@ export function WithdrawalsTab({
           총 <span className="tabular text-slate-200">{total}</span>건
         </div>
 
-        {loading ? <FeedbackState title="출금 목록 로딩 중" description="admin withdrawals 목록을 불러오고 있습니다." /> : null}
-        {!loading && items.length === 0 ? <FeedbackState title="출금 내역 없음" description="현재 필터 조건에 맞는 withdrawals가 없습니다." /> : null}
+        {loading ? <FeedbackState title="출금 목록 불러오는 중" description="출금 목록을 불러오고 있습니다." /> : null}
+        {!loading && items.length === 0 ? <FeedbackState title="출금 내역 없음" description="현재 조건에 맞는 출금 내역이 없습니다." /> : null}
 
         {items.length > 0 ? (
           <>
@@ -383,14 +383,14 @@ export function WithdrawalsTab({
                   <tr>
                     <th>신청일</th>
                     <th>회원</th>
-                    <th>출금 타입</th>
+                    <th>출금 구분</th>
                     <th>신청 금액</th>
                     <th>수수료</th>
                     <th>실수령액</th>
                     <th>상태</th>
-                    <th>network</th>
-                    <th>wallet</th>
-                    <th>tx_hash</th>
+                    <th>네트워크</th>
+                    <th>지갑 주소</th>
+                    <th>거래 해시</th>
                     <th>상세</th>
                   </tr>
                 </thead>
@@ -434,7 +434,7 @@ export function WithdrawalsTab({
       </Card>
 
       <div className="space-y-6">
-        {detailLoading ? <FeedbackState title="출금 상세 로딩 중" description="선택한 withdrawal 상세를 불러오고 있습니다." /> : null}
+        {detailLoading ? <FeedbackState title="출금 상세 불러오는 중" description="선택한 출금 상세를 불러오고 있습니다." /> : null}
         {detailError ? <FeedbackState title="출금 상세 조회 오류" description={detailError} tone="error" /> : null}
         <WithdrawalDetailPanel actorId={actorId} role={role} withdrawal={selectedWithdrawal} onUpdated={handleUpdated} />
       </div>

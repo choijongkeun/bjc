@@ -27,16 +27,16 @@ export function AuditLogsTab({ actorId, role }: { actorId: string; role: Session
   }, [page, role]);
 
   if (role !== "ADMIN") {
-    return <Card><FeedbackState title="관리자 전용 메뉴" description="감사 로그에는 정책 변경, 정산 확정, CSV 업로드, 실패 사유가 포함되므로 1차 MVP에서는 ADMIN만 조회할 수 있습니다." /></Card>;
+    return <Card><FeedbackState title="관리자 전용 메뉴" description="감사 로그는 관리자만 조회할 수 있습니다." /></Card>;
   }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
       <Card>
         <div className="mb-4 flex flex-wrap gap-3">
-          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="actor_account_id" value={filters.actor_account_id} onChange={(e) => setFilters((v) => ({ ...v, actor_account_id: e.target.value }))} />
-          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="action" value={filters.action} onChange={(e) => setFilters((v) => ({ ...v, action: e.target.value }))} />
-          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="target_table" value={filters.target_table} onChange={(e) => setFilters((v) => ({ ...v, target_table: e.target.value }))} />
+          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="처리자 ID" value={filters.actor_account_id} onChange={(e) => setFilters((v) => ({ ...v, actor_account_id: e.target.value }))} />
+          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="동작" value={filters.action} onChange={(e) => setFilters((v) => ({ ...v, action: e.target.value }))} />
+          <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="대상 테이블" value={filters.target_table} onChange={(e) => setFilters((v) => ({ ...v, target_table: e.target.value }))} />
           <Button onClick={() => void load()}>조회</Button>
         </div>
         {error ? <FeedbackState title="오류" description={error} tone="error" /> : null}
@@ -45,9 +45,9 @@ export function AuditLogsTab({ actorId, role }: { actorId: string; role: Session
             <thead>
               <tr>
                 <th>시간</th>
-                <th>actor</th>
-                <th>action</th>
-                <th>target</th>
+                <th>처리자</th>
+                <th>동작</th>
+                <th>대상</th>
               </tr>
             </thead>
             <tbody>
@@ -65,7 +65,7 @@ export function AuditLogsTab({ actorId, role }: { actorId: string; role: Session
         <div className="mt-4"><Pagination page={page} limit={10} total={total} onChange={setPage} /></div>
       </Card>
       <Card>
-        <h3 className="text-lg font-bold text-slate-50">payload</h3>
+        <h3 className="text-lg font-bold text-slate-50">상세 내용</h3>
         {selected ? <div className="mt-4"><JsonPanel title={selected.action} value={selected.meta} /></div> : <FeedbackState title="선택된 로그 없음" description="좌측 테이블에서 로그를 선택해 주세요." />}
       </Card>
     </div>

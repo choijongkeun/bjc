@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { api, type CalcRunSummaryReportRow, type ReportSummary, type RewardByTypeReportRow, type RewardSummaryReport, type SessionRole } from "@/lib/api";
+import { getDisplayLabel } from "@/lib/display";
 import { formatRewardAmountBase, REWARD_STATUS_OPTIONS, REWARD_TYPE_OPTIONS } from "@/lib/rewards";
 import { Button, Card, FeedbackState, TableShell } from "@/components/ui";
 
@@ -113,19 +114,19 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
     ["총 스테이킹 원금", summary.total_stake_amount_base],
     ["총 보상 금액", summary.total_reward_amount_base],
     ["총 수수료 금액", summary.total_fee_amount_base],
-    ["계정 수", summary.total_accounts],
+    ["회원 수", summary.total_accounts],
     ["원장 이벤트 수", summary.total_ledger_events],
-    ["정산 실행 수", summary.total_calc_runs],
-    ["확정 정산 수", summary.finalized_calc_runs],
+    ["계산 실행 수", summary.total_calc_runs],
+    ["확정 완료 건수", summary.finalized_calc_runs],
   ];
 
   const rewardCards = rewardSummary
     ? [
         ["보상 발생액", formatRewardAmountBase(rewardSummary.reward_amount_base)],
-        ["역분개 금액", rewardSummary.reversal_amount_base],
-        ["순액", rewardSummary.net_reward_amount_base],
-        ["출금 예약액", rewardSummary.reserved_withdrawal_amount_base],
-        ["출금 완료액", rewardSummary.completed_withdrawal_amount_base],
+        ["취소 금액", rewardSummary.reversal_amount_base],
+        ["순보상 금액", rewardSummary.net_reward_amount_base],
+        ["출금 예약 금액", rewardSummary.reserved_withdrawal_amount_base],
+        ["출금 완료 금액", rewardSummary.completed_withdrawal_amount_base],
         ["중복/충돌/실패", `${rewardSummary.duplicate_skip_count} / ${rewardSummary.conflict_count} / ${rewardSummary.failed_count}`],
       ]
     : [];
@@ -160,7 +161,7 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
             </select>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => void load()}>리포트 갱신</Button>
+            <Button onClick={() => void load()}>조회</Button>
             {role === "ADMIN" ? (
               <Button variant="secondary" onClick={() => void download("rewards")} disabled={downloading !== ""}>
                 <Download className="mr-2 h-4 w-4" />
@@ -180,7 +181,7 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map(([label, value]) => (
           <Card key={label} className="overflow-hidden">
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+            <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
             <div className="mt-4 text-3xl font-extrabold tabular text-slate-50">{value}</div>
           </Card>
         ))}
@@ -189,7 +190,7 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rewardCards.map(([label, value]) => (
             <Card key={label} className="overflow-hidden">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+              <div className="text-xs tracking-[0.16em] text-slate-500">{label}</div>
               <div className="mt-4 text-2xl font-extrabold tabular text-slate-50">{value}</div>
             </Card>
           ))}
@@ -213,7 +214,7 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
               <tbody>
                 {rewardByType.map((row) => (
                   <tr key={row.reward_type}>
-                    <td>{row.reward_type}</td>
+                    <td>{getDisplayLabel(row.reward_type)}</td>
                     <td className="tabular text-right">{row.reward_amount_base}</td>
                     <td className="tabular text-right">{row.reward_count}</td>
                     <td className="tabular text-right">{row.reversal_amount_base}</td>
@@ -243,7 +244,7 @@ export function ReportsTab({ actorId, role }: { actorId: string; role: SessionRo
               <tbody>
                 {calcRunSummary.map((row) => (
                   <tr key={row.run_type}>
-                    <td>{row.run_type}</td>
+                    <td>{getDisplayLabel(row.run_type)}</td>
                     <td className="tabular text-right">{row.total_run_count}</td>
                     <td className="tabular text-right">{row.succeeded_run_count}</td>
                     <td className="tabular text-right">{row.failed_run_count}</td>

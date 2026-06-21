@@ -71,7 +71,7 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
   async function handleActivate(policyId: string) {
     try {
       await api.activatePolicy(actorId, policyId);
-      setNotice(`정책 ${policyId}를 ACTIVE로 전환했습니다.`);
+      setNotice(`정책 ${policyId}를 활성 상태로 변경했습니다.`);
       await load();
     } catch (actionError: any) {
       setError(actionError.message ?? "정책 활성화에 실패했습니다.");
@@ -97,7 +97,7 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-50">정책 버전</h2>
-              <p className="text-sm text-slate-400">정책 생성과 ACTIVE 전환을 관리합니다.</p>
+              <p className="text-sm text-slate-400">정책 생성과 활성 전환을 관리합니다.</p>
             </div>
             <Button variant="secondary" onClick={() => void load()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -114,12 +114,12 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
                   <th>상태</th>
                   <th>메모</th>
                   <th>유효기간</th>
-                  <th>액션</th>
+                  <th>처리</th>
                 </tr>
               </thead>
               <tbody>
                 {policies.map((policy) => (
-                  <tr key={policy.id} className="cursor-pointer hover:bg-slate-800/60" onClick={() => setSelectedPolicyId(policy.id)}>
+                <tr key={policy.id} className="cursor-pointer hover:bg-slate-800/60" onClick={() => setSelectedPolicyId(policy.id)}>
                     <td className="font-mono text-xs text-slate-300">{policy.id}</td>
                     <td><StatusBadge value={policy.status} /></td>
                     <td>{policy.note ?? "-"}</td>
@@ -128,7 +128,7 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
                       {role === "ADMIN" && policy.status !== "ACTIVE" ? (
                         <Button variant="primary" onClick={(event) => { event.stopPropagation(); void handleActivate(policy.id); }}>활성화</Button>
                       ) : (
-                        <span className="text-xs text-slate-500">읽기 전용</span>
+                        <span className="text-xs text-slate-500">조회 전용</span>
                       )}
                     </td>
                   </tr>
@@ -148,8 +148,8 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
                   <th>상품명</th>
                   <th>심볼</th>
                   <th>기간</th>
-                  <th>일일 이자(bps)</th>
-                  <th>금액 범위(base)</th>
+                  <th>일일 이자율(bp)</th>
+                  <th>금액 범위</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,8 +178,8 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
             <div className="mt-4 space-y-3">
               <input className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="메모" value={policyForm.note} onChange={(e) => setPolicyForm((v) => ({ ...v, note: e.target.value }))} />
               <div className="grid gap-3 md:grid-cols-2">
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="effective_from" value={policyForm.effective_from} onChange={(e) => setPolicyForm((v) => ({ ...v, effective_from: e.target.value }))} />
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="effective_to" value={policyForm.effective_to} onChange={(e) => setPolicyForm((v) => ({ ...v, effective_to: e.target.value }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="적용 시작일" value={policyForm.effective_from} onChange={(e) => setPolicyForm((v) => ({ ...v, effective_from: e.target.value }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="적용 종료일" value={policyForm.effective_to} onChange={(e) => setPolicyForm((v) => ({ ...v, effective_to: e.target.value }))} />
               </div>
               <Button onClick={() => void handleCreatePolicy()}><Plus className="mr-2 h-4 w-4" />정책 생성</Button>
             </div>
@@ -195,15 +195,15 @@ export function PoliciesTab({ actorId, role }: { actorId: string; role: SessionR
               <input className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="상품명" value={productDraft.name} onChange={(e) => setProductDraft((v) => ({ ...v, name: e.target.value }))} />
               <div className="grid gap-3 md:grid-cols-2">
                 <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="심볼" value={productDraft.symbol} onChange={(e) => setProductDraft((v) => ({ ...v, symbol: e.target.value }))} />
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" type="number" placeholder="decimals" value={productDraft.decimals} onChange={(e) => setProductDraft((v) => ({ ...v, decimals: Number(e.target.value) }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" type="number" placeholder="소수 자릿수" value={productDraft.decimals} onChange={(e) => setProductDraft((v) => ({ ...v, decimals: Number(e.target.value) }))} />
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="min_stake_amount_base" value={productDraft.min_stake_amount_base} onChange={(e) => setProductDraft((v) => ({ ...v, min_stake_amount_base: e.target.value }))} />
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="max_stake_amount_base" value={productDraft.max_stake_amount_base} onChange={(e) => setProductDraft((v) => ({ ...v, max_stake_amount_base: e.target.value }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="최소 스테이킹 금액" value={productDraft.min_stake_amount_base} onChange={(e) => setProductDraft((v) => ({ ...v, min_stake_amount_base: e.target.value }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="최대 스테이킹 금액" value={productDraft.max_stake_amount_base} onChange={(e) => setProductDraft((v) => ({ ...v, max_stake_amount_base: e.target.value }))} />
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" type="number" placeholder="staking_days" value={productDraft.staking_days} onChange={(e) => setProductDraft((v) => ({ ...v, staking_days: Number(e.target.value) }))} />
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="daily_interest_bps" value={productDraft.daily_interest_bps} onChange={(e) => setProductDraft((v) => ({ ...v, daily_interest_bps: e.target.value }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" type="number" placeholder="스테이킹 기간(일)" value={productDraft.staking_days} onChange={(e) => setProductDraft((v) => ({ ...v, staking_days: Number(e.target.value) }))} />
+                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 font-mono" placeholder="일일 이자율(bp)" value={productDraft.daily_interest_bps} onChange={(e) => setProductDraft((v) => ({ ...v, daily_interest_bps: e.target.value }))} />
               </div>
               <div className="flex items-center gap-3">
                 <Button variant="secondary" onClick={() => { setProductQueue((current) => [...current, productDraft]); setProductDraft(emptyProduct); }}>큐에 추가</Button>
