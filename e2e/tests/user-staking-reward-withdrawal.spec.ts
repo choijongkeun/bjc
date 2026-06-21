@@ -19,6 +19,7 @@ test.afterAll(async () => {
 
 test("스테이킹 신청, 중복 idempotency, 상세와 취소 요청 흐름을 검증한다", async ({ page, request }) => {
   const session = await loginUserByApi(request, fixture.credentials.root_user);
+  const adminSession = await loginUserByApi(request, fixture.credentials.admin);
   const first = await jsonRequest<{ staking: { id: string; status: string } }>(request, "/api/me/stakings", {
     method: "POST",
     accessToken: session.access_token,
@@ -41,7 +42,7 @@ test("스테이킹 신청, 중복 idempotency, 상세와 취소 요청 흐름을
 
   await jsonRequest(request, `/api/admin/stakings/${first.staking.id}/activate`, {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
   });
 
   await loginUserUi(page, fixture.credentials.root_user);

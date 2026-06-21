@@ -63,13 +63,13 @@ type SidecarSingleResponse = {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
+  if (init.accessToken) {
+    headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
 
   const response = await fetch(`${baseUrl}${path}`, {
@@ -89,11 +89,13 @@ async function requestJson<T>(
   return { status: response.status, payload: payload as T };
 }
 
-async function requestText(path: string, actorId: string): Promise<string> {
+async function requestText(path: string, accessToken?: string): Promise<string> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: { "x-actor-account-id": actorId }
-  });
+  const headers = new Headers();
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+  const response = await fetch(`${baseUrl}${path}`, { headers });
   const payload = await response.text();
   if (!response.ok) {
     throw {
@@ -267,6 +269,10 @@ function cleanupSucceeded(remaining: Record<string, number>): boolean {
 async function main() {
   const results: Result[] = [];
   const fixture = await createFixture();
+  const adminLoginId = `smoke_sidecar_admin_${fixture.suffix}`;
+  const readerLoginId = `smoke_sidecar_reader_${fixture.suffix}`;
+  let adminToken = "";
+  let readerToken = "";
   let calcRunId = "";
   let step = "fixture";
 
@@ -275,11 +281,31 @@ async function main() {
     await requestJson<{ ok: true }>("/health");
     results.push({ name: "health 확인", ok: true });
 
+    const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminSidecar!123",
+      }),
+    });
+    adminToken = adminLogin.payload.access_token;
+    results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+    const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderSidecar!123",
+      }),
+    });
+    readerToken = readerLogin.payload.access_token;
+    results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
+
     step = "reader forbidden";
     try {
       await requestJson("/api/admin/rewards/sidecar/run", {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.calculationDate
@@ -294,7 +320,7 @@ async function main() {
     step = "batch run";
     const batch = await requestJson<SidecarBatchResponse>("/api/admin/rewards/sidecar/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate
@@ -346,7 +372,7 @@ async function main() {
     step = "single duplicate";
     const single = await requestJson<SidecarSingleResponse>(`/api/admin/accounts/${fixture.memberId}/sidecar`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate
@@ -363,7 +389,7 @@ async function main() {
     });
 
     const calcRunSummary = await requestJson<SidecarBatchResponse>(`/api/admin/calc-runs/${calcRunId}/summary`, {
-      actorId: fixture.adminId
+      accessToken: adminToken
     });
     results.push({
       name: "calc_run summary",
@@ -376,7 +402,7 @@ async function main() {
 
     const calcRunReport = await requestJson<{ items: Array<{ run_type: string; succeeded_run_count: string }> }>(
       `/api/admin/reports/calc-run-summary?policy_version_id=${fixture.policyId}&run_type=SIDECAR`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "calc-run report",
@@ -389,7 +415,7 @@ async function main() {
 
     const calcRunsCsv = await requestText(
       `/api/admin/reports/calc-runs.csv?policy_version_id=${fixture.policyId}&run_type=SIDECAR`,
-      fixture.adminId
+      adminToken
     );
     results.push({
       name: "calc-runs.csv",
@@ -399,7 +425,7 @@ async function main() {
 
     const adminRewards = await requestJson<{ total: number }>(
       `/api/admin/rewards?page=1&limit=20&reward_type=SIDECAR`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "SIDECAR는 reward row 미생성",

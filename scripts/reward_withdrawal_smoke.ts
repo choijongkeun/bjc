@@ -145,14 +145,11 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -559,8 +556,12 @@ async function main() {
   try {
     const results: Result[] = [];
     const fixture = await createFixture();
+    const adminLoginId = `smoke_withdrawal_admin_${fixture.suffix}`;
+    const readerLoginId = `smoke_withdrawal_reader_${fixture.suffix}`;
     let userToken = "";
     let otherUserToken = "";
+    let adminToken = "";
+    let readerToken = "";
     let currentStep = "fixture created";
 
     try {
@@ -589,6 +590,28 @@ async function main() {
       });
       otherUserToken = otherUserLogin.payload.access_token;
       results.push({ name: "다른 User 로그인 성공", ok: otherUserLogin.payload.account.id === fixture.otherUserId });
+
+      currentStep = "admin login";
+      const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          login_id: adminLoginId,
+          password: "AdminWithdraw!123"
+        })
+      });
+      adminToken = adminLogin.payload.access_token;
+      results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+      currentStep = "reader login";
+      const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          login_id: readerLoginId,
+          password: "ReaderWithdraw!123"
+        })
+      });
+      readerToken = readerLogin.payload.access_token;
+      results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
 
       currentStep = "initial balance";
       const initialBalance = await requestJson<WithdrawalBalanceResponse>("/api/me/withdrawal-balance", {
@@ -770,11 +793,11 @@ async function main() {
       currentStep = "reader list/detail";
       const readerList = await requestJson<{ items: WithdrawalDetail[]; total: number }>(
         `/api/admin/withdrawals?page=1&limit=20&q=${encodeURIComponent(fixture.userLoginId)}`,
-        { actorId: fixture.readerId }
+        { accessToken: readerToken }
       );
       const readerDetail = await requestJson<{ withdrawal: WithdrawalDetail }>(
         `/api/admin/withdrawals/${mainWithdrawalId}`,
-        { actorId: fixture.readerId }
+        { accessToken: readerToken }
       );
       results.push({
         name: "READER 목록/상세 가능",
@@ -791,7 +814,7 @@ async function main() {
       try {
         await requestJson(`/api/admin/withdrawals/${mainWithdrawalId}/approve`, {
           method: "POST",
-          actorId: fixture.readerId
+          accessToken: readerToken
         });
         results.push({ name: "READER 상태 변경 403", ok: false, message: "unexpected success" });
       } catch (error) {
@@ -804,7 +827,7 @@ async function main() {
         `/api/admin/withdrawals/${mainWithdrawalId}/approve`,
         {
           method: "POST",
-          actorId: fixture.adminId
+          accessToken: adminToken
         }
       );
       results.push({
@@ -817,7 +840,7 @@ async function main() {
         `/api/admin/withdrawals/${mainWithdrawalId}/processing`,
         {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({ network: "BASE" })
         }
       );
@@ -831,7 +854,7 @@ async function main() {
         `/api/admin/withdrawals/${mainWithdrawalId}/complete`,
         {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({
             tx_hash: `0xcomplete${fixture.suffix}`,
             network: "BASE"
@@ -896,7 +919,7 @@ async function main() {
         `/api/admin/withdrawals/${rejectWithdrawalId}/reject`,
         {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({ reason: "manual reject smoke" })
         }
       );
@@ -922,18 +945,18 @@ async function main() {
       const failWithdrawalId = failCreate.payload.withdrawal.id;
       await requestJson(`/api/admin/withdrawals/${failWithdrawalId}/approve`, {
         method: "POST",
-        actorId: fixture.adminId
+        accessToken: adminToken
       });
       await requestJson(`/api/admin/withdrawals/${failWithdrawalId}/processing`, {
         method: "POST",
-        actorId: fixture.adminId,
+        accessToken: adminToken,
         body: JSON.stringify({ network: "BASE" })
       });
       const failed = await requestJson<{ withdrawal: WithdrawalDetail }>(
         `/api/admin/withdrawals/${failWithdrawalId}/fail`,
         {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({ reason: "chain fail smoke" })
         }
       );
@@ -968,7 +991,7 @@ async function main() {
       const adminAccountList = await requestJson<{ account: { id: string }; items: WithdrawalDetail[]; total: number }>(
         `/api/admin/accounts/${fixture.userId}/withdrawals?page=1&limit=20&sort=requested_at_desc`,
         {
-          actorId: fixture.readerId
+          accessToken: readerToken
         }
       );
       results.push({
@@ -990,7 +1013,7 @@ async function main() {
         requested_count: number;
         completed_count: number;
       }>("/api/admin/reports/withdrawal-summary", {
-        actorId: fixture.readerId
+        accessToken: readerToken
       });
       results.push({
         name: "withdrawal summary",

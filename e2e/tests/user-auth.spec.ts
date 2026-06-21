@@ -3,7 +3,7 @@ import { cleanupBjcFixture } from "../../scripts/fixtures/bjcFixtureCleanup.js";
 import { createBjcFixture } from "../../scripts/fixtures/bjcFixtureFactory.js";
 import type { BjcFixture } from "../../scripts/fixtures/bjcFixtureTypes.js";
 import { assertApiReady, loginUserUi } from "../helpers/api.js";
-import { E2E_USER_URL } from "../helpers/env.js";
+import { E2E_API_URL, E2E_USER_URL } from "../helpers/env.js";
 
 let fixture: BjcFixture;
 
@@ -29,6 +29,9 @@ test("회원가입, 로그인, 로그아웃, 보호 경로 차단을 검증한�
   await page.getByRole("button", { name: "회원가입" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByText("내 계정 요약")).toBeVisible();
+  await page.reload();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByText("내 계정 요약")).toBeVisible();
 
   await page.getByRole("button", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/login/);
@@ -42,12 +45,21 @@ test("잘못된 비밀번호와 BLOCKED 계정 로그인을 차단한다", async
   await page.getByLabel("아이디").fill(fixture.credentials.root_user.login_id);
   await page.getByLabel("비밀번호", { exact: true }).fill("WrongPassword!123");
   await page.getByRole("button", { name: "로그인" }).click();
-  await expect(page.getByText("로그인 실패")).toBeVisible();
+  await expect(page.getByText("아이디 또는 비밀번호가 올바르지 않습니다.")).toBeVisible();
 
   await page.getByLabel("아이디").fill(fixture.credentials.blocked_user.login_id);
   await page.getByLabel("비밀번호", { exact: true }).fill(fixture.credentials.blocked_user.password);
   await page.getByRole("button", { name: "로그인" }).click();
-  await expect(page.getByText("로그인 실패")).toBeVisible();
+  await expect(page.getByText("사용할 수 없는 계정입니다.")).toBeVisible();
+});
+
+test("ADMIN 계정의 User Front 접근을 차단한다", async ({ page }) => {
+  await page.goto(`${E2E_USER_URL}/login`);
+  await page.getByLabel("아이디").fill(fixture.credentials.admin.login_id);
+  await page.getByLabel("비밀번호", { exact: true }).fill(fixture.credentials.admin.password);
+  await page.getByRole("button", { name: "로그인" }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByText("사용할 수 없는 계정입니다.")).toBeVisible();
 });
 
 test("로그인 후 auth/me와 로그아웃 후 보호 경로를 다시 확인한다", async ({ page }) => {
@@ -55,6 +67,28 @@ test("로그인 후 auth/me와 로그아웃 후 보호 경로를 다시 확인�
   await expect(page.getByText(fixture.credentials.root_user.login_id, { exact: true }).first()).toBeVisible();
   await page.goto(`${E2E_USER_URL}/network`);
   await expect(page.getByRole("heading", { name: "추천 조직", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "추천 조직", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/login/);
+});
+
+test("세션 만료 후 로그인 화면으로 이동하고 안내 문구를 표시한다", async ({ page, request }) => {
+  await loginUserUi(page, fixture.credentials.root_user);
+  const accessToken = await page.evaluate(() => {
+    const raw = window.localStorage.getItem("bjc-user-session");
+    if (!raw) return null;
+    return JSON.parse(raw)?.state?.accessToken ?? null;
+  });
+  expect(accessToken).toBeTruthy();
+
+  const logoutResponse = await request.post(`${E2E_API_URL}/api/auth/logout`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: {},
+  });
+  expect(logoutResponse.ok()).toBeTruthy();
+
+  await page.goto(`${E2E_USER_URL}/dashboard`);
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByText("로그인이 만료되었습니다. 다시 로그인해 주세요.")).toBeVisible();
 });

@@ -87,14 +87,11 @@ function toDateOnly(value: unknown): string {
 
 async function http<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<T> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -374,8 +371,12 @@ async function main() {
   try {
     const results: Result[] = [];
     const fixture = await createFixture();
+    const adminLoginId = `smoke_reward_admin_${fixture.suffix}`;
+    const readerLoginId = `smoke_reward_reader_${fixture.suffix}`;
     let userToken = "";
     let otherUserToken = "";
+    let adminToken = "";
+    let readerToken = "";
     let calcRunId = "";
     let originalRewardId = "";
     let reversalRewardId = "";
@@ -413,11 +414,33 @@ async function main() {
       otherUserToken = otherUserLogin.access_token;
       results.push({ name: "다른 User 로그인 성공", ok: otherUserLogin.account.id === fixture.otherUserId });
 
+      currentStep = "admin login";
+      const adminLogin = await http<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          login_id: adminLoginId,
+          password: "AdminRewardPass!123",
+        }),
+      });
+      adminToken = adminLogin.access_token;
+      results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.account.id === fixture.adminId });
+
+      currentStep = "reader login";
+      const readerLogin = await http<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          login_id: readerLoginId,
+          password: "ReaderRewardPass!123",
+        }),
+      });
+      readerToken = readerLogin.access_token;
+      results.push({ name: "READER 로그인 성공", ok: readerLogin.account.id === fixture.readerId });
+
       currentStep = "reader forbidden";
       try {
         await http("/api/admin/calc-runs/daily-reward", {
           method: "POST",
-          actorId: fixture.readerId,
+          accessToken: readerToken,
           body: JSON.stringify({
             policy_version_id: fixture.policyId,
             reward_date: fixture.rewardDate,
@@ -440,7 +463,7 @@ async function main() {
         total_reward_amount_base: string;
       }>("/api/admin/calc-runs/daily-reward", {
         method: "POST",
-        actorId: fixture.adminId,
+        accessToken: adminToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           reward_date: fixture.rewardDate,
@@ -464,7 +487,7 @@ async function main() {
       try {
         await http("/api/admin/calc-runs/daily-reward", {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({
             policy_version_id: fixture.policyId,
             reward_date: fixture.rewardDate,
@@ -668,7 +691,7 @@ async function main() {
       currentStep = "admin list";
       const adminRewards = await http<{ items: Array<RewardApiItem & { account: { id: string; login_id: string | null } }>; total: number }>(
         `/api/admin/rewards?page=1&limit=20&q=${encodeURIComponent(fixture.userLoginId)}`,
-        { actorId: fixture.adminId }
+        { accessToken: adminToken }
       );
       results.push({
         name: "Admin rewards 목록",
@@ -685,7 +708,7 @@ async function main() {
           calc_run: { id: string; status: string };
           reversal: { id: string; amount_base: string } | null;
         };
-      }>(`/api/admin/rewards/${originalRewardId}`, { actorId: fixture.adminId });
+      }>(`/api/admin/rewards/${originalRewardId}`, { accessToken: adminToken });
       results.push({
         name: "Admin reward 상세",
         ok:
@@ -699,7 +722,7 @@ async function main() {
       currentStep = "admin account rewards";
       const accountRewards = await http<{ items: RewardApiItem[]; total: number }>(
         `/api/admin/accounts/${fixture.userId}/rewards?page=1&limit=20`,
-        { actorId: fixture.adminId }
+        { accessToken: adminToken }
       );
       results.push({
         name: "Admin account별 rewards 조회",
@@ -709,7 +732,7 @@ async function main() {
       currentStep = "calc run rewards";
       const calcRunRewards = await http<{ calc_run: { id: string; status: string }; items: RewardApiItem[]; total: number }>(
         `/api/admin/calc-runs/${calcRunId}/rewards?page=1&limit=20`,
-        { actorId: fixture.adminId }
+        { accessToken: adminToken }
       );
       results.push({
         name: "calc_run별 rewards 조회",
@@ -721,7 +744,7 @@ async function main() {
         `/api/admin/rewards/${originalRewardId}/reverse`,
         {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({ reason: "smoke reversal" }),
         }
       );
@@ -737,7 +760,7 @@ async function main() {
       try {
         await http(`/api/admin/rewards/${originalRewardId}/reverse`, {
           method: "POST",
-          actorId: fixture.adminId,
+          accessToken: adminToken,
           body: JSON.stringify({ reason: "duplicate reversal" }),
         });
         results.push({ name: "이미 reversed 409", ok: false, message: "unexpected success" });
@@ -788,7 +811,7 @@ async function main() {
       currentStep = "post reversal detail";
       const reversedDetail = await http<{ reward: RewardApiItem & { reversal: { id: string; amount_base: string } } }>(
         `/api/admin/rewards/${originalRewardId}`,
-        { actorId: fixture.adminId }
+        { accessToken: adminToken }
       );
       results.push({
         name: "reversal 후 Admin 상세 반영",
@@ -818,7 +841,7 @@ async function main() {
       currentStep = "post reversal calc run";
       const calcRunAfterReversal = await http<{ items: RewardApiItem[]; total: number }>(
         `/api/admin/calc-runs/${calcRunId}/rewards?page=1&limit=20`,
-        { actorId: fixture.adminId }
+        { accessToken: adminToken }
       );
       results.push({
         name: "calc_run rewards에 reversal 포함",

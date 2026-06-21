@@ -4,7 +4,6 @@ import { E2E_ADMIN_URL, E2E_API_URL, E2E_USER_URL } from "./env.js";
 
 type JsonInit = {
   method?: "GET" | "POST";
-  actorId?: string;
   accessToken?: string;
   body?: unknown;
 };
@@ -34,7 +33,6 @@ export async function jsonRequest<T>(request: APIRequestContext, path: string, i
   const response = await request.fetch(`${E2E_API_URL}${path}`, {
     method: init.method ?? "GET",
     headers: {
-      ...(init.actorId ? { "x-actor-account-id": init.actorId } : {}),
       ...(init.accessToken ? { Authorization: `Bearer ${init.accessToken}` } : {}),
       ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
@@ -48,7 +46,6 @@ export async function rawRequest(request: APIRequestContext, path: string, init:
   return request.fetch(`${E2E_API_URL}${path}`, {
     method: init.method ?? "GET",
     headers: {
-      ...(init.actorId ? { "x-actor-account-id": init.actorId } : {}),
       ...(init.accessToken ? { Authorization: `Bearer ${init.accessToken}` } : {}),
       ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
@@ -59,57 +56,59 @@ export async function rawRequest(request: APIRequestContext, path: string, init:
 export async function loginUserByApi(
   request: APIRequestContext,
   credentials: { login_id: string; password: string }
-): Promise<{ access_token: string; account: { id: string; login_id: string } }> {
+): Promise<{ access_token: string; account: { id: string; login_id: string; role: string; status?: string } }> {
   return jsonRequest(request, "/api/auth/login", {
     method: "POST",
     body: credentials,
   });
 }
 
-export async function loginAdminUi(page: Page, actorId: string) {
+export async function loginAdminUi(page: Page, credentials: { login_id: string; password: string }) {
   await page.goto(`${E2E_ADMIN_URL}/login`);
-  await page.getByLabel(/운영 계정 ID/i).fill(actorId);
+  await page.getByLabel("아이디", { exact: true }).fill(credentials.login_id);
+  await page.getByLabel("비밀번호", { exact: true }).fill(credentials.password);
   await page.getByRole("button", { name: "로그인" }).click();
-  await expect(page).toHaveURL(/\/admin\?tab=policies/);
+  await expect(page).toHaveURL(/\/admin(\?|$)/);
 }
 
 export async function loginUserUi(page: Page, credentials: { login_id: string; password: string }) {
   await page.goto(`${E2E_USER_URL}/login`);
-  await page.getByLabel(/아이디/i).fill(credentials.login_id);
-  await page.getByLabel(/비밀번호/i).fill(credentials.password);
+  await page.getByLabel("아이디", { exact: true }).fill(credentials.login_id);
+  await page.getByLabel("비밀번호", { exact: true }).fill(credentials.password);
   await page.getByRole("button", { name: /로그인/ }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
 export async function runAllRewardBatches(request: APIRequestContext, fixture: BjcFixture) {
+  const adminSession = await loginUserByApi(request, fixture.credentials.admin);
   await jsonRequest(request, "/api/admin/calc-runs/daily-reward", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, reward_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/direct-referral/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, activated_from: "2026-06-20", activated_to: "2026-06-20" },
   });
   await jsonRequest(request, "/api/admin/rewards/rank-qualification/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/rank-bonus/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/contribution/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/sidecar/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
 }

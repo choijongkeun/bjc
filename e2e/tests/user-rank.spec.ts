@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { cleanupBjcFixture } from "../../scripts/fixtures/bjcFixtureCleanup.js";
 import { createBjcFixture } from "../../scripts/fixtures/bjcFixtureFactory.js";
 import type { BjcFixture } from "../../scripts/fixtures/bjcFixtureTypes.js";
-import { assertApiReady, jsonRequest, loginUserUi } from "../helpers/api.js";
+import { assertApiReady, jsonRequest, loginUserByApi, loginUserUi } from "../helpers/api.js";
 import { E2E_USER_URL } from "../helpers/env.js";
 
 let fixture: BjcFixture;
@@ -10,19 +10,20 @@ let fixture: BjcFixture;
 test.beforeAll(async ({ request }) => {
   fixture = await createBjcFixture();
   await assertApiReady(request);
+  const adminSession = await loginUserByApi(request, fixture.credentials.admin);
   await jsonRequest(request, "/api/admin/calc-runs/daily-reward", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, reward_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/rank-qualification/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
   await jsonRequest(request, "/api/admin/rewards/rank-bonus/run", {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { policy_version_id: fixture.ids.policy_id, calculation_date: fixture.calculation_date },
   });
 });

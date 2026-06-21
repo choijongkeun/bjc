@@ -1,49 +1,41 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { ApiError, resolveActorRole, type SessionRole } from "@/lib/api";
+import type { SessionAccount, SessionRole } from "@/lib/api";
 
 type SessionState = {
-  actorId: string | null;
-  role: SessionRole | null;
-  status: "idle" | "loading" | "ready";
-  error: string | null;
-  login: (actorId: string) => Promise<SessionRole>;
-  logout: () => void;
+  accessToken: string | null;
+  account: SessionAccount | null;
+  setSession: (accessToken: string, account: SessionAccount) => void;
+  setAccount: (account: SessionAccount | null) => void;
+  clearSession: () => void;
+  isAuthenticated: () => boolean;
+  role: () => SessionRole | null;
 };
 
 export const useSessionStore = create<SessionState>()(
   persist(
-    (set) => ({
-      actorId: null,
-      role: null,
-      status: "idle",
-      error: null,
-      async login(actorId: string) {
-        set({ status: "loading", error: null });
-        try {
-          const role = await resolveActorRole(actorId);
-          set({ actorId, role, status: "ready", error: null });
-          return role;
-        } catch (error) {
-          const message =
-            error instanceof ApiError
-              ? error.status === 401
-                ? "유효한 actor 계정을 찾지 못했습니다."
-                : error.status === 403
-                  ? "관리자 콘솔 접근 권한이 없습니다."
-                  : error.message
-              : "로그인 중 오류가 발생했습니다.";
-          set({ actorId: null, role: null, status: "idle", error: message });
-          throw error;
-        }
+    (set, get) => ({
+      accessToken: null,
+      account: null,
+      setSession(accessToken, account) {
+        set({ accessToken, account });
       },
-      logout() {
-        set({ actorId: null, role: null, status: "idle", error: null });
+      setAccount(account) {
+        set({ account });
+      },
+      clearSession() {
+        set({ accessToken: null, account: null });
+      },
+      isAuthenticated() {
+        return Boolean(get().accessToken);
+      },
+      role() {
+        return get().account?.role ?? null;
       },
     }),
     {
       name: "bjc-admin-session",
-      partialize: (state) => ({ actorId: state.actorId, role: state.role }),
+      partialize: (state) => ({ accessToken: state.accessToken, account: state.account }),
     }
   )
 );

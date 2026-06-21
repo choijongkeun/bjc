@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getDisplayLabel } from "@/lib/display";
@@ -36,6 +36,18 @@ export function Button({
 
 export function Card({ children, className }: PropsWithChildren<{ className?: string }>) {
   return <section className={cn("glass-card p-5", className)}>{children}</section>;
+}
+
+export function TextField(props: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      className={cn(
+        "w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/15",
+        props.className
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TableShell({ children, height = "max-h-[420px]" }: PropsWithChildren<{ height?: string }>) {

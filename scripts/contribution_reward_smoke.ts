@@ -101,14 +101,11 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -134,12 +131,12 @@ async function requestJson<T>(
 
 async function requestText(
   path: string,
-  init: RequestInit & { actorId?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: string }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
+  if (init.accessToken) {
+    headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
 
   const response = await fetch(`${baseUrl}${path}`, {
@@ -419,7 +416,11 @@ async function main() {
   const expectedPool = "300";
   const expectedReward = "300";
   const expectedScore = "1250";
+  const adminLoginId = `smoke_contrib_admin_${fixture.suffix}`;
+  const readerLoginId = `smoke_contrib_reader_${fixture.suffix}`;
   let sponsorToken = "";
+  let adminToken = "";
+  let readerToken = "";
   let calcRunId = "";
   let rewardId = "";
   let step = "fixture";
@@ -440,11 +441,31 @@ async function main() {
     sponsorToken = login.payload.access_token;
     results.push({ name: "Sponsor 로그인 성공", ok: login.payload.account.id === fixture.sponsorId });
 
+    const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminContribution!123",
+      }),
+    });
+    adminToken = adminLogin.payload.access_token;
+    results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+    const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderContribution!123",
+      }),
+    });
+    readerToken = readerLogin.payload.access_token;
+    results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
+
     step = "reader forbidden";
     try {
       await requestJson("/api/admin/rewards/contribution/run", {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.calculationDate
@@ -459,7 +480,7 @@ async function main() {
     step = "batch run";
     const batch = await requestJson<ContributionBatchResponse>("/api/admin/rewards/contribution/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate
@@ -538,7 +559,7 @@ async function main() {
       `/api/admin/accounts/${fixture.sponsorId}/contribution`,
       {
         method: "POST",
-        actorId: fixture.adminId,
+        accessToken: adminToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.calculationDate
@@ -560,7 +581,7 @@ async function main() {
       `/api/admin/accounts/${fixture.zeroUserId}/contribution`,
       {
         method: "POST",
-        actorId: fixture.adminId,
+        accessToken: adminToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.calculationDate
@@ -637,7 +658,7 @@ async function main() {
 
     const adminRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
       `/api/admin/rewards?page=1&limit=20&reward_type=CONTRIBUTION&account_id=${fixture.sponsorId}&calc_run_id=${calcRunId}`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "Admin rewards 필터",
@@ -645,7 +666,7 @@ async function main() {
     });
 
     const calcRunSummary = await requestJson<ContributionBatchResponse>(`/api/admin/calc-runs/${calcRunId}/summary`, {
-      actorId: fixture.adminId
+      accessToken: adminToken
     });
     results.push({
       name: "calc_run summary",
@@ -662,7 +683,7 @@ async function main() {
       calc_run_succeeded_count: string;
     }>(
       `/api/admin/reports/reward-summary?policy_version_id=${fixture.policyId}&reward_type=CONTRIBUTION`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "report summary",
@@ -675,7 +696,7 @@ async function main() {
 
     const rewardsCsv = await requestText(
       `/api/admin/reports/rewards.csv?policy_version_id=${fixture.policyId}&reward_type=CONTRIBUTION`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "rewards.csv",
@@ -688,7 +709,7 @@ async function main() {
     });
 
     const calcRunsCsv = await requestText(`/api/admin/reports/calc-runs.csv?policy_version_id=${fixture.policyId}&run_type=CONTRIBUTION`, {
-      actorId: fixture.adminId
+      accessToken: adminToken
     });
     results.push({
       name: "calc-runs.csv",

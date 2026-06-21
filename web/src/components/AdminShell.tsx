@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Activity, ClipboardList, Coins, FileClock, Gift, GitBranch, Layers3, LogOut, Package2, ShieldCheck, TrendingUp, Users2, Wallet } from "lucide-react";
+import { api } from "@/lib/api";
 import { getDisplayLabel } from "@/lib/display";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button, cn } from "@/components/ui";
@@ -40,10 +41,22 @@ export function AdminShell({
   onTabChange: (tab: AdminTab) => void;
   children: React.ReactNode;
 }) {
-  const actorId = useSessionStore((state) => state.actorId);
-  const role = useSessionStore((state) => state.role);
-  const logout = useSessionStore((state) => state.logout);
+  const accessToken = useSessionStore((state) => state.accessToken);
+  const account = useSessionStore((state) => state.account);
+  const clearSession = useSessionStore((state) => state.clearSession);
+  const role = account?.role ?? null;
   const visibleItems = role === "ADMIN" ? navItems : navItems.filter((item) => item.key !== "audit");
+
+  async function handleLogout() {
+    try {
+      await api.logout(accessToken);
+    } catch {
+      // ignore logout failure and clear client session regardless
+    } finally {
+      clearSession();
+      window.location.replace("/login");
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -79,9 +92,10 @@ export function AdminShell({
           </nav>
           <div className="mt-auto rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
             <div className="font-semibold">현재 운영 계정</div>
-            <div className="mt-2 break-all font-mono text-xs text-slate-400">{actorId}</div>
+            <div className="mt-2 text-base font-semibold text-slate-100">{account?.display_name ?? account?.login_id ?? "운영자"}</div>
+            <div className="mt-1 break-all text-xs text-slate-400">{account?.login_id ?? "로그인 정보 확인 중"}</div>
             <div className="mt-3 inline-flex rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100">{getDisplayLabel(role)}</div>
-            <Button variant="ghost" className="mt-4 w-full justify-start px-0 text-rose-300 hover:bg-transparent hover:text-rose-200" onClick={logout}>
+            <Button variant="ghost" className="mt-4 w-full justify-start px-0 text-rose-300 hover:bg-transparent hover:text-rose-200" onClick={() => void handleLogout()}>
               <LogOut className="mr-2 h-4 w-4" /> 로그아웃
             </Button>
           </div>

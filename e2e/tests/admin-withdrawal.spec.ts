@@ -19,6 +19,7 @@ test.afterAll(async () => {
 
 test("REQUESTED -> APPROVED -> PROCESSING -> COMPLETED 와 실패 validation을 검증한다", async ({ page, request }) => {
   const userSession = await loginUserByApi(request, fixture.credentials.root_user);
+  const adminSession = await loginUserByApi(request, fixture.credentials.admin);
   const created = await jsonRequest<{ withdrawal: { id: string; status: string } }>(request, "/api/me/withdrawals", {
     method: "POST",
     accessToken: userSession.access_token,
@@ -32,36 +33,36 @@ test("REQUESTED -> APPROVED -> PROCESSING -> COMPLETED 와 실패 validation을 
   });
   const withdrawalId = created.withdrawal.id;
 
-  await loginAdminUi(page, fixture.accounts.admin.id);
+  await loginAdminUi(page, fixture.credentials.admin);
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=withdrawals`);
-  await expect(page.getByText("출금 상세")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "출금 상세" })).toBeVisible();
 
   const badComplete = await rawRequest(request, `/api/admin/withdrawals/${withdrawalId}/complete`, {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { tx_hash: "", network: "" },
   });
   expect(badComplete.status()).toBe(422);
 
   await jsonRequest(request, `/api/admin/withdrawals/${withdrawalId}/approve`, {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
   });
   await jsonRequest(request, `/api/admin/withdrawals/${withdrawalId}/processing`, {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { network: "BSC" },
   });
   await jsonRequest(request, `/api/admin/withdrawals/${withdrawalId}/complete`, {
     method: "POST",
-    actorId: fixture.accounts.admin.id,
+    accessToken: adminSession.access_token,
     body: { tx_hash: "0xfeedbeef", network: "BSC" },
   });
 
   const detail = await jsonRequest<{ withdrawal: { status: string; tx_hash: string | null; network: string | null } }>(
     request,
     `/api/admin/withdrawals/${withdrawalId}`,
-    { actorId: fixture.accounts.admin.id }
+    { accessToken: adminSession.access_token }
   );
   expect(detail.withdrawal.status).toBe("COMPLETED");
   expect(detail.withdrawal.tx_hash).toBe("0xfeedbeef");

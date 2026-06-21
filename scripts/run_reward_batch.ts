@@ -13,6 +13,16 @@ type BatchConfig = {
   buildPayload: (args: Record<string, string>) => Record<string, string>;
 };
 
+type LoginResponse = {
+  access_token: string;
+  account: {
+    id: string;
+    login_id: string | null;
+    role: string;
+    status: string;
+  };
+};
+
 const CONFIG: Record<BatchKind, BatchConfig> = {
   "daily-reward": {
     path: "/api/admin/calc-runs/daily-reward",
@@ -78,7 +88,7 @@ function parseArgs(argv: string[]) {
   const [kindRaw, ...rest] = argv;
   if (!kindRaw || !(kindRaw in CONFIG)) {
     throw new Error(
-      "Usage: tsx scripts/run_reward_batch.ts <daily-reward|direct-referral|rank-qualification|rank-bonus|contribution|sidecar> --policy=<id> [--date=<YYYY-MM-DD> | --from=<YYYY-MM-DD> --to=<YYYY-MM-DD>] [--dry-run] [--execute] [--actor-id=<uuid>] [--base-url=<url>]"
+      "Usage: tsx scripts/run_reward_batch.ts <daily-reward|direct-referral|rank-qualification|rank-bonus|contribution|sidecar> --policy=<id> [--date=<YYYY-MM-DD> | --from=<YYYY-MM-DD> --to=<YYYY-MM-DD>] [--dry-run] [--execute] [--login-id=<id>] [--password=<password>] [--base-url=<url>]"
     );
   }
 
@@ -112,14 +122,51 @@ function parseArgs(argv: string[]) {
   };
 }
 
+async function parseJsonResponse<T>(response: Response): Promise<T | string> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text;
+  }
+}
+
+async function login(baseUrl: string, credentials: { login_id: string; password: string }) {
+  const response = await fetch(`${baseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(credentials),
+  });
+  const body = await parseJsonResponse<LoginResponse>(response);
+  if (!response.ok || typeof body === "string") {
+    throw new Error(
+      `Batch login failed with status ${response.status}: ${typeof body === "string" ? body : JSON.stringify(body)}`
+    );
+  }
+  return body;
+}
+
+async function logout(baseUrl: string, accessToken: string) {
+  await fetch(`${baseUrl}/api/auth/logout`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+}
+
 async function main() {
+  let baseUrl = "";
+  let accessToken = "";
   try {
     const parsed = parseArgs(process.argv.slice(2));
-    const baseUrl = parsed.args["base-url"] ?? process.env.BJC_BATCH_BASE_URL ?? process.env.BJC_API_BASE_URL ?? "http://127.0.0.1:3011";
-    const actorId = parsed.args["actor-id"] ?? process.env.BJC_BATCH_ACTOR_ID;
-    if (!actorId) {
-      throw new Error("Missing actor id: provide --actor-id=<uuid> or BJC_BATCH_ACTOR_ID");
-    }
+    baseUrl = parsed.args["base-url"] ?? process.env.BJC_BATCH_BASE_URL ?? process.env.BJC_API_BASE_URL ?? "http://127.0.0.1:3011";
+    const loginId = parsed.args["login-id"] ?? process.env.BJC_BATCH_LOGIN_ID;
+    const password = parsed.args.password ?? process.env.BJC_BATCH_PASSWORD;
 
     const preflight = await runSmokePreflight({
       env: {
@@ -138,8 +185,8 @@ async function main() {
       mode: parsed.dryRun ? "dry-run" : "execute",
       batch_kind: parsed.kind,
       url: targetUrl,
-      actor_mode: "x-actor-account-id",
-      actor_id: actorId,
+      auth_mode: "login_id_password_to_bearer",
+      login_id: loginId ?? null,
       payload,
       preflight,
     };
@@ -149,21 +196,22 @@ async function main() {
       return;
     }
 
+    if (!loginId || !password) {
+      throw new Error("Missing batch credentials: provide --login-id/--password or BJC_BATCH_LOGIN_ID/BJC_BATCH_PASSWORD");
+    }
+
+    const loginResult = await login(baseUrl, { login_id: loginId, password });
+    accessToken = loginResult.access_token;
+
     const response = await fetch(targetUrl, {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        "x-actor-account-id": actorId,
       },
       body: JSON.stringify(payload),
     });
-    const text = await response.text();
-    let body: unknown = text;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      // keep raw text
-    }
+    const body = await parseJsonResponse<unknown>(response);
     if (!response.ok) {
       process.stdout.write(
         `${JSON.stringify(
@@ -186,6 +234,8 @@ async function main() {
       `${JSON.stringify(
         {
           ...output,
+          authenticated_account_id: loginResult.account.id,
+          authenticated_role: loginResult.account.role,
           status: response.status,
           response: body,
         },
@@ -205,6 +255,10 @@ async function main() {
       )}\n`
     );
     process.exit(1);
+  } finally {
+    if (baseUrl && accessToken) {
+      await logout(baseUrl, accessToken);
+    }
   }
 }
 

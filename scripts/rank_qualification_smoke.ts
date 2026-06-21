@@ -104,14 +104,11 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -565,9 +562,13 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
 async function main() {
   const results: Result[] = [];
   const fixture = await createFixture();
+  const adminLoginId = `smoke_rank_admin_${fixture.suffix}`;
+  const readerLoginId = `smoke_rank_reader_${fixture.suffix}`;
   const initialFixtureAccountIds = [fixture.rootUserId, fixture.leftUserId, fixture.rightUserId, fixture.leftDownlineUserId];
   const promotedFixtureAccountIds = [...initialFixtureAccountIds, fixture.rightSupportUserId];
   let rootToken = "";
+  let adminToken = "";
+  let readerToken = "";
   let initialRunId = "";
   let promotedRunId = "";
   let deferredRunId = "";
@@ -589,11 +590,33 @@ async function main() {
     rootToken = login.payload.access_token;
     results.push({ name: "USER 로그인 성공", ok: login.payload.account.id === fixture.rootUserId });
 
+    currentStep = "admin login";
+    const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminRank!123"
+      })
+    });
+    adminToken = adminLogin.payload.access_token;
+    results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+    currentStep = "reader login";
+    const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderRank!123"
+      })
+    });
+    readerToken = readerLogin.payload.access_token;
+    results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
+
     currentStep = "reader forbidden";
     try {
       await requestJson("/api/admin/rewards/rank-qualification/run", {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.initialDate
@@ -608,7 +631,7 @@ async function main() {
     currentStep = "initial batch";
     const initialRun = await requestJson<RankRunResponse>("/api/admin/rewards/rank-qualification/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.initialDate
@@ -627,7 +650,7 @@ async function main() {
     currentStep = "duplicate batch";
     const duplicateRun = await requestJson<RankRunResponse>("/api/admin/rewards/rank-qualification/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.initialDate
@@ -641,7 +664,7 @@ async function main() {
     currentStep = "initial results";
     const initialResults = await requestJson<{ calc_run: { id: string }; items: RankQualificationResultItem[]; total: number }>(
       `/api/admin/calc-runs/${initialRunId}/rank-results?page=1&limit=100`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     const rootInitial = initialResults.payload.items.find((item) => item.account_id === fixture.rootUserId);
     const initialFixtureResults = initialResults.payload.items.filter((item) => initialFixtureAccountIds.includes(item.account_id));
@@ -693,7 +716,7 @@ async function main() {
     currentStep = "promoted batch";
     const promotedRun = await requestJson<RankRunResponse>("/api/admin/rewards/rank-qualification/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.promotedDate
@@ -712,7 +735,7 @@ async function main() {
     currentStep = "promoted results";
     const promotedResults = await requestJson<{ items: RankQualificationResultItem[]; total: number }>(
       `/api/admin/calc-runs/${promotedRunId}/rank-results?page=1&limit=100`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     const rootPromoted = promotedResults.payload.items.find((item) => item.account_id === fixture.rootUserId);
     const promotedFixtureResults = promotedResults.payload.items.filter((item) => promotedFixtureAccountIds.includes(item.account_id));
@@ -735,7 +758,7 @@ async function main() {
     currentStep = "deferred batch";
     const deferredRun = await requestJson<RankRunResponse>("/api/admin/rewards/rank-qualification/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.deferredDate
@@ -795,7 +818,7 @@ async function main() {
       account: { id: string };
       rank_status: { current_rank_level: number | null } | null;
       latest_qualification_result: RankQualificationResultItem | null;
-    }>(`/api/admin/accounts/${fixture.rootUserId}/rank`, { actorId: fixture.adminId });
+    }>(`/api/admin/accounts/${fixture.rootUserId}/rank`, { accessToken: adminToken });
     results.push({
       name: "Admin account rank 조회",
       ok:
@@ -807,7 +830,7 @@ async function main() {
     currentStep = "admin history";
     const adminHistory = await requestJson<{ items: RankHistoryItem[]; total: number }>(
       `/api/admin/accounts/${fixture.rootUserId}/rank-history?page=1&limit=10`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "Admin account rank history 조회",
@@ -820,7 +843,7 @@ async function main() {
       qualification_result: RankQualificationResultItem;
     }>(`/api/admin/accounts/${fixture.rootUserId}/rank-qualification`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.singleDate

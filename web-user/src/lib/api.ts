@@ -1,3 +1,5 @@
+import { useSessionStore } from "@/store/sessionStore";
+
 export type AccountStatus = "ACTIVE" | "BLOCKED" | "WITHDRAWN";
 export type BinaryPosition = "LEFT" | "RIGHT";
 export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
@@ -560,10 +562,44 @@ export class ApiError extends Error {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const AUTH_MESSAGE_STORAGE_KEY = "bjc-user-auth-message";
+let redirectingForAuthFailure = false;
 
 type RequestOptions = RequestInit & {
   accessToken?: string | null;
+  skipAuthRedirect?: boolean;
 };
+
+function redirectToLogin(message: string) {
+  if (typeof window === "undefined" || redirectingForAuthFailure) {
+    return;
+  }
+
+  redirectingForAuthFailure = true;
+  useSessionStore.getState().clearSession();
+  window.sessionStorage.setItem(AUTH_MESSAGE_STORAGE_KEY, message);
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+}
+
+export function persistAuthMessage(message: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(AUTH_MESSAGE_STORAGE_KEY, message);
+}
+
+export function consumeAuthMessage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const value = window.sessionStorage.getItem(AUTH_MESSAGE_STORAGE_KEY);
+  if (!value) {
+    return null;
+  }
+  window.sessionStorage.removeItem(AUTH_MESSAGE_STORAGE_KEY);
+  return value;
+}
 
 function params(query: Record<string, string | number | boolean | undefined | null>) {
   const search = new URLSearchParams();
@@ -578,10 +614,11 @@ function params(query: Record<string, string | number | boolean | undefined | nu
 function toFriendlyMessage(status: number, message: string) {
   if (status === 401) {
     if (message.includes("Authorization")) return "로그인이 필요합니다.";
-    return "로그인 정보가 올바르지 않거나 세션이 만료되었습니다.";
+    if (message.includes("invalid login or password")) return "아이디 또는 비밀번호가 올바르지 않습니다.";
+    return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
   }
   if (status === 403) {
-    if (message.includes("account is not active")) return "비활성 상태의 회원입니다. 관리자에게 문의해 주세요.";
+    if (message.includes("account is not active")) return "사용할 수 없는 계정입니다.";
     return "이 요청을 수행할 권한이 없습니다.";
   }
   if (status === 404) {
@@ -614,8 +651,9 @@ async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
   if (!(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  if (init.accessToken) {
-    headers.set("Authorization", `Bearer ${init.accessToken}`);
+  const currentAccessToken = init.accessToken ?? useSessionStore.getState().accessToken;
+  if (currentAccessToken) {
+    headers.set("Authorization", `Bearer ${currentAccessToken}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -629,7 +667,11 @@ async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
   if (!response.ok) {
     const errorPayload = typeof payload === "object" && payload && "error" in payload ? (payload as { error?: { message?: string; details?: unknown } }).error : null;
     const backendMessage = errorPayload?.message ?? response.statusText;
-    throw new ApiError(response.status, toFriendlyMessage(response.status, backendMessage), errorPayload?.details);
+    const friendlyMessage = toFriendlyMessage(response.status, backendMessage);
+    if (response.status === 401 && currentAccessToken && !init.skipAuthRedirect) {
+      redirectToLogin(friendlyMessage);
+    }
+    throw new ApiError(response.status, friendlyMessage, errorPayload?.details);
   }
 
   return payload as T;
@@ -661,24 +703,28 @@ export const api = {
     return request<AuthResponse>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(body),
+      skipAuthRedirect: true,
     });
   },
   login(body: { login_id: string; password: string }) {
     return request<AuthResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(body),
+      skipAuthRedirect: true,
     });
   },
   me(accessToken?: string | null) {
     return request<{ account: SessionAccount }>("/api/auth/me", {
       method: "GET",
       accessToken,
+      skipAuthRedirect: true,
     });
   },
   logout(accessToken?: string | null) {
     return request<{ ok: true }>("/api/auth/logout", {
       method: "POST",
       accessToken,
+      skipAuthRedirect: true,
       body: JSON.stringify({}),
     });
   },

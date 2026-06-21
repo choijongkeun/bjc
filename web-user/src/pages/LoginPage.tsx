@@ -1,25 +1,42 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { api, getErrorMessage } from "@/lib/api";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { api, consumeAuthMessage, getErrorMessage } from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button, Card, SectionTitle, TextField } from "@/components/ui";
 import { FeedbackState } from "@/components/FeedbackState";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const accessToken = useSessionStore((state) => state.accessToken);
+  const account = useSessionStore((state) => state.account);
   const setSession = useSessionStore((state) => state.setSession);
+  const clearSession = useSessionStore((state) => state.clearSession);
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nextPath = (() => {
+    const next = searchParams.get("next");
+    return next && next.startsWith("/") ? next : "/dashboard";
+  })();
 
   useEffect(() => {
-    if (accessToken) {
-      navigate("/dashboard", { replace: true });
+    const stateMessage = (location.state as { message?: string } | null)?.message ?? null;
+    const storedMessage = consumeAuthMessage();
+    if (stateMessage || storedMessage) {
+      setError(stateMessage ?? storedMessage);
     }
-  }, [accessToken, navigate]);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (accessToken && account?.role === "USER") {
+      navigate(nextPath, { replace: true });
+    }
+  }, [accessToken, account, navigate, nextPath]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -31,9 +48,17 @@ export default function LoginPage() {
         login_id: loginId.trim(),
         password,
       });
+      if (result.account.role !== "USER") {
+        await api.logout(result.access_token).catch(() => undefined);
+        clearSession();
+        setPassword("");
+        setError("사용할 수 없는 계정입니다.");
+        return;
+      }
       setSession(result.access_token, result.account);
-      navigate("/dashboard", { replace: true });
+      navigate(nextPath, { replace: true });
     } catch (submitError) {
+      setPassword("");
       setError(getErrorMessage(submitError));
     } finally {
       setSubmitting(false);
@@ -76,12 +101,20 @@ export default function LoginPage() {
                 <LockKeyhole className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextField
                   className="pl-11"
-                  type="password"
+                type={showPassword ? "text" : "password"}
                   placeholder="비밀번호"
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 hover:bg-slate-900/70 hover:text-slate-200"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
               </div>
             </label>
 

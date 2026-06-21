@@ -123,14 +123,11 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -637,7 +634,11 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
 async function main() {
   const results: Result[] = [];
   const fixture = await createFixture();
+  const adminLoginId = `smoke_rank_bonus_admin_${fixture.suffix}`;
+  const readerLoginId = `smoke_rank_bonus_reader_${fixture.suffix}`;
   let rootToken = "";
+  let adminToken = "";
+  let readerToken = "";
   let bonusCalcRunId = "";
   let createdRewardId = "";
   let createdLedgerId = "";
@@ -659,11 +660,31 @@ async function main() {
     rootToken = login.payload.access_token;
     results.push({ name: "USER 로그인 성공", ok: login.payload.account.id === fixture.rootUserId });
 
+    const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminRankBonus!123",
+      }),
+    });
+    adminToken = adminLogin.payload.access_token;
+    results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+    const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderRankBonus!123",
+      }),
+    });
+    readerToken = readerLogin.payload.access_token;
+    results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
+
     currentStep = "reader forbidden";
     try {
       await requestJson("/api/admin/rewards/rank-bonus/run", {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           calculation_date: fixture.calculationDate,
@@ -678,7 +699,7 @@ async function main() {
     currentStep = "batch run";
     const run = await requestJson<RankBonusRunResponse>("/api/admin/rewards/rank-bonus/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate,
@@ -700,7 +721,7 @@ async function main() {
 
     currentStep = "summary";
     const summary = await requestJson<RankBonusRunResponse>(`/api/admin/calc-runs/${bonusCalcRunId}/summary`, {
-      actorId: fixture.adminId,
+      accessToken: adminToken,
     });
     results.push({
       name: "rank bonus summary 조회",
@@ -752,7 +773,7 @@ async function main() {
     currentStep = "duplicate batch";
     const duplicateBatch = await requestJson<RankBonusRunResponse>("/api/admin/rewards/rank-bonus/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate,
@@ -769,7 +790,7 @@ async function main() {
     currentStep = "single duplicate";
     const singleDuplicate = await requestJson<RankBonusSingleResponse>(`/api/admin/accounts/${fixture.rootUserId}/rank-bonus`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         calculation_date: fixture.calculationDate,
@@ -873,7 +894,7 @@ async function main() {
 
     const adminRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
       `/api/admin/accounts/${fixture.rootUserId}/rewards?reward_type=RANK_BONUS&page=1&limit=20`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "Admin account rewards 조회",
@@ -882,7 +903,7 @@ async function main() {
 
     const calcRunRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
       `/api/admin/calc-runs/${bonusCalcRunId}/rewards?reward_type=RANK_BONUS&page=1&limit=20`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "calc_run rewards 조회",
@@ -892,7 +913,7 @@ async function main() {
     });
 
     const adminRewardDetail = await requestJson<{ reward: RewardDetail }>(`/api/admin/rewards/${createdRewardId}`, {
-      actorId: fixture.adminId,
+      accessToken: adminToken,
     });
     results.push({
       name: "Admin reward 상세 metadata / amount string",

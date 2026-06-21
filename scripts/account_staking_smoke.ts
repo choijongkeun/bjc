@@ -52,15 +52,12 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function http<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<T> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   if (!(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
-  }
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
   }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
@@ -265,8 +262,12 @@ async function main() {
   try {
     const results: Result[] = [];
     const fixture = await createFixture();
+    const adminLoginId = `smoke_staking_admin_${fixture.suffix}`;
+    const readerLoginId = `smoke_staking_reader_${fixture.suffix}`;
     let userToken = "";
     let otherUserToken = "";
+    let adminToken = "";
+    let readerToken = "";
     let pendingCancelledId = "";
     let activeCancelledId = "";
     let rejectedId = "";
@@ -319,6 +320,34 @@ async function main() {
     results.push({
       name: "다른 User 로그인 성공",
       ok: otherUserLogin.account.id === fixture.otherUserId,
+    });
+
+    currentStep = "admin login";
+    const adminLogin = await http<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminSmokePass!123",
+      }),
+    });
+    adminToken = adminLogin.access_token;
+    results.push({
+      name: "ADMIN 로그인 성공",
+      ok: adminLogin.account.id === fixture.adminId,
+    });
+
+    currentStep = "reader login";
+    const readerLogin = await http<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderSmokePass!123",
+      }),
+    });
+    readerToken = readerLogin.access_token;
+    results.push({
+      name: "READER 로그인 성공",
+      ok: readerLogin.account.id === fixture.readerId,
     });
 
     currentStep = "create pending";
@@ -465,7 +494,7 @@ async function main() {
     const readerList = await http<{ items: Array<any>; total: number }>(
       `/api/admin/stakings?page=1&limit=20&account_id=${fixture.userId}`,
       {
-        actorId: fixture.readerId,
+        accessToken: readerToken,
       }
     );
     results.push({
@@ -475,7 +504,7 @@ async function main() {
 
     currentStep = "reader detail";
     const readerDetail = await http<{ staking: any }>(`/api/admin/stakings/${activeCancelledId}`, {
-      actorId: fixture.readerId,
+      accessToken: readerToken,
     });
     results.push({
       name: "READER 상세 가능",
@@ -486,7 +515,7 @@ async function main() {
     try {
       await http(`/api/admin/stakings/${activeCancelledId}/activate`, {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({}),
       });
       results.push({ name: "READER activate 실패", ok: false, message: "unexpected success" });
@@ -498,7 +527,7 @@ async function main() {
     currentStep = "admin activate";
     const adminActivate = await http<{ staking: any }>(`/api/admin/stakings/${activeCancelledId}/activate`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({}),
     });
     results.push({
@@ -526,7 +555,7 @@ async function main() {
     currentStep = "admin cancel";
     const adminCancel = await http<{ staking: any }>(`/api/admin/stakings/${activeCancelledId}/cancel`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         reason: "admin final cancel by smoke",
       }),
@@ -551,7 +580,7 @@ async function main() {
     currentStep = "admin reject";
     const adminReject = await http<{ staking: any }>(`/api/admin/stakings/${rejectedId}/reject`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         reason: "reject by smoke",
       }),
@@ -565,7 +594,7 @@ async function main() {
     const adminAccountList = await http<{ items: Array<any>; total: number }>(
       `/api/admin/accounts/${fixture.userId}/stakings?page=1&limit=20`,
       {
-        actorId: fixture.adminId,
+        accessToken: adminToken,
       }
     );
     results.push({

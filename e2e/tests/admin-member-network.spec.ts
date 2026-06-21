@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { cleanupBjcFixture } from "../../scripts/fixtures/bjcFixtureCleanup.js";
 import { createBjcFixture } from "../../scripts/fixtures/bjcFixtureFactory.js";
 import type { BjcFixture } from "../../scripts/fixtures/bjcFixtureTypes.js";
-import { assertApiReady, jsonRequest, loginAdminUi } from "../helpers/api.js";
+import { assertApiReady, jsonRequest, loginAdminUi, loginUserByApi } from "../helpers/api.js";
 import { E2E_ADMIN_URL } from "../helpers/env.js";
 
 let fixture: BjcFixture;
@@ -17,7 +17,8 @@ test.afterAll(async () => {
 });
 
 test("회원 상세, 상태 변경, referral/binary/downline 조회를 검증한다", async ({ page, request }) => {
-  await loginAdminUi(page, fixture.accounts.admin.id);
+  const adminSession = await loginUserByApi(request, fixture.credentials.admin);
+  await loginAdminUi(page, fixture.credentials.admin);
 
   await page.goto(`${E2E_ADMIN_URL}/admin?tab=accounts&accountId=${fixture.accounts.root_user.id}`);
   await page.getByPlaceholder("아이디 / 이름 / 추천 코드").fill(fixture.credentials.root_user.login_id);
@@ -32,7 +33,7 @@ test("회원 상세, 상태 변경, referral/binary/downline 조회를 검증한
       const detail = await jsonRequest<{ account: { status: string } }>(
         request,
         `/api/admin/accounts/${fixture.accounts.root_user.id}`,
-        { actorId: fixture.accounts.admin.id }
+        { accessToken: adminSession.access_token }
       );
       return detail.account.status;
     })
@@ -41,7 +42,7 @@ test("회원 상세, 상태 변경, referral/binary/downline 조회를 검증한
   const detail = await jsonRequest<{ account: { status: string } }>(
     request,
     `/api/admin/accounts/${fixture.accounts.root_user.id}`,
-    { actorId: fixture.accounts.admin.id }
+    { accessToken: adminSession.access_token }
   );
   expect(detail.account.status).toBe("BLOCKED");
 
@@ -53,14 +54,14 @@ test("회원 상세, 상태 변경, referral/binary/downline 조회를 검증한
   const referralTree = await jsonRequest<{ root: { account_id: string }; children: Array<{ account_id: string }> }>(
     request,
     `/api/admin/accounts/${fixture.accounts.root_user.id}/referral-tree?depth=3`,
-    { actorId: fixture.accounts.admin.id }
+    { accessToken: adminSession.access_token }
   );
   expect(referralTree.children).toHaveLength(2);
 
   const binaryLegs = await jsonRequest<{ left: { member_count: number }; right: { member_count: number } }>(
     request,
     `/api/admin/accounts/${fixture.accounts.root_user.id}/binary-legs`,
-    { actorId: fixture.accounts.admin.id }
+    { accessToken: adminSession.access_token }
   );
   expect(binaryLegs.left.member_count).toBe(1);
   expect(binaryLegs.right.member_count).toBe(1);

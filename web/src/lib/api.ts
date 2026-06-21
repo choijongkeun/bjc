@@ -1,3 +1,5 @@
+import { useSessionStore } from "@/store/sessionStore";
+
 export type SessionRole = "ADMIN" | "READER" | "USER";
 export type AccountStakingStatus = "PENDING" | "ACTIVE" | "CANCEL_REQUESTED" | "CANCELLED" | "MATURED" | "CLOSED";
 export type AccountStakingSort = "created_at_desc" | "created_at_asc" | "matures_at_asc" | "matures_at_desc";
@@ -38,6 +40,25 @@ export type PolicyVersion = {
   created_at: string;
   activated_at: string | null;
   retired_at: string | null;
+};
+
+export type SessionAccount = {
+  id: string;
+  login_id: string | null;
+  display_name: string | null;
+  role: SessionRole;
+  status: AccountStatus;
+  referral_code: string | null;
+  sponsor_account_id: string | null;
+  binary_parent_account_id: string | null;
+  binary_position: BinaryPosition | null;
+  joined_at?: string | null;
+  last_login_at?: string | null;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  account: SessionAccount;
 };
 
 export type StakingProduct = {
@@ -868,14 +889,79 @@ export function getErrorMessage(error: unknown) {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const AUTH_MESSAGE_STORAGE_KEY = "bjc-admin-auth-message";
+let redirectingForAuthFailure = false;
 
-async function request<T>(path: string, init: RequestInit & { actorId?: string } = {}): Promise<T> {
+type RequestOptions = RequestInit & {
+  actorId?: string;
+  accessToken?: string | null;
+  skipAuthRedirect?: boolean;
+};
+
+function toFriendlyMessage(status: number, message: string) {
+  if (status === 401) {
+    if (message.includes("Authorization")) return "로그인이 필요합니다.";
+    if (message.includes("invalid login or password")) return "아이디 또는 비밀번호가 올바르지 않습니다.";
+    return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
+  }
+  if (status === 403) {
+    if (message.includes("account is not active")) return "사용할 수 없는 계정입니다.";
+    if (message.includes("reader permission required") || message.includes("admin permission required")) {
+      return "관리자 화면에 접근할 권한이 없습니다.";
+    }
+    return "이 작업을 수행할 권한이 없습니다.";
+  }
+  if (status === 404) {
+    return "요청한 정보를 찾을 수 없습니다.";
+  }
+  if (status === 409) {
+    return "현재 상태로는 요청을 처리할 수 없습니다.";
+  }
+  if (status === 422) {
+    return "입력값을 다시 확인해 주세요.";
+  }
+  return message || "요청 처리 중 오류가 발생했습니다.";
+}
+
+function redirectToLogin(message: string) {
+  if (typeof window === "undefined" || redirectingForAuthFailure) {
+    return;
+  }
+
+  redirectingForAuthFailure = true;
+  useSessionStore.getState().clearSession();
+  window.sessionStorage.setItem(AUTH_MESSAGE_STORAGE_KEY, message);
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+}
+
+export function persistAuthMessage(message: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(AUTH_MESSAGE_STORAGE_KEY, message);
+}
+
+export function consumeAuthMessage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const value = window.sessionStorage.getItem(AUTH_MESSAGE_STORAGE_KEY);
+  if (!value) {
+    return null;
+  }
+  window.sessionStorage.removeItem(AUTH_MESSAGE_STORAGE_KEY);
+  return value;
+}
+
+async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
   const headers = new Headers(init.headers ?? {});
   if (!(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
+  const currentAccessToken = init.accessToken ?? useSessionStore.getState().accessToken;
+  if (currentAccessToken) {
+    headers.set("Authorization", `Bearer ${currentAccessToken}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
@@ -884,16 +970,22 @@ async function request<T>(path: string, init: RequestInit & { actorId?: string }
 
   if (!response.ok) {
     const errorPayload = typeof payload === "object" && payload && "error" in payload ? (payload as any).error : null;
-    throw new ApiError(response.status, errorPayload?.message ?? response.statusText, errorPayload?.details);
+    const backendMessage = errorPayload?.message ?? response.statusText;
+    const friendlyMessage = toFriendlyMessage(response.status, backendMessage);
+    if (response.status === 401 && currentAccessToken && !init.skipAuthRedirect) {
+      redirectToLogin(friendlyMessage);
+    }
+    throw new ApiError(response.status, friendlyMessage, errorPayload?.details);
   }
 
   return payload as T;
 }
 
-async function requestBlob(path: string, init: RequestInit & { actorId?: string } = {}): Promise<Blob> {
+async function requestBlob(path: string, init: RequestOptions = {}): Promise<Blob> {
   const headers = new Headers(init.headers ?? {});
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
+  const currentAccessToken = init.accessToken ?? useSessionStore.getState().accessToken;
+  if (currentAccessToken) {
+    headers.set("Authorization", `Bearer ${currentAccessToken}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
@@ -901,7 +993,12 @@ async function requestBlob(path: string, init: RequestInit & { actorId?: string 
     const contentType = response.headers.get("content-type") ?? "";
     const payload = contentType.includes("application/json") ? await response.json() : await response.text();
     const errorPayload = typeof payload === "object" && payload && "error" in payload ? (payload as any).error : null;
-    throw new ApiError(response.status, errorPayload?.message ?? response.statusText, errorPayload?.details);
+    const backendMessage = errorPayload?.message ?? response.statusText;
+    const friendlyMessage = toFriendlyMessage(response.status, backendMessage);
+    if (response.status === 401 && currentAccessToken && !init.skipAuthRedirect) {
+      redirectToLogin(friendlyMessage);
+    }
+    throw new ApiError(response.status, friendlyMessage, errorPayload?.details);
   }
   return response.blob();
 }
@@ -916,26 +1013,29 @@ function params(query: Record<string, string | number | boolean | undefined | nu
   return text ? `?${text}` : "";
 }
 
-export async function resolveActorRole(actorId: string): Promise<"ADMIN" | "READER"> {
-  await request<PagedResponse<PolicyVersion, "policy_versions">>(`/api/policies${params({ page: 1, limit: 1 })}`, {
-    method: "GET",
-    actorId,
-  });
-  try {
-    await request<PagedResponse<AuditLog, "audit_logs">>(`/api/audit-logs${params({ page: 1, limit: 1 })}`, {
-      method: "GET",
-      actorId,
-    });
-    return "ADMIN";
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 403) {
-      return "READER";
-    }
-    throw error;
-  }
-}
-
 export const api = {
+  login(body: { login_id: string; password: string }) {
+    return request<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(body),
+      skipAuthRedirect: true,
+    });
+  },
+  me(accessToken?: string | null) {
+    return request<{ account: SessionAccount }>("/api/auth/me", {
+      method: "GET",
+      accessToken,
+      skipAuthRedirect: true,
+    });
+  },
+  logout(accessToken?: string | null) {
+    return request<{ ok: true }>("/api/auth/logout", {
+      method: "POST",
+      accessToken,
+      skipAuthRedirect: true,
+      body: JSON.stringify({}),
+    });
+  },
   listPolicies: (actorId: string, query: Record<string, unknown>) =>
     request<PagedResponse<PolicyVersion, "policy_versions">>(`/api/policies${params(query as any)}`, { method: "GET", actorId }),
   createPolicy: (actorId: string, body: { note?: string | null; effective_from?: string | null; effective_to?: string | null }) =>

@@ -42,8 +42,9 @@ const allowedTabs = new Set<TabKey>([
 ]);
 
 export default function AdminPage() {
-  const actorId = useSessionStore((state) => state.actorId)!;
-  const role = useSessionStore((state) => state.role)!;
+  const account = useSessionStore((state) => state.account)!;
+  const actorId = account.id;
+  const role = account.role;
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = (searchParams.get("tab") as TabKey | null) ?? "policies";
   const selectedAccountId = searchParams.get("accountId");

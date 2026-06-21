@@ -19,7 +19,6 @@ import { RankQualificationService } from "./services/rankQualificationService.js
 import { RewardWithdrawalService } from "./services/rewardWithdrawalService.js";
 import { SidecarRewardService } from "./services/sidecarRewardService.js";
 import { toHttpError } from "./http/httpErrors.js";
-import { actorMiddleware } from "./http/actorMiddleware.js";
 import { checkReadiness } from "./http/readiness.js";
 import { extractBearerToken, requireSessionAccount, sessionAuthMiddleware } from "./http/sessionAuth.js";
 import { notFound, unauthorized, validationError } from "./domain/errors.js";
@@ -35,7 +34,7 @@ app.use((req, res, next) => {
   if (origin && allowedOriginPattern.test(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Vary", "Origin");
-    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, x-actor-account-id");
+    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
     res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   }
 
@@ -48,7 +47,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "2mb" }));
-app.use(actorMiddleware);
 
 const engine = new PolicyEngine(pool);
 const authService = new AuthService(pool);
@@ -146,11 +144,7 @@ const reportCalcRunTypeSchema = z.enum([
 ]);
 
 function requireActorId(req: express.Request): string {
-  const actorId = req.header("x-actor-account-id");
-  if (!actorId) {
-    throw unauthorized("Missing header: x-actor-account-id");
-  }
-  return actorId;
+  return requireSessionAccount(req).id;
 }
 
 function sendCsv(res: express.Response, filename: string, rows: Array<Record<string, unknown>>) {
@@ -274,6 +268,20 @@ app.post("/api/auth/logout", requireSession, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+app.use("/api/admin", requireSession);
+app.use("/api/policies", requireSession);
+app.use("/api/calc-runs", requireSession);
+app.use("/api/settlement-items", requireSession);
+app.use("/api/reports", requireSession);
+app.use("/api/audit-logs", requireSession);
+app.use("/api/ledger-events", requireSession);
+app.use("/api/staking-products", (req, res, next) => {
+  if (req.method === "POST") {
+    return requireSession(req, res, next);
+  }
+  return next();
 });
 
 app.post("/api/me/stakings", requireSession, async (req, res, next) => {
@@ -2045,8 +2053,10 @@ app.get("/api/staking-products", async (req, res, next) => {
       })
       .parse(req.query);
 
-    if (req.header("x-actor-account-id")) {
-      const actor_account_id = requireActorId(req);
+    const authorization = req.header("authorization");
+    if (authorization) {
+      const sessionAccount = await authService.authenticateAccessToken(extractBearerToken(authorization));
+      const actor_account_id = sessionAccount.id;
       const result = await engine.listStakingProducts({
         actor_account_id,
         policy_version_id: query.policy_id,

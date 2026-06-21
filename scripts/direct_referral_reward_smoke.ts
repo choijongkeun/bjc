@@ -131,14 +131,11 @@ function containsSensitiveKey(value: unknown, key: string): boolean {
 
 async function requestJson<T>(
   path: string,
-  init: RequestInit & { actorId?: string; accessToken?: string } = {}
+  init: RequestInit & { accessToken?: string } = {}
 ): Promise<{ status: number; payload: T }> {
   const baseUrl = resolveSmokeBaseUrl(process.env);
   const headers = new Headers(init.headers ?? {});
   headers.set("Content-Type", "application/json");
-  if (init.actorId) {
-    headers.set("x-actor-account-id", init.actorId);
-  }
   if (init.accessToken) {
     headers.set("Authorization", `Bearer ${init.accessToken}`);
   }
@@ -527,8 +524,12 @@ async function cleanupFixture(fixture: Fixture): Promise<{ remaining: Record<str
 async function main() {
   const results: Result[] = [];
   const fixture = await createFixture();
+  const adminLoginId = `smoke_direct_admin_${fixture.suffix}`;
+  const readerLoginId = `smoke_direct_reader_${fixture.suffix}`;
   const expectedAmount = ((1000000n * 1500n) / 10000n).toString();
   let sponsorToken = "";
+  let adminToken = "";
+  let readerToken = "";
   let rewardId = "";
   let calcRunId = "";
   let currentStep = "fixture created";
@@ -549,11 +550,33 @@ async function main() {
     sponsorToken = sponsorLogin.payload.access_token;
     results.push({ name: "Sponsor 로그인 성공", ok: sponsorLogin.payload.account.id === fixture.sponsorId });
 
+    currentStep = "admin login";
+    const adminLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: adminLoginId,
+        password: "AdminDirect!123"
+      })
+    });
+    adminToken = adminLogin.payload.access_token;
+    results.push({ name: "ADMIN 로그인 성공", ok: adminLogin.payload.account.id === fixture.adminId });
+
+    currentStep = "reader login";
+    const readerLogin = await requestJson<{ access_token: string; account: { id: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_id: readerLoginId,
+        password: "ReaderDirect!123"
+      })
+    });
+    readerToken = readerLogin.payload.access_token;
+    results.push({ name: "READER 로그인 성공", ok: readerLogin.payload.account.id === fixture.readerId });
+
     currentStep = "reader forbidden";
     try {
       await requestJson("/api/admin/rewards/direct-referral/run", {
         method: "POST",
-        actorId: fixture.readerId,
+        accessToken: readerToken,
         body: JSON.stringify({
           policy_version_id: fixture.policyId,
           activated_from: fixture.activatedFrom,
@@ -569,7 +592,7 @@ async function main() {
     currentStep = "batch run";
     const batchRun = await requestJson<DirectReferralBatchResponse>("/api/admin/rewards/direct-referral/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         activated_from: fixture.activatedFrom,
@@ -669,7 +692,7 @@ async function main() {
     currentStep = "rerun duplicate";
     const rerun = await requestJson<DirectReferralBatchResponse>("/api/admin/rewards/direct-referral/run", {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({
         policy_version_id: fixture.policyId,
         activated_from: fixture.activatedFrom,
@@ -698,7 +721,7 @@ async function main() {
       existing_reward_id: string | null;
     }>(`/api/admin/stakings/${fixture.activeSourceStakingId}/direct-referral-calculate`, {
       method: "POST",
-      actorId: fixture.adminId,
+      accessToken: adminToken,
       body: JSON.stringify({})
     });
     results.push({
@@ -785,7 +808,7 @@ async function main() {
     currentStep = "admin reward detail";
     const adminRewardDetail = await requestJson<{ reward: RewardListItem & { metadata: Record<string, unknown> } }>(
       `/api/admin/rewards/${rewardId}`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "Admin reward 상세",
@@ -805,7 +828,7 @@ async function main() {
     currentStep = "admin reward list";
     const adminRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
       `/api/admin/rewards?page=1&limit=20&reward_type=DIRECT_REFERRAL&account_id=${fixture.sponsorId}&calc_run_id=${calcRunId}`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     const fixtureAdminRewards = findFixtureRewards(adminRewards.payload.items, {
       rewardId,
@@ -825,7 +848,7 @@ async function main() {
     currentStep = "admin account rewards";
     const adminAccountRewards = await requestJson<{ items: RewardListItem[]; total: number }>(
       `/api/admin/accounts/${fixture.sponsorId}/rewards?page=1&limit=20&reward_type=DIRECT_REFERRAL`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "Admin account별 rewards 조회",
@@ -835,7 +858,7 @@ async function main() {
     currentStep = "calc run rewards";
     const calcRunRewards = await requestJson<{ calc_run: { id: string; status: string }; items: RewardListItem[]; total: number }>(
       `/api/admin/calc-runs/${calcRunId}/rewards?page=1&limit=20&reward_type=DIRECT_REFERRAL`,
-      { actorId: fixture.adminId }
+      { accessToken: adminToken }
     );
     results.push({
       name: "calc_run별 rewards 조회",

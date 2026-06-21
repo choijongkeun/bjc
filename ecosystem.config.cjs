@@ -9,6 +9,7 @@ module.exports = {
       autorestart: true,
       max_memory_restart: "512M",
       watch: false,
+      time: true,
       out_file: "logs/pm2/bjc-api.out.log",
       error_file: "logs/pm2/bjc-api.error.log",
       merge_logs: true,

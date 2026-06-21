@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { api, ApiError } from "@/lib/api";
+import { Navigate, useLocation } from "react-router-dom";
+import { api, ApiError, persistAuthMessage } from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 
 export function resolvePrivateRouteState(input: {
@@ -19,38 +19,46 @@ export function resolvePrivateRouteState(input: {
 }
 
 export function PrivateRoute({ children }: { children: JSX.Element }) {
+  const location = useLocation();
   const accessToken = useSessionStore((state) => state.accessToken);
   const setAccount = useSessionStore((state) => state.setAccount);
   const clearSession = useSessionStore((state) => state.clearSession);
-  const [status, setStatus] = useState<"checking" | "verified" | "rejected">(
-    accessToken ? "checking" : "rejected"
+  const [status, setStatus] = useState<"UNKNOWN" | "AUTHENTICATED" | "UNAUTHENTICATED" | "FORBIDDEN">(
+    accessToken ? "UNKNOWN" : "UNAUTHENTICATED"
   );
 
   useEffect(() => {
     let cancelled = false;
 
     if (!accessToken) {
-      setStatus("rejected");
+      setStatus("UNAUTHENTICATED");
       return;
     }
 
-    setStatus("checking");
+    setStatus("UNKNOWN");
 
     api
       .me(accessToken)
       .then((result) => {
         if (cancelled) return;
+        if (result.account.role !== "USER") {
+          clearSession();
+          setStatus("FORBIDDEN");
+          return;
+        }
         setAccount(result.account);
-        setStatus("verified");
+        setStatus("AUTHENTICATED");
       })
       .catch((error) => {
         if (cancelled) return;
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           clearSession();
-          setStatus("rejected");
+          persistAuthMessage(error.status === 403 ? "사용할 수 없는 계정입니다." : "로그인이 만료되었습니다. 다시 로그인해 주세요.");
+          setStatus(error.status === 403 ? "FORBIDDEN" : "UNAUTHENTICATED");
           return;
         }
-        setStatus("rejected");
+        clearSession();
+        setStatus("UNAUTHENTICATED");
       });
 
     return () => {
@@ -60,13 +68,23 @@ export function PrivateRoute({ children }: { children: JSX.Element }) {
 
   const decision = resolvePrivateRouteState({
     accessToken,
-    isChecking: status === "checking",
-    isVerified: status === "verified",
-    isRejected: status === "rejected",
+    isChecking: status === "UNKNOWN",
+    isVerified: status === "AUTHENTICATED",
+    isRejected: status === "UNAUTHENTICATED" || status === "FORBIDDEN",
   });
 
+  if (status === "FORBIDDEN") {
+    return (
+      <Navigate
+        to={`/login?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
+        replace
+        state={{ message: "사용할 수 없는 계정입니다." }}
+      />
+    );
+  }
+
   if (decision === "redirect") {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={`/login?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`} replace />;
   }
 
   if (decision === "loading") {

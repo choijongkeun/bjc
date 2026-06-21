@@ -7,8 +7,9 @@ import { Card, FeedbackState, JsonPanel, TableShell } from "@/components/ui";
 import { useSessionStore } from "@/store/sessionStore";
 
 export default function LedgerDetailPage() {
-  const actorId = useSessionStore((state) => state.actorId)!;
-  const role = useSessionStore((state) => state.role)!;
+  const account = useSessionStore((state) => state.account)!;
+  const actorId = account.id;
+  const role = account.role;
   const { accountId = "" } = useParams();
   const [ledgerEvents, setLedgerEvents] = useState<LedgerEvent[]>([]);
   const [settlements, setSettlements] = useState<SettlementItem[]>([]);
