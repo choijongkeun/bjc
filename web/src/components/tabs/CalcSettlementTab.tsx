@@ -1,9 +1,74 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, PauseCircle, Play, ShieldAlert } from "lucide-react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Copy, PauseCircle, Play, ShieldAlert } from "lucide-react";
 import { api, type AnyCalcRunSummary, type CalcRun, type SessionRole, type SettlementItem } from "@/lib/api";
 import { formatTokenAmount } from "@/lib/amount";
 import { getDisplayLabel } from "@/lib/display";
-import { Button, Card, FeedbackState, JsonPanel, Pagination, StatusBadge, TableShell } from "@/components/ui";
+import { Button, Card, FeedbackState, FormField, JsonPanel, Pagination, SelectField, StatusBadge, TableShell, TextField, cn } from "@/components/ui";
+
+function DetailItem({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0 space-y-1", className)}>
+      <dt className="text-xs font-medium text-slate-500">{label}</dt>
+      <dd className="min-w-0 text-sm text-slate-200">{value}</dd>
+    </div>
+  );
+}
+
+function CopyableValue({
+  label,
+  value,
+  className,
+  textClassName,
+}: {
+  label: string;
+  value: string | null | undefined;
+  className?: string;
+  textClassName?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const safeValue = value?.trim() ? value : null;
+
+  async function handleCopy(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (!safeValue || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(safeValue);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
+      <span className={cn("min-w-0 flex-1 truncate", textClassName)} title={safeValue ?? "-"}>
+        {safeValue ?? "-"}
+      </span>
+      {safeValue ? (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/70 text-slate-400 transition hover:border-slate-700 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/30"
+          aria-label={`${label} 복사`}
+          title={copied ? `${label} 복사됨` : `${label} 복사`}
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export function CalcSettlementTab({
   actorId,
@@ -34,6 +99,7 @@ export function CalcSettlementTab({
   const [failReason, setFailReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   async function loadRuns() {
     try {
@@ -176,90 +242,184 @@ export function CalcSettlementTab({
           </div>
           {error ? <FeedbackState title="오류" description={error} tone="error" /> : null}
           {notice ? <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{notice}</div> : null}
-          <div className="mb-4 grid gap-3 md:grid-cols-4">
-            <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="정책 버전 ID" value={filters.policy_id} onChange={(e) => setFilters((v) => ({ ...v, policy_id: e.target.value }))} />
-            <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="실행 구분" value={filters.run_type} onChange={(e) => setFilters((v) => ({ ...v, run_type: e.target.value }))} />
-            <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="상태" value={filters.status} onChange={(e) => setFilters((v) => ({ ...v, status: e.target.value }))} />
-            <Button onClick={() => void loadRuns()}>조회</Button>
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <FormField label="정책 버전 ID">
+              <TextField placeholder="정책 버전 ID를 입력하세요" value={filters.policy_id} onChange={(e) => setFilters((v) => ({ ...v, policy_id: e.target.value }))} />
+            </FormField>
+            <FormField label="실행 구분">
+              <SelectField value={filters.run_type} onChange={(e) => setFilters((v) => ({ ...v, run_type: e.target.value }))}>
+                <option value="">전체 실행 구분</option>
+                {["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_QUALIFICATION", "RANK_BONUS", "CONTRIBUTION", "SIDECAR"].map((item) => (
+                  <option key={item} value={item}>{getDisplayLabel(item)}</option>
+                ))}
+              </SelectField>
+            </FormField>
+            <FormField label="상태">
+              <SelectField value={filters.status} onChange={(e) => setFilters((v) => ({ ...v, status: e.target.value }))}>
+                <option value="">전체 상태</option>
+                {["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "FINALIZED"].map((item) => (
+                  <option key={item} value={item}>{getDisplayLabel(item)}</option>
+                ))}
+              </SelectField>
+            </FormField>
+            <div className="flex items-end">
+              <Button className="w-full" onClick={() => void loadRuns()}>조회</Button>
+            </div>
           </div>
-          <TableShell>
-            <table className="data-table min-w-full">
-              <thead>
-                <tr>
-                  <th>실행일</th>
-                  <th>실행 구분</th>
-                  <th>상태</th>
-                  <th>정책 버전</th>
-                  <th>생성</th>
-                  <th>중복</th>
-                  <th>실패</th>
-                  <th>총 금액</th>
-                  <th>에러</th>
-                  <th>연결</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => {
-                  const summary = runSummaries[run.id];
-                  return (
-                    <tr
-                      key={run.id}
-                      className={selected?.id === run.id ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}
-                      onClick={() => {
-                        setSelected(run);
-                        onSelectCalcRunId(run.id);
-                      }}
-                    >
-                      <td>{run.run_date}</td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <span>{getDisplayLabel(run.run_type)}</span>
-                          {run.run_type === "DAILY_REWARD" ? <StatusBadge value="DAILY_REWARD" tone="blue" /> : null}
-                          {run.run_type === "DIRECT_REFERRAL" ? <StatusBadge value="DIRECT_REFERRAL" tone="emerald" /> : null}
-                        </div>
-                      </td>
-                      <td><StatusBadge value={run.status} /></td>
-                      <td className="font-mono text-xs text-slate-400">{run.policy_version_id}</td>
-                      <td className="tabular text-right">{getSummaryMetric(summary, "created_count")}</td>
-                      <td className="tabular text-right">{getSummaryMetric(summary, "duplicate_skip_count")}</td>
-                      <td className={`tabular text-right ${getNumericSummaryMetric(summary, "failed_count") > 0 ? "text-rose-300" : ""}`}>
-                        {getSummaryMetric(summary, "failed_count")}
-                      </td>
-                      <td className="tabular text-right">{getSummaryAmount(summary)}</td>
-                      <td className="text-slate-500">{run.error_message ?? "-"}</td>
-                      <td>
-                        {run.run_type === "RANK_BONUS" ? (
-                          <Button variant="ghost" onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenRewards(run.id);
-                          }}>
-                            보상 보기
-                          </Button>
-                        ) : run.run_type === "RANK_QUALIFICATION" ? (
-                          <Button
-                            variant="ghost"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onOpenRanks({ calcRunId: run.id });
-                            }}
-                          >
-                            결과 보기
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenRewards(run.id);
-                          }}>
-                            보상 보기
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableShell>
+          <div className="hidden xl:block">
+            <TableShell>
+              <table className="data-table min-w-full">
+                <thead>
+                  <tr>
+                    <th>실행일</th>
+                    <th>실행 구분</th>
+                    <th>상태</th>
+                    <th>정책 버전</th>
+                    <th>생성</th>
+                    <th>중복</th>
+                    <th>실패</th>
+                    <th>총 금액</th>
+                    <th>에러</th>
+                    <th>연결</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => {
+                    const summary = runSummaries[run.id];
+                    return (
+                      <tr
+                        key={run.id}
+                        className={selected?.id === run.id ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}
+                        onClick={() => {
+                          setSelected(run);
+                          onSelectCalcRunId(run.id);
+                        }}
+                      >
+                        <td>{run.run_date}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <span>{getDisplayLabel(run.run_type)}</span>
+                            {run.run_type === "DAILY_REWARD" ? <StatusBadge value="DAILY_REWARD" tone="blue" /> : null}
+                            {run.run_type === "DIRECT_REFERRAL" ? <StatusBadge value="DIRECT_REFERRAL" tone="emerald" /> : null}
+                          </div>
+                        </td>
+                        <td><StatusBadge value={run.status} /></td>
+                        <td className="max-w-[220px]"><CopyableValue label="정책 버전 ID" value={run.policy_version_id} textClassName="font-mono text-xs text-slate-400" /></td>
+                        <td className="tabular text-right">{getSummaryMetric(summary, "created_count")}</td>
+                        <td className="tabular text-right">{getSummaryMetric(summary, "duplicate_skip_count")}</td>
+                        <td className={`tabular text-right ${getNumericSummaryMetric(summary, "failed_count") > 0 ? "text-rose-300" : ""}`}>
+                          {getSummaryMetric(summary, "failed_count")}
+                        </td>
+                        <td className="tabular text-right">{getSummaryAmount(summary)}</td>
+                        <td className="max-w-[180px] truncate text-slate-500" title={run.error_message ?? "-"}>{run.error_message ?? "-"}</td>
+                        <td>{renderCalcRunLinkButton(run, onOpenRewards, onOpenRanks)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableShell>
+          </div>
+          <div className="hidden md:block xl:hidden">
+            <TableShell>
+              <table className="data-table min-w-full">
+                <thead>
+                  <tr>
+                    <th>실행</th>
+                    <th>상태</th>
+                    <th>요약</th>
+                    <th className="w-[120px]">상세</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => {
+                    const summary = runSummaries[run.id];
+                    const expanded = expandedRunId === run.id;
+                    return (
+                      <Fragment key={run.id}>
+                        <tr className={selected?.id === run.id ? "bg-blue-500/10" : "cursor-pointer hover:bg-slate-800/60"}>
+                          <td onClick={() => { setSelected(run); onSelectCalcRunId(run.id); }}>
+                            <div className="space-y-1">
+                              <div className="font-semibold text-slate-100">{getDisplayLabel(run.run_type)}</div>
+                              <div className="text-xs text-slate-500">{run.run_date}</div>
+                              <CopyableValue label="정책 버전 ID" value={run.policy_version_id} textClassName="font-mono text-xs text-slate-500" />
+                            </div>
+                          </td>
+                          <td><StatusBadge value={run.status} /></td>
+                          <td className="text-sm">
+                            <div>생성 {getSummaryMetric(summary, "created_count")}</div>
+                            <div className="text-slate-500">총액 {getSummaryAmount(summary)}</div>
+                          </td>
+                          <td>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" className="px-3 py-2 text-xs" onClick={() => { setSelected(run); onSelectCalcRunId(run.id); }}>
+                                선택
+                              </Button>
+                              <Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => setExpandedRunId((current) => current === run.id ? null : run.id)}>
+                                {expanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />}
+                                {expanded ? "접기" : "열기"}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expanded ? (
+                          <tr className="bg-slate-950/70">
+                            <td colSpan={4} className="px-4 py-4">
+                              <dl className="grid gap-3 sm:grid-cols-2">
+                                <DetailItem label="중복" value={getSummaryMetric(summary, "duplicate_skip_count")} />
+                                <DetailItem label="실패" value={getSummaryMetric(summary, "failed_count")} />
+                                <DetailItem label="에러" value={run.error_message ?? "-"} className="sm:col-span-2" />
+                              </dl>
+                              <div className="mt-4">{renderCalcRunLinkButton(run, onOpenRewards, onOpenRanks)}</div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableShell>
+          </div>
+          <div className="space-y-3 md:hidden">
+            {runs.map((run) => {
+              const summary = runSummaries[run.id];
+              const expanded = expandedRunId === run.id;
+              const active = selected?.id === run.id;
+              return (
+                <div key={run.id} className={cn("rounded-[24px] border border-slate-800 bg-slate-950/60 p-4", active && "border-blue-500/40 bg-blue-500/10")}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-slate-100">{getDisplayLabel(run.run_type)}</div>
+                      <div className="mt-1 text-xs text-slate-500">{run.run_date}</div>
+                    </div>
+                    <StatusBadge value={run.status} />
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3">
+                    <DetailItem label="생성" value={getSummaryMetric(summary, "created_count")} />
+                    <DetailItem label="총 금액" value={<span className="tabular">{getSummaryAmount(summary)}</span>} />
+                  </dl>
+                  {expanded ? (
+                    <dl className="mt-4 grid gap-3 border-t border-slate-800 pt-4">
+                      <DetailItem label="정책 버전 ID" value={<CopyableValue label="정책 버전 ID" value={run.policy_version_id} textClassName="font-mono text-xs text-slate-400" />} />
+                      <DetailItem label="중복" value={getSummaryMetric(summary, "duplicate_skip_count")} />
+                      <DetailItem label="실패" value={getSummaryMetric(summary, "failed_count")} />
+                      <DetailItem label="에러" value={run.error_message ?? "-"} />
+                    </dl>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant={active ? "primary" : "secondary"} className="flex-1" onClick={() => { setSelected(run); onSelectCalcRunId(run.id); }}>
+                      {active ? "선택됨" : "상세 보기"}
+                    </Button>
+                    <Button variant="ghost" className="px-4" onClick={() => setExpandedRunId((current) => current === run.id ? null : run.id)}>
+                      {expanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />}
+                      {expanded ? "접기" : "추가 정보"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           <div className="mt-4"><Pagination page={page} limit={10} total={total} onChange={setPage} /></div>
         </Card>
       </div>
@@ -271,10 +431,20 @@ export function CalcSettlementTab({
             <FeedbackState title="조회 전용" description="READER는 생성과 상태 변경 버튼이 숨겨집니다." />
           ) : (
             <div className="mt-4 space-y-3">
-              <input className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="정책 버전 ID" value={form.policy_id} onChange={(e) => setForm((v) => ({ ...v, policy_id: e.target.value }))} />
+              <FormField label="정책 버전 ID">
+                <TextField placeholder="정책 버전 ID를 입력하세요" value={form.policy_id} onChange={(e) => setForm((v) => ({ ...v, policy_id: e.target.value }))} />
+              </FormField>
               <div className="grid gap-3 md:grid-cols-2">
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="실행 구분" value={form.run_type} onChange={(e) => setForm((v) => ({ ...v, run_type: e.target.value }))} />
-                <input className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" type="date" value={form.run_date} onChange={(e) => setForm((v) => ({ ...v, run_date: e.target.value }))} />
+                <FormField label="실행 구분">
+                  <SelectField value={form.run_type} onChange={(e) => setForm((v) => ({ ...v, run_type: e.target.value }))}>
+                    {["DAILY_REWARD", "DIRECT_REFERRAL", "RANK_QUALIFICATION", "RANK_BONUS", "CONTRIBUTION", "SIDECAR"].map((item) => (
+                      <option key={item} value={item}>{getDisplayLabel(item)}</option>
+                    ))}
+                  </SelectField>
+                </FormField>
+                <FormField label="실행일">
+                  <TextField type="date" value={form.run_date} onChange={(e) => setForm((v) => ({ ...v, run_date: e.target.value }))} />
+                </FormField>
               </div>
               <Button onClick={() => void createRun()}><Play className="mr-2 h-4 w-4" />계산 실행 생성</Button>
             </div>
@@ -288,9 +458,11 @@ export function CalcSettlementTab({
               <StatusBadge value={selected.status} />
             </div>
             <div className="mt-4 space-y-3 text-sm text-slate-300">
-              <div className="font-mono text-xs text-slate-400">{selected.id}</div>
-              <div>실행 구분: {getDisplayLabel(selected.run_type)}</div>
-              <div>정책 버전: <span className="font-mono text-xs text-slate-400">{selected.policy_version_id}</span></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DetailItem label="계산 실행 ID" value={<CopyableValue label="계산 실행 ID" value={selected.id} textClassName="font-mono text-xs text-slate-400" />} className="sm:col-span-2" />
+                <DetailItem label="실행 구분" value={getDisplayLabel(selected.run_type)} />
+                <DetailItem label="정책 버전" value={<CopyableValue label="정책 버전 ID" value={selected.policy_version_id} textClassName="font-mono text-xs text-slate-400" />} />
+              </div>
               {selectedSummary ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   {formatCalcRunSummary(selectedSummary).map((item) => (
@@ -326,7 +498,9 @@ export function CalcSettlementTab({
                   <Button variant="danger" onClick={() => void transition("fail", selected)}><PauseCircle className="mr-2 h-4 w-4" />실패 처리</Button>
                   <Button onClick={() => void transition("finalize", selected)}><ShieldAlert className="mr-2 h-4 w-4" />확정 처리</Button>
                 </div>
-                <input className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3" placeholder="실패 사유" value={failReason} onChange={(e) => setFailReason(e.target.value)} />
+                <FormField label="실패 사유">
+                  <TextField placeholder="실패 사유를 입력하세요" value={failReason} onChange={(e) => setFailReason(e.target.value)} />
+                </FormField>
               </div>
             ) : null}
             <div className="mt-6">
@@ -334,26 +508,41 @@ export function CalcSettlementTab({
                 <div className="text-sm font-semibold text-slate-200">정산 내역</div>
                 <div className="text-xs text-slate-500">총 {settlementTotal}건</div>
               </div>
-              <TableShell height="max-h-[260px]">
-                <table className="data-table min-w-full">
-                  <thead>
-                    <tr>
-                      <th>정산 구분</th>
-                      <th>회원 ID</th>
-                      <th>금액</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {settlements.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.settlement_type}</td>
-                        <td className="font-mono text-xs text-slate-400">{item.account_id}</td>
-                        <td className="tabular text-right">{formatTokenAmount(item.amount_base, item.decimals, item.symbol)}</td>
+              <div className="hidden md:block">
+                <TableShell height="max-h-[260px]">
+                  <table className="data-table min-w-full">
+                    <thead>
+                      <tr>
+                        <th>정산 구분</th>
+                        <th>회원 ID</th>
+                        <th>금액</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableShell>
+                    </thead>
+                    <tbody>
+                      {settlements.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.settlement_type}</td>
+                          <td className="max-w-[220px]"><CopyableValue label="회원 ID" value={item.account_id} textClassName="font-mono text-xs text-slate-400" /></td>
+                          <td className="tabular text-right">{formatTokenAmount(item.amount_base, item.decimals, item.symbol)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableShell>
+              </div>
+              <div className="space-y-3 md:hidden">
+                {settlements.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-slate-100">{item.settlement_type}</div>
+                        <CopyableValue label="회원 ID" value={item.account_id} textClassName="mt-1 font-mono text-xs text-slate-400" />
+                      </div>
+                      <div className="tabular text-sm text-slate-100">{formatTokenAmount(item.amount_base, item.decimals, item.symbol)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {settlements[0] ? <div className="mt-4"><JsonPanel title="첫 정산 메타" value={settlements[0].meta} /></div> : null}
             </div>
           </Card>
@@ -411,4 +600,36 @@ function formatCalcRunSummary(summary: AnyCalcRunSummary): Array<{ label: string
       label: key,
       value: String(value)
     }));
+}
+
+function renderCalcRunLinkButton(
+  run: CalcRun,
+  onOpenRewards: (calcRunId: string) => void,
+  onOpenRanks: (target: { calcRunId?: string | null; accountId?: string | null }) => void
+) {
+  if (run.run_type === "RANK_QUALIFICATION") {
+    return (
+      <Button
+        variant="ghost"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenRanks({ calcRunId: run.id });
+        }}
+      >
+        결과 보기
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpenRewards(run.id);
+      }}
+    >
+      보상 보기
+    </Button>
+  );
 }
